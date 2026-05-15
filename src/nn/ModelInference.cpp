@@ -9,9 +9,9 @@ namespace mmviz::nn {
 
 struct ModelInference::Impl {
 #ifndef NO_ONNX
-    Ort::Env          env;
-    Ort::Session      session;
-    Ort::SessionOptions opts;
+    Ort::Env            env;
+    Ort::SessionOptions opts;   // must be before session (init order = declaration order)
+    Ort::Session        session;
 
     Impl(const std::string& path)
         : env(ORT_LOGGING_LEVEL_WARNING, "mammoviz")
@@ -50,22 +50,27 @@ ModelInference::InferenceResult ModelInference::run(
     }
 
 #ifndef NO_ONNX
-    // Concatenate image features + TDA features into one input tensor
-    std::vector<float> input;
-    input.insert(input.end(), image_input.begin(),  image_input.end());
-    input.insert(input.end(), tda_features.begin(), tda_features.end());
+    // Two separate input tensors matching the ONNX graph signature
+    std::vector<float> img_buf(image_input);
+    std::vector<float> tda_buf = tda_features.empty()
+        ? std::vector<float>(192, 0.0f) : tda_features;
 
     Ort::MemoryInfo mem = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
-    std::array<int64_t, 2> shape = { 1, (int64_t)input.size() };
+    std::array<int64_t, 2> img_shape = { 1, (int64_t)img_buf.size() };
+    std::array<int64_t, 2> tda_shape = { 1, (int64_t)tda_buf.size() };
 
-    auto tensor = Ort::Value::CreateTensor<float>(
-        mem, input.data(), input.size(), shape.data(), shape.size());
+    Ort::Value tensors[2] = {
+        Ort::Value::CreateTensor<float>(mem, img_buf.data(), img_buf.size(),
+                                        img_shape.data(), 2),
+        Ort::Value::CreateTensor<float>(mem, tda_buf.data(), tda_buf.size(),
+                                        tda_shape.data(), 2),
+    };
 
-    const char* input_names[]  = { "input" };
-    const char* output_names[] = { "output" };
+    const char* input_names[]  = { "image_features", "tda_features" };
+    const char* output_names[] = { "logits" };
 
     auto outputs = m_session->session.Run(
-        Ort::RunOptions{nullptr}, input_names, &tensor, 1, output_names, 1);
+        Ort::RunOptions{nullptr}, input_names, tensors, 2, output_names, 1);
 
     float* logits = outputs[0].GetTensorMutableData<float>();
     result.logits = { logits[0], logits[1] };

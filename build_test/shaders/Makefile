@@ -126,20 +126,6 @@ depend:
 	cd /home/nickhernd/Desktop/mammoviz-tda/build_test && $(CMAKE_COMMAND) -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 1
 .PHONY : depend
 
-# Convenience name for target.
-shaders/CMakeFiles/shaders.dir/rule:
-	cd /home/nickhernd/Desktop/mammoviz-tda/build_test && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 shaders/CMakeFiles/shaders.dir/rule
-.PHONY : shaders/CMakeFiles/shaders.dir/rule
-
-# Convenience name for target.
-shaders: shaders/CMakeFiles/shaders.dir/rule
-.PHONY : shaders
-
-# fast build rule for target.
-shaders/fast:
-	cd /home/nickhernd/Desktop/mammoviz-tda/build_test && $(MAKE) $(MAKESILENT) -f shaders/CMakeFiles/shaders.dir/build.make shaders/CMakeFiles/shaders.dir/build
-.PHONY : shaders/fast
-
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -149,7 +135,6 @@ help:
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
 	@echo "... test"
-	@echo "... shaders"
 .PHONY : help
 
 

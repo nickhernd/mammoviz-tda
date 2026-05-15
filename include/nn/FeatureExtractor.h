@@ -5,8 +5,8 @@
 namespace mmviz::nn {
 
 struct FeatureExtractorParams {
-    int  patch_size = 64;
-    int  n_patches  = 16;
+    int  patch_size = 4;   // 4³=64 voxels; 8 patches → exactly 512 features
+    int  n_patches  = 8;
     bool augment    = false;
 };
 

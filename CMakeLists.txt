@@ -118,6 +118,8 @@ if(EXISTS "${IMGUI_DIR}/imgui.h")
     )
     target_include_directories(imgui PUBLIC ${IMGUI_DIR} ${IMGUI_DIR}/backends)
     target_link_libraries(imgui PUBLIC glfw OpenGL::GL)
+    set(HAVE_IMGUI TRUE)
+    message(STATUS "ImGui found — building with GUI overlay")
 endif()
 
 # ── GTest ─────────────────────────────────────────────────────────────────────

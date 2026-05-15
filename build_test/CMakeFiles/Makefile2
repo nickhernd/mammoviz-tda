@@ -93,11 +93,11 @@ clean: tests/clean
 # Directory level rules for directory shaders
 
 # Recursive "all" directory target.
-shaders/all: shaders/CMakeFiles/shaders.dir/all
+shaders/all:
 .PHONY : shaders/all
 
 # Recursive "codegen" directory target.
-shaders/codegen: shaders/CMakeFiles/shaders.dir/codegen
+shaders/codegen:
 .PHONY : shaders/codegen
 
 # Recursive "preinstall" directory target.
@@ -105,7 +105,7 @@ shaders/preinstall:
 .PHONY : shaders/preinstall
 
 # Recursive "clean" directory target.
-shaders/clean: shaders/CMakeFiles/shaders.dir/clean
+shaders/clean:
 .PHONY : shaders/clean
 
 #=============================================================================
@@ -367,6 +367,7 @@ src/CMakeFiles/mammoviz_xai.dir/clean:
 # Target rules for target src/CMakeFiles/mammoviz_render.dir
 
 # All Build rule for target.
+src/CMakeFiles/mammoviz_render.dir/all: CMakeFiles/imgui.dir/all
 src/CMakeFiles/mammoviz_render.dir/all: src/CMakeFiles/mammoviz_utils.dir/all
 src/CMakeFiles/mammoviz_render.dir/all: src/CMakeFiles/mammoviz_io.dir/all
 src/CMakeFiles/mammoviz_render.dir/all: src/CMakeFiles/mammoviz_tda_lib.dir/all
@@ -379,7 +380,7 @@ src/CMakeFiles/mammoviz_render.dir/all: src/CMakeFiles/mammoviz_xai.dir/all
 
 # Build rule for subdir invocation for target.
 src/CMakeFiles/mammoviz_render.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/nickhernd/Desktop/mammoviz-tda/build_test/CMakeFiles 22
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/nickhernd/Desktop/mammoviz-tda/build_test/CMakeFiles 29
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 src/CMakeFiles/mammoviz_render.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/nickhernd/Desktop/mammoviz-tda/build_test/CMakeFiles 0
 .PHONY : src/CMakeFiles/mammoviz_render.dir/rule
@@ -477,51 +478,20 @@ src/CMakeFiles/mammoviz.dir/clean:
 .PHONY : src/CMakeFiles/mammoviz.dir/clean
 
 #=============================================================================
-# Target rules for target shaders/CMakeFiles/shaders.dir
-
-# All Build rule for target.
-shaders/CMakeFiles/shaders.dir/all:
-	$(MAKE) $(MAKESILENT) -f shaders/CMakeFiles/shaders.dir/build.make shaders/CMakeFiles/shaders.dir/depend
-	$(MAKE) $(MAKESILENT) -f shaders/CMakeFiles/shaders.dir/build.make shaders/CMakeFiles/shaders.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/nickhernd/Desktop/mammoviz-tda/build_test/CMakeFiles --progress-num=37,38,39,40,41,42 "Built target shaders"
-.PHONY : shaders/CMakeFiles/shaders.dir/all
-
-# Build rule for subdir invocation for target.
-shaders/CMakeFiles/shaders.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/nickhernd/Desktop/mammoviz-tda/build_test/CMakeFiles 6
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 shaders/CMakeFiles/shaders.dir/all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/nickhernd/Desktop/mammoviz-tda/build_test/CMakeFiles 0
-.PHONY : shaders/CMakeFiles/shaders.dir/rule
-
-# Convenience name for target.
-shaders: shaders/CMakeFiles/shaders.dir/rule
-.PHONY : shaders
-
-# codegen rule for target.
-shaders/CMakeFiles/shaders.dir/codegen:
-	$(MAKE) $(MAKESILENT) -f shaders/CMakeFiles/shaders.dir/build.make shaders/CMakeFiles/shaders.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/nickhernd/Desktop/mammoviz-tda/build_test/CMakeFiles --progress-num=37,38,39,40,41,42 "Finished codegen for target shaders"
-.PHONY : shaders/CMakeFiles/shaders.dir/codegen
-
-# clean rule for target.
-shaders/CMakeFiles/shaders.dir/clean:
-	$(MAKE) $(MAKESILENT) -f shaders/CMakeFiles/shaders.dir/build.make shaders/CMakeFiles/shaders.dir/clean
-.PHONY : shaders/CMakeFiles/shaders.dir/clean
-
-#=============================================================================
 # Target rules for target tests/CMakeFiles/test_tda.dir
 
 # All Build rule for target.
 tests/CMakeFiles/test_tda.dir/all: src/CMakeFiles/mammoviz_utils.dir/all
 tests/CMakeFiles/test_tda.dir/all: src/CMakeFiles/mammoviz_io.dir/all
+tests/CMakeFiles/test_tda.dir/all: src/CMakeFiles/mammoviz_tda_lib.dir/all
 	$(MAKE) $(MAKESILENT) -f tests/CMakeFiles/test_tda.dir/build.make tests/CMakeFiles/test_tda.dir/depend
 	$(MAKE) $(MAKESILENT) -f tests/CMakeFiles/test_tda.dir/build.make tests/CMakeFiles/test_tda.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/nickhernd/Desktop/mammoviz-tda/build_test/CMakeFiles --progress-num=43,44 "Built target test_tda"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/nickhernd/Desktop/mammoviz-tda/build_test/CMakeFiles --progress-num=37,38 "Built target test_tda"
 .PHONY : tests/CMakeFiles/test_tda.dir/all
 
 # Build rule for subdir invocation for target.
 tests/CMakeFiles/test_tda.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/nickhernd/Desktop/mammoviz-tda/build_test/CMakeFiles 9
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/nickhernd/Desktop/mammoviz-tda/build_test/CMakeFiles 13
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 tests/CMakeFiles/test_tda.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/nickhernd/Desktop/mammoviz-tda/build_test/CMakeFiles 0
 .PHONY : tests/CMakeFiles/test_tda.dir/rule
@@ -533,7 +503,7 @@ test_tda: tests/CMakeFiles/test_tda.dir/rule
 # codegen rule for target.
 tests/CMakeFiles/test_tda.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f tests/CMakeFiles/test_tda.dir/build.make tests/CMakeFiles/test_tda.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/nickhernd/Desktop/mammoviz-tda/build_test/CMakeFiles --progress-num=43,44 "Finished codegen for target test_tda"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/nickhernd/Desktop/mammoviz-tda/build_test/CMakeFiles --progress-num=37,38 "Finished codegen for target test_tda"
 .PHONY : tests/CMakeFiles/test_tda.dir/codegen
 
 # clean rule for target.

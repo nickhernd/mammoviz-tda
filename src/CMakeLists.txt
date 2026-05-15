@@ -31,19 +31,24 @@ endif()
 
 # ── xai (depends on Eigen3 + nn) ─────────────────────────────────────────────
 target_include_directories(mammoviz_xai PUBLIC ${COMMON_INCLUDES})
-target_link_libraries(mammoviz_xai PUBLIC mammoviz_utils mammoviz_nn Eigen3::Eigen)
+target_link_libraries(mammoviz_xai PUBLIC mammoviz_utils mammoviz_io mammoviz_nn Eigen3::Eigen)
 
-# ── render (depends on OpenGL + GLFW + GLEW) ─────────────────────────────────
+# ── render (depends on OpenGL + GLFW + GLEW + optional ImGui) ────────────────
 target_include_directories(mammoviz_render PUBLIC ${COMMON_INCLUDES})
 target_link_libraries(mammoviz_render PUBLIC
     mammoviz_utils mammoviz_io mammoviz_tda_lib mammoviz_xai
     OpenGL::GL glfw GLEW::GLEW)
+if(TARGET imgui)
+    target_link_libraries(mammoviz_render PUBLIC imgui)
+    target_compile_definitions(mammoviz_render PUBLIC HAVE_IMGUI)
+endif()
 
 # ── ui ────────────────────────────────────────────────────────────────────────
 target_include_directories(mammoviz_ui PUBLIC ${COMMON_INCLUDES})
 target_link_libraries(mammoviz_ui PUBLIC mammoviz_render)
 if(TARGET imgui)
     target_link_libraries(mammoviz_ui PUBLIC imgui)
+    target_compile_definitions(mammoviz_ui PUBLIC HAVE_IMGUI)
 endif()
 
 # ── Main executable ───────────────────────────────────────────────────────────

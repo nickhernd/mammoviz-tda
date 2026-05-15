@@ -13,7 +13,6 @@
 /home/nickhernd/Desktop/mammoviz-tda/build_test/src/CMakeFiles/test.dir
 /home/nickhernd/Desktop/mammoviz-tda/build_test/src/CMakeFiles/edit_cache.dir
 /home/nickhernd/Desktop/mammoviz-tda/build_test/src/CMakeFiles/rebuild_cache.dir
-/home/nickhernd/Desktop/mammoviz-tda/build_test/shaders/CMakeFiles/shaders.dir
 /home/nickhernd/Desktop/mammoviz-tda/build_test/shaders/CMakeFiles/test.dir
 /home/nickhernd/Desktop/mammoviz-tda/build_test/shaders/CMakeFiles/edit_cache.dir
 /home/nickhernd/Desktop/mammoviz-tda/build_test/shaders/CMakeFiles/rebuild_cache.dir

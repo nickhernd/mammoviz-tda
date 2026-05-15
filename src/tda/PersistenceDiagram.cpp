@@ -19,35 +19,87 @@ PersistenceDiagram PersistenceDiagram::filtered(float min_persistence) const {
     return out;
 }
 
-// ── Feature vector for CNN input ─────────────────────────────────────────────
-// Implements a simplified persistence image: for each dimension (0,1,2),
-// build a 1D histogram of persistence values → concatenate → normalize
-// This is the standard way to use TDA signatures as ML features.
+// ── Feature vector for model input (192-dim) ─────────────────────────────────
+// Exact layout matches train_model.py _build_tda_vector():
+//  [0:3]     H0_count, H1_count, H2_count
+//  [3:7]     max_persistence, mean_persistence, std_persistence, placeholder=0
+//  [7:10]    persistence_entropy H0, H1, H2
+//  [10:70]   top-20 birth/death pairs for H0 (40 floats, persistence-sorted desc)
+//  [70:110]  top-20 birth/death pairs for H1 (40 floats)
+//  [110:150] top-20 birth/death pairs for H2 (40 floats)
+//  [150:192] zeros
 
-std::vector<float> PersistenceDiagram::toFeatureVector(int bins) const {
-    // 3 dimensions × bins each
-    std::vector<float> feat(3 * bins, 0.0f);
+static float persistenceEntropy(const std::vector<std::pair<float,float>>& pairs) {
+    if (pairs.empty()) return 0.0f;
+    std::vector<float> pers;
+    for (auto [b,d] : pairs)
+        if (d > b) pers.push_back(d - b);
+    if (pers.empty()) return 0.0f;
+    float total = std::accumulate(pers.begin(), pers.end(), 0.0f);
+    if (total < 1e-12f) return 0.0f;
+    float H = 0.0f;
+    for (float p : pers) {
+        float r = p / total;
+        H -= r * std::log(r + 1e-12f);
+    }
+    return H;
+}
 
-    // Find global max persistence for normalization
-    float max_p = 0.0f;
-    for (const auto& p : points)
-        max_p = std::max(max_p, p.persistence());
-    if (max_p == 0.0f) return feat;
+std::vector<float> PersistenceDiagram::toFeatureVector(int /*bins*/) const {
+    std::vector<float> feat(192, 0.0f);
 
+    // Split by dimension, keep only finite pairs
+    std::vector<std::pair<float,float>> h0, h1, h2;
     for (const auto& p : points) {
-        int dim = std::clamp(p.dimension, 0, 2);
-        float norm_p = p.persistence() / max_p;
-        // Weight by persistence (more persistent features matter more)
-        int bin = std::min((int)(norm_p * bins), bins - 1);
-        feat[dim * bins + bin] += p.persistence();
+        if (p.death <= p.birth) continue;
+        auto pr = std::make_pair(p.birth, p.death);
+        if      (p.dimension == 0) h0.push_back(pr);
+        else if (p.dimension == 1) h1.push_back(pr);
+        else if (p.dimension == 2) h2.push_back(pr);
     }
 
-    // L2 normalize
-    float norm = 0.0f;
-    for (float v : feat) norm += v * v;
-    norm = std::sqrt(norm);
-    if (norm > 0.0f)
-        for (float& v : feat) v /= norm;
+    // [0:3] counts
+    feat[0] = (float)h0.size();
+    feat[1] = (float)h1.size();
+    feat[2] = (float)h2.size();
+
+    // Global persistence statistics [3:7]
+    std::vector<float> all_pers;
+    for (auto& v : {h0, h1, h2})
+        for (auto [b,d] : v) all_pers.push_back(d - b);
+
+    if (!all_pers.empty()) {
+        float sum = 0, sum2 = 0;
+        for (float p : all_pers) { sum += p; sum2 += p*p; }
+        float mn = sum / all_pers.size();
+        feat[3] = *std::max_element(all_pers.begin(), all_pers.end());
+        feat[4] = mn;
+        feat[5] = std::sqrt(std::max(0.0f, sum2/all_pers.size() - mn*mn));
+    }
+    feat[6] = 0.0f;  // placeholder
+
+    // [7:10] entropy per dimension
+    feat[7] = persistenceEntropy(h0);
+    feat[8] = persistenceEntropy(h1);
+    feat[9] = persistenceEntropy(h2);
+
+    // Top-20 birth/death pairs (desc by persistence) [10:70], [70:110], [110:150]
+    auto top20flat = [&](std::vector<std::pair<float,float>>& pairs, int start) {
+        std::partial_sort(pairs.begin(),
+                          pairs.begin() + std::min((int)pairs.size(), 20),
+                          pairs.end(),
+                          [](auto& a, auto& b){ return (a.second-a.first) > (b.second-b.first); });
+        int lim = std::min((int)pairs.size(), 20);
+        for (int i = 0; i < lim; ++i) {
+            feat[start + 2*i]   = pairs[i].first;
+            feat[start + 2*i+1] = pairs[i].second;
+        }
+    };
+    top20flat(h0,  10);
+    top20flat(h1,  70);
+    top20flat(h2, 110);
+
+    // [150:192] already zero
 
     return feat;
 }

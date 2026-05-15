@@ -244,19 +244,6 @@ mammoviz/fast:
 .PHONY : mammoviz/fast
 
 #=============================================================================
-# Target rules for targets named shaders
-
-# Build rule for target.
-shaders: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 shaders
-.PHONY : shaders
-
-# fast build rule for target.
-shaders/fast:
-	$(MAKE) $(MAKESILENT) -f shaders/CMakeFiles/shaders.dir/build.make shaders/CMakeFiles/shaders.dir/build
-.PHONY : shaders/fast
-
-#=============================================================================
 # Target rules for targets named test_tda
 
 # Build rule for target.
@@ -422,7 +409,6 @@ help:
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
 	@echo "... test"
-	@echo "... shaders"
 	@echo "... imgui"
 	@echo "... mammoviz"
 	@echo "... mammoviz_io"

@@ -33,6 +33,8 @@ public:
 
     void setRenderMode(RenderMode mode);
     void setTransferFunction(const TransferFunction& tf);
+    void setCameraPos(float x, float y, float z);
+    void setGradCAM(bool enabled);
 
     // Called each frame from RenderEngine
     void render(const float* view_matrix, const float* proj_matrix);
@@ -43,14 +45,23 @@ public:
         float birth, float death, int dimension) const;
 
 private:
-    unsigned int m_vao    = 0;
-    unsigned int m_vbo    = 0;
-    unsigned int m_vol_tex = 0;
-    unsigned int m_sal_tex = 0;
-    unsigned int m_shader  = 0;
+    unsigned int m_vao       = 0;
+    unsigned int m_vbo       = 0;
+    unsigned int m_ebo       = 0;
+    unsigned int m_vol_tex   = 0;
+    unsigned int m_sal_tex   = 0;
+    unsigned int m_tf_tex    = 0;
+    unsigned int m_shader    = 0;
+    int          m_num_idx   = 0;
+    bool         m_ready     = false;
+    std::array<int,3> m_vol_dims = {1,1,1};
 
-    RenderMode     m_mode = RenderMode::DirectVolumeRendering;
+    RenderMode     m_mode = RenderMode::GradCAMOverlay;
     TransferFunction m_tf;
+    float m_cam_x = 0.5f, m_cam_y = 0.5f, m_cam_z = 2.5f;
+    bool  m_gradcam_on = true;
+
+    void lazyInit();
 };
 
 } // namespace mmviz::render

@@ -96,6 +96,7 @@ test_tda_EXTERNAL_OBJECTS =
 tests/test_tda: tests/CMakeFiles/test_tda.dir/unit/test_tda.cpp.o
 tests/test_tda: tests/CMakeFiles/test_tda.dir/build.make
 tests/test_tda: tests/CMakeFiles/test_tda.dir/compiler_depend.ts
+tests/test_tda: src/libmammoviz_tda_lib.a
 tests/test_tda: src/libmammoviz_io.a
 tests/test_tda: src/libmammoviz_utils.a
 tests/test_tda: /usr/lib/libITKIOGDCM-5.4.so.1

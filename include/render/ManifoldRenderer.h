@@ -34,10 +34,16 @@ private:
     unsigned int m_shader     = 0;
     unsigned int m_vao        = 0;
     unsigned int m_vbo        = 0;
+    int          m_num_points = 0;
+    bool         m_shaders_ok = false;
+    bool         m_pts_dirty  = true;
 
     std::vector<xai::ProjectedPoint> m_points;
     std::string m_selected_id;
     bool        m_trajectories = false;
+
+    void initShaders();
+    void uploadPoints();
 };
 
 } // namespace mmviz::render

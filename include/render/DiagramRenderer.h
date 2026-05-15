@@ -29,13 +29,24 @@ public:
     const tda::PersistencePoint* hitTest(float screen_x, float screen_y) const;
 
 private:
-    unsigned int m_shader = 0;
-    unsigned int m_vao    = 0;
+    unsigned int m_shader      = 0;
+    unsigned int m_vao         = 0;
+    unsigned int m_vbo         = 0;
+    unsigned int m_line_shader = 0;
+    unsigned int m_line_vao    = 0;
+    unsigned int m_line_vbo    = 0;
+    int          m_num_points  = 0;
+    float        m_scale_max   = 1.0f;
+    bool         m_shaders_ok  = false;
+    bool         m_pts_dirty   = true;
 
     tda::PersistenceDiagram              m_current_diagram;
     std::vector<tda::PersistenceDiagram> m_temporal_diags;
     float m_min_persistence = 0.0f;
     int   m_phase           = 0;
+
+    void initShaders();
+    void uploadPoints();
 };
 
 } // namespace mmviz::render

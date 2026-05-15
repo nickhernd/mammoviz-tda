@@ -4,7 +4,7 @@
 # compile CXX with /usr/bin/c++
 CXX_DEFINES = -DITK_IMAGEIO_FACTORY_REGISTER_MANAGER
 
-CXX_INCLUDES = -I/home/nickhernd/Desktop/mammoviz-tda/build_test/ITKFactoryRegistration -I/home/nickhernd/Desktop/mammoviz-tda/include -isystem /usr/include/ITK-5.4 -isystem /usr/include/eigen3
+CXX_INCLUDES = -I/home/nickhernd/Desktop/mammoviz-tda/build_test/ITKFactoryRegistration -I/usr/include/ITK-5.4 -I/home/nickhernd/Desktop/mammoviz-tda/include -I/usr/include/eigen3
 
 CXX_FLAGS = -O3 -march=native -std=c++20
 

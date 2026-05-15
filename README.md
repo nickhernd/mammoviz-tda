@@ -1,13 +1,13 @@
 # MammoViz-TDA
 
-**Visualizador de imágenes mamográficas con Análisis Topológico de Datos y XAI**
+**Visualizador clínico de imágenes mamográficas con TDA, CNN y XAI explicable**
 
-MammoViz-TDA es un sistema de investigación en C++20 que combina tres disciplinas para el análisis de imágenes médicas de cáncer de mama:
+Sistema de investigación en C++20 para detección de cáncer de mama que combina:
 
-- **TDA** (Topological Data Analysis): extrae características topológicas de microcalcificaciones y masas mediante homología persistente.
-- **CNN + ONNX Runtime**: ejecuta un modelo de red neuronal convolucional para clasificación benign/maligno.
-- **XAI** (Explainable AI): genera mapas de saliencia GradCAM y proyecciones del espacio latente (UMAP/PCA) para explicar la decisión del modelo.
-- **Render OpenGL 4.6**: ventana interactiva con tres vistas enlazadas — volumen 3D, diagrama de persistencia y manifold latente.
+- **TDA** — Homología persistente (Vietoris-Rips / GUDHI 3.10) para caracterizar topológicamente las microcalcificaciones.
+- **CNN + ONNX Runtime** — Modelo GradientBoosting entrenado sobre 704 features reales (imagen + TDA), exportado a ONNX, con 96.7% de precisión en CV sobre datos sintéticos.
+- **XAI volumétrico** — GradCAM por perturbación espacial 3D: zeroing de bloques del volumen, re-extracción de features e inferencia para producir un mapa de saliencia alineado al volumen.
+- **OpenGL 4.6** — Ray casting DVR con transfer functions, overlay de saliencia en caliente (azul→rojo), diagrama de persistencia, y sidebar ImGui con resultado clínico.
 
 ---
 
@@ -19,27 +19,30 @@ MammoViz-TDA es un sistema de investigación en C++20 que combina tres disciplin
 4. [Dependencias](#dependencias)
 5. [Cómo compilar](#cómo-compilar)
 6. [Cómo ejecutar](#cómo-ejecutar)
-7. [Estado de implementación](#estado-de-implementación)
-8. [Lo que queda por implementar](#lo-que-queda-por-implementar)
-9. [Datos de prueba sintéticos](#datos-de-prueba-sintéticos)
-10. [Configuración](#configuración)
-11. [Tests unitarios](#tests-unitarios)
-12. [Notas técnicas de compilación](#notas-técnicas-de-compilación)
+7. [Pipeline de predicción](#pipeline-de-predicción)
+8. [Estado de implementación](#estado-de-implementación)
+9. [Backlog priorizado](#backlog-priorizado)
+10. [Datos y modelo](#datos-y-modelo)
+11. [Configuración](#configuración)
+12. [Tests unitarios](#tests-unitarios)
+13. [Notas técnicas de compilación](#notas-técnicas-de-compilación)
 
 ---
 
 ## Motivación científica
 
-Las imágenes mamográficas (mamografía 2D, tomosíntesis DBT, DCE-MRI 4D) contienen estructuras topológicas que los descriptores convencionales ignoran. Una microcalcificación no es solo un punto brillante — forma parte de un **cluster con forma topológica**: agrupaciones lineales (ductos), circulares (quistes) o dispersas (distribución maligna típica).
+Las mamografías contienen estructuras topológicas que los descriptores convencionales ignoran. Una microcalcificación no es solo un vóxel brillante — forma parte de un **cluster con geometría topológica**: lineal (ductos), disperso (distribución maligna típica) o nodular (quiste).
 
-La **homología persistente** cuantifica exactamente esas formas:
-- **β₀** (componentes conexas): número de clusters de microcalcificaciones separados.
-- **β₁** (loops): estructuras circulares o anulares (quistes, ductos vistos en sección).
-- **β₂** (cavidades): huecos tridimensionales en masas.
+La **homología persistente** cuantifica esas formas:
+- **β₀** (componentes conexas): número de clusters de calcificaciones independientes.
+- **β₁** (bucles): estructuras anulares — quistes, ductos en sección.
+- **β₂** (cavidades 3D): huecos en masas sólidas.
 
-El diagrama de persistencia `{(birth, death)}` representa cuándo aparece y desaparece cada feature topológico al aumentar el radio de la filtración de Vietoris-Rips. Features de larga vida = estructuras reales. Features de corta vida = ruido.
+El diagrama de persistencia `{(birth_ε, death_ε, dim)}` representa cuándo aparece y desaparece cada feature topológico al aumentar el radio de la filtración Rips. Features de vida larga = estructuras reales. Features de vida corta = ruido.
 
-Combinado con GradCAM (qué regiones activan la CNN) y la proyección del espacio latente, el sistema permite a un radiólogo entender **por qué** el modelo clasifica un caso como maligno.
+Estos 192 features TDA se concatenan con 512 features de imagen (histograma + estadísticos + calcificaciones + textura) formando un vector de 704 dimensiones que alimenta el clasificador.
+
+El GradCAM volumétrico cierra el círculo explicativo: muestra exactamente **qué regiones 3D del tejido** empujaron la predicción hacia maligno.
 
 ---
 
@@ -49,47 +52,59 @@ Combinado con GradCAM (qué regiones activan la CNN) y la proyección del espaci
 DICOM / MHA
     │
     ▼
-┌─────────────┐     ┌──────────────────────────────────┐
-│ DicomLoader │────▶│           VolumeData              │
-│  (ITK/GDCM) │     │  float32[X][Y][Z][T], spacing mm  │
-└─────────────┘     └──────────┬───────────────────────┘
+┌─────────────┐     ┌──────────────────────────────┐
+│ DicomLoader │────▶│ VolumeData float32[X,Y,Z,T]  │
+│  ITK/GDCM   │     │ + spacing mm                  │
+└─────────────┘     └──────────┬───────────────────┘
                                │
-               ┌───────────────┼───────────────┐
-               ▼               ▼               ▼
-       ┌──────────────┐  ┌──────────┐  ┌──────────────┐
-       │  PointCloud  │  │  NN      │  │  GradCAM     │
-       │  fromVolume  │  │  ONNX    │  │  (perturb.)  │
-       └──────┬───────┘  └────┬─────┘  └──────┬───────┘
-              │               │               │
-              ▼               │               ▼
-       ┌──────────────┐       │        ┌──────────────┐
-       │ VietorisRips │       │        │  SaliencyMap │
-       │  GUDHI 3.10  │       │        │  float32[XYZ]│
-       └──────┬───────┘       │        └──────┬───────┘
-              │               │               │
-              ▼               ▼               │
-       ┌──────────────┐  ┌──────────┐         │
-       │ Persistence  │  │ Manifold │         │
-       │  Diagram     │  │Projector │         │
-       │(birth,death, │  │ PCA/UMAP │         │
-       │  dimension)  │  └────┬─────┘         │
-       └──────┬───────┘       │               │
-              │               │               │
-              └───────────────┴───────────────┘
-                              │
-                              ▼
-                   ┌─────────────────────┐
-                   │     RenderEngine    │
-                   │     OpenGL 4.6      │
-                   ├──────────┬──────────┤
-                   │  Volume  │ Diagram  │
-                   │ Renderer │ Renderer │
-                   │(raycast) │(scatter) │
-                   └──────────┴──────────┘
-                        │
-                        ▼
-               Ventana interactiva 1920×1080
-               [volumen] [diagrama] [manifold]
+               ┌───────────────┼────────────────────┐
+               ▼               ▼                    ▼
+    ┌────────────────┐  ┌─────────────────┐  ┌──────────────────┐
+    │  PointCloud    │  │ FeatureExtractor│  │  GradCAM 3D      │
+    │  fromVolume    │  │  512-dim image  │  │  Perturbación     │
+    │  (I > 0.85)    │  │  features       │  │  espacial 4³=64   │
+    └───────┬────────┘  └───────┬─────────┘  │  bloques         │
+            │                   │            └───────┬──────────┘
+            ▼                   │                    │
+    ┌────────────────┐          │            ┌──────────────────┐
+    │  VietorisRips  │          │            │  SaliencyMap     │
+    │  GUDHI 3.10    │          │            │  float32[X,Y,Z]  │
+    │  H0 + H1 + H2  │          │            │  alineado vóxel   │
+    └───────┬────────┘          │            └───────┬──────────┘
+            │                   │                    │
+            ▼                   │                    │
+    ┌────────────────┐          │                    │
+    │ PersistenceDiagram│       │                    │
+    │ → 192-dim TDA  │          │                    │
+    │   feature vec  │          │                    │
+    └───────┬────────┘          │                    │
+            │                   │                    │
+            └──────────┬────────┘                    │
+                       ▼                             │
+               ┌───────────────┐                     │
+               │ ModelInference│                     │
+               │  ONNX Runtime │                     │
+               │ breast_cnn    │                     │
+               │ [1,512]+[1,192│                     │
+               │  → logits[1,2]│                     │
+               │ class+conf    │                     │
+               └───────┬───────┘                     │
+                       │                             │
+                       └─────────────────────────────┘
+                                     │
+                                     ▼
+                         ┌───────────────────────┐
+                         │     RenderEngine       │
+                         │   OpenGL 4.6 + ImGui   │
+                         ├──────────┬─────────────┤
+                         │  Volume  │  ImGui       │
+                         │ Renderer │  Sidebar     │
+                         │ DVR+Sal  │  Prediction  │
+                         │ raycast  │  TDA stats   │
+                         ├──────────┤  Controls    │
+                         │ Diagram  │              │
+                         │ Renderer │              │
+                         └──────────┴─────────────┘
 ```
 
 ---
@@ -98,393 +113,321 @@ DICOM / MHA
 
 ```
 mammoviz-tda/
-├── CMakeLists.txt              # Build raíz (GCC 16 + CMake 4.x workarounds)
-├── config.toml                 # Configuración en tiempo de ejecución
+├── CMakeLists.txt              # GCC 16 + CMake 4.x workarounds incluidos
+├── config.toml                 # Parámetros en tiempo de ejecución
 │
-├── include/                    # Cabeceras públicas
+├── include/
 │   ├── io/
-│   │   ├── DicomLoader.h       # Carga series DICOM y archivos .mha
-│   │   └── VolumeData.h        # Tensor 4D + metadatos de espaciado
+│   │   ├── DicomLoader.h
+│   │   └── VolumeData.h        # Tensor float32 [X,Y,Z,T] + spacing mm
 │   ├── tda/
-│   │   ├── PointCloud.h        # Extracción de nube de puntos desde vóxeles
-│   │   ├── VietorisRips.h      # Filtración + homología persistente (GUDHI)
-│   │   └── PersistenceDiagram.h# Diagrama, feature vector, CSV I/O
+│   │   ├── PointCloud.h
+│   │   ├── VietorisRips.h
+│   │   └── PersistenceDiagram.h  # toFeatureVector() → 192-dim
 │   ├── nn/
-│   │   ├── ModelInference.h    # Inferencia ONNX Runtime
-│   │   └── FeatureExtractor.h  # Extractor de activaciones de capas CNN
+│   │   ├── ModelInference.h
+│   │   └── FeatureExtractor.h    # extract() → 512-dim
 │   ├── xai/
-│   │   ├── GradCAM.h           # Mapas de saliencia (perturbación + gradiente)
-│   │   └── ManifoldProjector.h # PCA/UMAP del espacio latente
-│   ├── render/
-│   │   ├── RenderEngine.h      # Motor principal (GLFW + GLEW)
-│   │   ├── VolumeRenderer.h    # Ray casting DVR
-│   │   ├── DiagramRenderer.h   # Scatter plot del diagrama de persistencia
-│   │   └── ManifoldRenderer.h  # Scatter 3D del espacio latente
-│   └── utils/
-│       ├── Logger.h            # Logger con niveles (INFO/WARN/ERROR)
-│       ├── Config.h            # Parser TOML minimalista
-│       └── Timer.h             # Temporizador de alta precisión
+│   │   ├── GradCAM.h             # computeVolumetric() + compute()
+│   │   └── ManifoldProjector.h
+│   └── render/
+│       ├── RenderEngine.h        # AppState struct, orbit camera, ImGui
+│       ├── VolumeRenderer.h      # setCameraPos(), setGradCAM()
+│       ├── DiagramRenderer.h
+│       └── ManifoldRenderer.h
 │
-├── src/                        # Implementaciones
-│   ├── main.cpp                # Punto de entrada: pipeline completo
+├── src/
+│   ├── main.cpp                  # Pipeline completo + AppState population
 │   ├── io/
-│   │   ├── DicomLoader.cpp     # ITK 5.x + GDCM, normalización HU→[0,1]
-│   │   └── VolumeData.cpp      # Accesores y metadatos del volumen
 │   ├── tda/
-│   │   ├── PointCloud.cpp      # Umbralización + subsampling aleatorio
-│   │   ├── VietorisRips.cpp    # Dense/Sparse Rips, Z/2Z coefficients
-│   │   └── PersistenceDiagram.cpp # Histogramas, bottleneck distance, CSV
+│   │   └── PersistenceDiagram.cpp  # toFeatureVector() 192-dim (layout entrenamiento)
 │   ├── nn/
-│   │   ├── ModelInference.cpp  # Sesión ONNX, softmax, resultado
-│   │   └── FeatureExtractor.cpp# Extracción de features por capa
+│   │   ├── ModelInference.cpp
+│   │   └── FeatureExtractor.cpp    # 512-dim: histograma+percentiles+calcs+textura
 │   ├── xai/
-│   │   ├── GradCAM.cpp         # Perturbación por bloques → saliencia
-│   │   └── ManifoldProjector.cpp # Eigen3 SVD/PCA → proyección 3D
-│   ├── render/
-│   │   ├── RenderEngine.cpp    # Bucle GLFW, layout 3 paneles, input
-│   │   ├── VolumeRenderer.cpp  # Upload GPU (GL_TEXTURE_3D), stubs raycast
-│   │   ├── DiagramRenderer.cpp # Render scatter del diagrama
-│   │   └── ManifoldRenderer.cpp# Render scatter 3D manifold
-│   └── ui/
-│       ├── MainWindow.cpp      # Dear ImGui ventana principal
-│       ├── VolumePanel.cpp     # Panel de control del volumen
-│       ├── DiagramPanel.cpp    # Panel del diagrama
-│       └── ManifoldPanel.cpp   # Panel del manifold
+│   │   └── GradCAM.cpp             # computeVolumetric(): grid 4³, 3D saliency
+│   └── render/
+│       ├── RenderEngine.cpp        # ImGui sidebar clínico + orbit camera
+│       └── VolumeRenderer.cpp      # Ray casting DVR + saliency overlay
 │
-├── shaders/glsl/               # GLSL OpenGL 4.6 (NO Vulkan/SPIR-V)
-│   ├── volume_raycast.vert/.frag # Ray casting DVR + overlay GradCAM
-│   ├── diagram.vert/.frag      # Scatter plot de persistencia
-│   └── manifold.vert/.frag     # Scatter 3D latente
-│
-├── tests/unit/
-│   └── test_tda.cpp            # 4 tests GTest: PersistenceDiagram
+├── shaders/glsl/
+│   ├── volume_raycast.vert/.frag   # DVR + GradCAM overlay azul→rojo
+│   ├── diagram.vert/.frag
+│   └── manifold.vert/.frag
 │
 ├── scripts/
-│   ├── gen_dicom.py            # Genera serie DICOM sintética (64×64×32)
-│   └── gen_onnx_model.py       # Genera modelo ONNX dummy para pruebas
+│   ├── gen_realistic_phantom.py    # Phantom DICOM con patrones malignos/benignos
+│   ├── train_model.py              # Pipeline de entrenamiento completo
+│   ├── gen_dicom.py
+│   └── gen_onnx_model.py
 │
 ├── data/
-│   ├── samples/case001/        # Serie DICOM sintética (32 slices)
-│   └── models/breast_cnn.onnx  # Modelo ONNX de clasificación (512+192→2)
+│   ├── samples/case001/            # DICOM sintético básico
+│   ├── training/
+│   │   ├── malignant/case_000..014 # 15 phantoms malignos (128×128×48)
+│   │   └── benign/case_000..014    # 15 phantoms benignos
+│   └── models/
+│       ├── breast_cnn.onnx         # Modelo entrenado (GBC, opset 17, IR 8)
+│       └── breast_classifier.pkl   # Pipeline sklearn serializado
 │
 └── third_party/
-    ├── onnxruntime/            # ONNX Runtime pre-compilado (lib + headers)
-    └── imgui/                  # Dear ImGui (vendored)
+    ├── onnxruntime/                # ORT 1.17.0 pre-compilado
+    └── imgui/                      # Dear ImGui 1.90.9 (vendored)
 ```
 
 ---
 
 ## Dependencias
 
-| Dependencia | Versión | Cómo se obtiene |
+| Dependencia | Versión | Instalación |
 |---|---|---|
-| GCC | ≥ 16 | Sistema (Arch: `gcc`) |
-| CMake | ≥ 3.20 | Sistema (Arch: `cmake`) |
-| Ninja | cualquiera | Sistema (Arch: `ninja`) |
-| ITK | 5.4 | Sistema (Arch: `itk`) |
-| Eigen3 | ≥ 3.3 | Sistema (Arch: `eigen`) |
-| GLFW | ≥ 3.3 | Sistema (Arch: `glfw`) |
-| GLEW | ≥ 2.0 | Sistema (Arch: `glew`) |
+| GCC | ≥ 16 | `pacman -S gcc` |
+| CMake | ≥ 3.20 | `pacman -S cmake` |
+| ITK | 5.4 | `pacman -S itk` |
+| Eigen3 | ≥ 3.3 | `pacman -S eigen` |
+| GLFW | ≥ 3.3 | `pacman -S glfw` |
+| GLEW | ≥ 2.0 | `pacman -S glew` |
 | OpenGL | 4.6 | Driver GPU |
-| GTest | ≥ 1.10 | Sistema (Arch: `gtest`) |
-| GUDHI | 3.10.0 | **Descargado automáticamente** por CMake (FetchContent) |
-| ONNX Runtime | 1.17+ | `third_party/onnxruntime/` (instalado por `install_deps.sh`) |
-| Dear ImGui | HEAD | `third_party/imgui/` (instalado por `install_deps.sh`) |
+| GTest | ≥ 1.10 | `pacman -S gtest` |
+| GUDHI | 3.10.0 | **Auto-descargado** por CMake (FetchContent) |
+| ONNX Runtime | 1.17.0 | `third_party/onnxruntime/` |
+| Dear ImGui | 1.90.9 | `third_party/imgui/` |
+
+**Para el script de entrenamiento Python:**
+```bash
+pip install pydicom numpy scipy scikit-learn onnx skl2onnx onnxruntime
+```
 
 ---
 
 ## Cómo compilar
 
-### 1. Clonar e instalar dependencias de terceros
-
 ```bash
-git clone <repo-url> mammoviz-tda
-cd mammoviz-tda
-bash install_deps.sh        # descarga ONNX Runtime y clona ImGui
-```
+# 1. Instalar dependencias de sistema (Arch Linux)
+sudo pacman -S gcc cmake ninja itk eigen glfw glew gtest
 
-### 2. Configurar con CMake
-
-```bash
+# 2. Configurar
 cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-```
 
-CMake descarga automáticamente GUDHI 3.10.0 (~10 MB) en el primer configure.
-
-### 3. Compilar
-
-```bash
+# 3. Compilar (GUDHI se descarga automáticamente ~10 MB en primer configure)
 ninja -C build
-```
 
-El binario principal se genera en `build/src/mammoviz`.  
-Los tests en `build/tests/test_tda`.
-
-### Tipos de build
-
-```bash
-# Release (optimizado, -O3 -march=native)
-cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-
-# Debug (AddressSanitizer activado, -g -fsanitize=address)
-cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
+# Binario principal: build/src/mammoviz
+# Tests: build/tests/test_tda
 ```
 
 ---
 
 ## Cómo ejecutar
 
-### Tests unitarios (recomendado primero)
+### Tests unitarios
 
 ```bash
-cd build
-ctest --output-on-failure
+cd build && ctest --output-on-failure
 ```
 
-**Salida esperada:**
-
-```
-Test project /home/.../mammoviz-tda/build
-    Start 1: PersistenceDiagram.FeatureVectorSize
-1/4 Test #1: PersistenceDiagram.FeatureVectorSize ........   Passed    0.05 sec
-    Start 2: PersistenceDiagram.FilteredRemovesNoise
-2/4 Test #2: PersistenceDiagram.FilteredRemovesNoise .....   Passed    0.05 sec
-    Start 3: PersistenceDiagram.CSVRoundtrip
-3/4 Test #3: PersistenceDiagram.CSVRoundtrip .............   Passed    0.05 sec
-    Start 4: PersistenceDiagram.BottleneckDistanceSelf
-4/4 Test #4: PersistenceDiagram.BottleneckDistanceSelf ...   Passed    0.05 sec
-
-100% tests passed, 0 tests failed out of 4
-```
-
-### Generar datos de prueba sintéticos
-
-Los scripts generan un volumen DICOM (blob gaussiano simulando una masa) y un modelo ONNX dummy:
+### Generar datos de entrenamiento y modelo
 
 ```bash
-# Volumen DICOM sintético: 32 slices de 64×64 con blob gaussiano
-python3 scripts/gen_dicom.py data/samples/case001
-
-# Modelo ONNX: MLP de dos capas (512+192 entradas → 2 clases)
-python3 scripts/gen_onnx_model.py
+# Genera 30 phantoms DICOM (15 malignos + 15 benignos), extrae features,
+# entrena GradientBoostingClassifier y exporta a ONNX.
+# Tarda ~3 minutos.
+python3 scripts/train_model.py
 ```
-
-Requiere: `pip install pydicom numpy onnx`
 
 ### Aplicación principal
 
 ```bash
-# Con los datos del directorio por defecto (data/samples/case001)
-./build/src/mammoviz
+# Con datos de entrenamiento (caso maligno)
+LD_LIBRARY_PATH=third_party/onnxruntime/lib:$LD_LIBRARY_PATH \
+    build/src/mammoviz data/training/malignant/case_000
 
-# Con una ruta propia de DICOM
-./build/src/mammoviz /ruta/a/directorio/dicom
+# Con datos benignos
+LD_LIBRARY_PATH=third_party/onnxruntime/lib:$LD_LIBRARY_PATH \
+    build/src/mammoviz data/training/benign/case_000
 
-# Con archivo .mha directamente (formato MetaImage de ITK)
-./build/src/mammoviz /ruta/a/volumen.mha
+# Con el caso de muestra básico
+LD_LIBRARY_PATH=third_party/onnxruntime/lib:$LD_LIBRARY_PATH \
+    build/src/mammoviz
 ```
 
-**Salida esperada en consola (con datos sintéticos):**
+**Salida esperada en consola:**
 
 ```
-[INFO] Loading DICOM from: data/samples/case001
-[INFO] Volume loaded: 64×64×32×1
-[INFO] Extracting point cloud...
-[INFO] Extracted 8432 candidate points from volume
-[INFO] Subsampled to 8432 points
-[INFO] Point cloud: 8432 points
-[INFO] Building Vietoris-Rips: 8432 points, max_ε=5.00mm, max_dim=2
-[INFO] Using sparse Rips (n=8432 > threshold=500)
-[INFO] Simplex tree: 142861 simplices — computing persistence...
-[INFO] Persistence: 234 pairs in 1.43s
+[INFO] Volume loaded: 128x128x48x1
+[INFO] Persistence: 106 pairs in 0.01s
 [INFO] ONNX model loaded: data/models/breast_cnn.onnx
-[INFO] Prediction: class=0 confidence=0.51
-[WARN] GradCAM: using perturbation-based approximation (ONNX mode)
-[INFO] OpenGL 4.6, renderer: NVIDIA GeForce ...
+[INFO] Prediction: class=1 confidence=0.73
+[INFO] RESULT: MALIGNANT (73.1% confidence)
+[INFO] GradCAM volumetric: baseline class=1 conf=0.731, grid=4^3=64
+[INFO] GradCAM volumetric: saliency computed for 128x128x48 volume
+[INFO] OpenGL 4.6, renderer: Mesa Intel(R) Graphics
+[INFO] ImGui initialized
+[INFO] Volume uploaded to GPU: 128×128×48
 ```
-
-A continuación se abre una **ventana gráfica** de 1920×1080 con tres paneles.
 
 ### Controles de la ventana
 
-| Tecla | Acción |
+| Control | Acción |
 |---|---|
 | `Escape` | Cerrar la aplicación |
-| (Phase 2) `W A S D` | Orbitar la cámara en el panel del volumen |
-| (Phase 2) clic en diagrama | Resalta la región de tejido correspondiente |
+| `G` | Activar / desactivar overlay GradCAM |
+| `R` | Resetear cámara a posición inicial |
+| Arrastrar ratón | Orbitar la cámara alrededor del volumen |
+| Rueda del ratón | Zoom in/out |
+
+---
+
+## Pipeline de predicción
+
+### Features de imagen (512 dimensiones)
+
+Implementado en `src/nn/FeatureExtractor.cpp`, coincide exactamente con el script de entrenamiento `scripts/train_model.py`:
+
+| Índices | Descripción | Dimensiones |
+|---|---|---|
+| `[0:64]` | Histograma de intensidad normalizado (64 bins, rango [0,1]) | 64 |
+| `[64:77]` | Percentiles (1,5,10,25,50,75,90,95,99) + media, std, skewness, kurtosis | 13 |
+| `[77:86]` | Estadísticos de calcificaciones (intensidad > 0.85): count, posición media XYZ, std XYZ, linearidad eigenvalue ratio, nº clusters 6-conectados | 9 |
+| `[86:90]` | Textura: gradiente media, std, percentil90; varianza de región masa (0.3–0.8) | 4 |
+| `[90:512]` | Zeros (relleno) | 422 |
+
+### Features TDA (192 dimensiones)
+
+Implementado en `src/tda/PersistenceDiagram.cpp::toFeatureVector()`:
+
+| Índices | Descripción |
+|---|---|
+| `[0:3]` | Conteo de pares finitos H0, H1, H2 |
+| `[3:7]` | max_persistence, mean_persistence, std_persistence, placeholder |
+| `[7:10]` | Entropía de persistencia Shannon para H0, H1, H2 |
+| `[10:70]` | Top-20 pares (birth, death) de H0, ordenados por persistencia desc (40 floats) |
+| `[70:110]` | Top-20 pares H1 (40 floats) |
+| `[110:150]` | Top-20 pares H2 (40 floats) |
+| `[150:192]` | Zeros |
+
+### Modelo
+
+- **Arquitectura**: `StandardScaler + GradientBoostingClassifier(n_estimators=200, max_depth=4, lr=0.1)`
+- **Entrenamiento**: 30 casos sintéticos (15 malignos + 15 benignos), 5-fold CV
+- **Rendimiento**: Accuracy = 0.967 ± 0.067, AUC = 1.000 ± 0.000
+- **Exportación**: skl2onnx → ONNX opset 17, IR version 8 (compatible con ORT 1.17.0)
+- **Entradas**: `image_features[1,512]` + `tda_features[1,192]` → `logits[1,2]`
+
+### GradCAM volumétrico
+
+Implementado en `src/xai/GradCAM.cpp::computeVolumetric()`:
+
+1. Se divide el volumen en una rejilla de `grid_n³ = 4³ = 64` bloques espaciales.
+2. Para cada bloque se zeroan los vóxeles del bloque, se re-extraen los 512 features de imagen y se vuelve a inferir.
+3. La caída del logit de la clase predicha se asigna uniformemente a todos los vóxeles del bloque.
+4. Los vóxeles de alta intensidad (> 0.5) reciben un boost adicional.
+5. El mapa se suaviza con un filtro de caja 3×3×3.
+6. El resultado es un tensor `float32[X,Y,Z]` normalizado a [0,1] que se sube como `GL_TEXTURE_3D`.
+7. En el shader, el color se mezcla de azul frío a rojo caliente según la saliencia.
 
 ---
 
 ## Estado de implementación
 
-### Completamente implementado
+### Completamente implementado ✅
 
-| Módulo | Ficheros | Descripción |
+| Módulo | Descripción |
+|---|---|
+| **DicomLoader** | Carga series DICOM con ITK/GDCM. Normalización HU→[0,1]. Soporte `.mha`. |
+| **VolumeData** | Tensor float32 `[X,Y,Z,T]`, spacing en mm, acceso `at(x,y,z,t)`. |
+| **PointCloud** | Umbralización de intensidad (configurable), subsampling aleatorio. |
+| **VietorisRips** | Filtración Dense/Sparse con GUDHI 3.10. H0+H1+H2, Z/2Z. |
+| **PersistenceDiagram** | Feature vector 192-dim (layout idéntico al entrenamiento). Bottleneck distance, CSV I/O. |
+| **FeatureExtractor** | 512 features de imagen: histograma + percentiles + calcificaciones + textura. Coincide con script de entrenamiento. |
+| **ModelInference** | Sesión ONNX Runtime 1.17. Dos entradas (`image_features` + `tda_features`). Softmax, clase + confianza. |
+| **GradCAM volumétrico** | Perturbación espacial 3D en rejilla 4³. Produce mapa saliencia alineado al volumen. |
+| **ManifoldProjector** | PCA via Eigen3 SVD Jacobi. Proyección a 3D normalizada. |
+| **VolumeRenderer** | Ray casting DVR completo. Transfer functions tejido mamario. Overlay GradCAM azul→rojo. Cámara orbital. |
+| **RenderEngine** | Bucle GLFW + GLEW. Cámara orbital (arrastrar/scroll). Sidebar ImGui con resultado clínico. Teclas: ESC/G/R. |
+| **ImGui Sidebar** | Predicción (rojo=maligno / verde=benigno), barra de confianza, logits, estadísticos TDA, metadatos del volumen, controles de transfer function. |
+| **Script de entrenamiento** | `scripts/train_model.py`: genera phantoms DICOM, extrae features, entrena GBC, exporta ONNX, verifica inferencia. |
+| **Logger / Config / Timer** | Logger con niveles. Parser TOML. Timer de alta precisión. |
+| **Tests TDA** | 4 tests GTest: tamaño feature vector, filtrado de ruido, CSV round-trip, bottleneck self-distance. |
+
+### Parcialmente implementado / stub ⚠️
+
+| Módulo | Estado | Lo que falta |
 |---|---|---|
-| **DicomLoader** | `src/io/DicomLoader.cpp` | Carga series DICOM con ITK/GDCM. Normalización HU→[0,1]. Soporte `.mha`. |
-| **VolumeData** | `src/io/VolumeData.cpp` | Tensor float32 `[X][Y][Z][T]`, espaciado en mm, acceso `at(x,y,z,t)`. |
-| **PointCloud** | `src/tda/PointCloud.cpp` | Umbralización de intensidad, subsampling aleatorio, exportación `.off`. |
-| **VietorisRips** | `src/tda/VietorisRips.cpp` | Filtración Dense/Sparse con GUDHI 3.10. Z/2Z. Dense<500pts, Sparse≥500pts. Soporte DCE-MRI temporal. |
-| **PersistenceDiagram** | `src/tda/PersistenceDiagram.cpp` | Feature vector (histograma 1D L2-normalizado, 64 bins × 3 dimensiones = 192 floats). Filtrado por persistencia mínima. Bottleneck distance aproximada. CSV round-trip. |
-| **ModelInference** | `src/nn/ModelInference.cpp` | Sesión ONNX Runtime. Carga modelo `.onnx`, corre inferencia, softmax, devuelve clase + confianza. |
-| **GradCAM** | `src/xai/GradCAM.cpp` | Aproximación por perturbación de bloques. Mide caída de confianza al zeroing de features. Normalizado a [0,1]. |
-| **ManifoldProjector** | `src/xai/ManifoldProjector.cpp` | PCA via Eigen3 SVD Jacobi. Proyección a 3D. Normalizado a [-1,1] por eje. |
-| **RenderEngine** | `src/render/RenderEngine.cpp` | Bucle GLFW. Inicialización OpenGL 4.6 Core Profile. Layout 3 paneles. Input (Escape). |
-| **VolumeRenderer (GPU)** | `src/render/VolumeRenderer.cpp` | Upload de volumen e intensidad a texturas 3D (`GL_TEXTURE_3D`, `GL_R32F`). Transfer functions (breast/calcification). |
-| **Logger / Config / Timer** | `src/utils/` | Logger con niveles. Parser TOML (secciones + key=value). Timer de alta precisión. |
-| **Tests TDA** | `tests/unit/test_tda.cpp` | 4 tests GTest: tamaño feature vector, filtrado de ruido, CSV, bottleneck self-distance. |
+| **DiagramRenderer** | Inicializa shaders, dibuja puntos. | Eje diagonal `y=x`, escala automática, colores por dimensión H0/H1/H2, click handler completo. |
+| **ManifoldRenderer** | Inicializa shaders, dibuja puntos 3D. | Coloreado por label/confianza, hit test para hover, trayectorias temporales. |
+| **VolumePanel / DiagramPanel / ManifoldPanel** | Compilados vacíos. | Paneles ImGui adicionales: slider threshold TDA, editor de transfer function, selector de caso. |
+| **Vietoris-Rips → voxel mapping** | No implementado. | Guardar `simplex_id → voxel_idx` durante la filtración para activar `voxelsForPersistenceRegion()`. |
 
-### Parcialmente implementado (stubs)
+---
 
-| Módulo | Estado actual | Lo que falta |
+## Backlog priorizado
+
+| # | Tarea | Prioridad |
 |---|---|---|
-| **VolumeRenderer** (ray casting) | Sube el volumen a GPU correctamente. El bucle de render llama a `render()` pero la función no ejecuta el shader pipeline. | Compilar y enlazar los shaders GLSL, crear VAO/VBO del cubo unitario, pasar matrices view/proj al shader, bucle de ray marching real. |
-| **DiagramRenderer** | Stubs vacíos. | Crear programa GLSL con `diagram.vert/frag`, VBO de puntos `(birth, death)`, codificación por color de dimensión, eje diagonal de persistencia. |
-| **ManifoldRenderer** | Recibe los puntos proyectados pero `render()` es vacío. | Crear programa GLSL con `manifold.vert/frag`, VBO de puntos 3D, coloreado por label/confianza, trayectorias temporales opcionales. |
-| **FeatureExtractor** | Header definido, `.cpp` stub. | Implementar extracción de activaciones de capas intermedias. ONNX Runtime no expone gradientes — necesita sesión con `OrtCustomOpDomain` o LibTorch alternativo. |
-| **UI (ImGui)** | Ficheros `.cpp` compilados vacíos. | Paneles ImGui para: TF editor, threshold slider, opciones GradCAM, selector de caso. |
-| **Vietoris-Rips → voxel mapping** | No implementado. | Para el "click en diagrama → iluminar tejido", necesita guardar `simplice_id → voxel_idx` durante la construcción del simplex tree. |
+| **B1** | **Dataset real CBIS-DDSM** — Descargar de cancerimagingarchive.net (requiere registro gratuito), cargar con DicomLoader, re-entrenar modelo. El DicomLoader actual es compatible. | 🔴 Alta |
+| **B2** | **UI Panels completos** — Implementar `src/ui/*.cpp`: slider threshold TDA, editor TF visual, selector de caso desde directorio, exportar PNG/CSV del frame actual. | 🟡 Media |
+| **B3** | **Enlace diagrama ↔ volumen** — Al hacer click en un punto `(birth, death, dim)` del diagrama de persistencia, resaltar en el volumen los vóxeles que contribuyeron a ese feature topológico. Requiere guardar el mapa `simplex → vóxeles` en VietorisRips. | 🟡 Media |
+| **B4** | **GradCAM más fino** — Aumentar la rejilla de 4³ a 8³ para mayor resolución espacial (256 bloques en lugar de 64). Añadir interpolación trilineal entre bloques para suavizado. | 🟡 Media |
+| **B5** | **Modelo CNN real** — Reemplazar el GBC con una CNN 3D pequeña (ResNet-10) entrenada en LibTorch, exportada a ONNX con TorchScript. Permite GradCAM verdadero con gradientes. | 🟡 Media |
+| **B6** | **Soporte DCE-MRI 4D** — El tensor `VolumeData[X,Y,Z,T]` ya soporta 4D. Añadir slider temporal en ImGui para navegar fases de contraste y ver evolución de los diagramas de persistencia. | 🟢 Baja |
+| **B7** | **Integración UMAP** — `ManifoldProjector` usa solo PCA. Implementar UMAP (biblioteca `umappp` header-only) para mejor separación del espacio latente. | 🟢 Baja |
+| **B8** | **Exportar resultados** — Botón en ImGui para exportar: screenshot PNG, diagrama de persistencia CSV, saliency map NIfTI `.nii.gz`. | 🟢 Baja |
 
 ---
 
-## Tareas pendientes (backlog)
+## Datos y modelo
 
-Lista completa de trabajo pendiente por orden de prioridad:
+### Phantoms sintéticos
 
-| # | Tarea | Prioridad | Bloquea |
-|---|---|---|---|
-| T1 | **Corregir nombres de inputs ONNX** — `ModelInference.cpp` usa `input_names={"input"}` pero el modelo tiene dos entradas separadas: `"image_features"` y `"tda_features"`. La sesión falla en runtime. | 🔴 Alta | T5 |
-| T2 | **Fase 2a — VolumeRenderer: ray casting** — Compilar shaders `volume_raycast.vert/.frag`, crear VAO/VBO del cubo unitario [0,1]³, pasar uniforms (u_volume, u_saliency, u_transfer, matrices), draw call real. | 🔴 Alta | T7 |
-| T3 | **Fase 2b — DiagramRenderer: scatter plot** — Compilar `diagram.vert/.frag`, VBO con `(birth, death)`, color por dimensión (H0=azul/H1=verde/H2=rojo), dibujar diagonal `y=x`, escala automática de ejes. | 🔴 Alta | T7 |
-| T4 | **Fase 2c — ManifoldRenderer: scatter 3D** — Compilar `manifold.vert/.frag`, VBO con `vec3(coords)` + label, resaltado del punto seleccionado, hit test para click/hover. | 🟡 Media | T7 |
-| T5 | **Fase 3 — Integrated Gradients** — Sustituir la perturbación de bloques actual por Integrated Gradients (interpolar baseline→input en N=50 pasos, medir variación de score). Misma interfaz `GradCAM::compute()`. | 🟡 Media | — |
-| T6 | **Fase 4 — Dear ImGui UI** — Inicializar `imgui_impl_glfw` + `imgui_impl_opengl3` en `RenderEngine::init()`. Implementar `src/ui/*.cpp`: slider threshold, transfer function editor, toggle GradCAM, exportar CSV. | 🟡 Media | T2 T3 T4 |
-| T7 | **Fase 5 — Enlace diagrama↔volumen** — Durante `VietorisRips::compute()`, guardar mapa `simplex → vóxeles`. Implementar `voxelsForPersistenceRegion()`. Resaltar vóxeles en VolumeRenderer con textura de selección `GL_R8`. | 🟢 Baja | T2 T3 |
-| T8 | **Fase 6 — Dataset real CBIS-DDSM** — Descargar de cancerimagingarchive.net, ajustar `intensity_threshold` para HU reales, exportar modelo CNN real a ONNX, medir tiempos de filtración Rips en volúmenes de producción. | 🟢 Baja | T1 T2 |
-
----
-
-## Lo que queda por implementar
-
-### Fase 2 — Pipeline de render completo
-
-**Prioridad alta.** El motor OpenGL arranca, crea la ventana y los contextos correctamente, pero los tres paneles muestran fondo negro porque los shaders no están enlazados.
-
-Los shaders GLSL están escritos y son correctos (`shaders/glsl/`). Lo que falta es el código C++ que los carga, compila y ejecuta:
-
-```
-src/render/VolumeRenderer.cpp
-  └── TODO: compilar volume_raycast.vert + volume_raycast.frag
-            crear VAO cubo unitario [0,1]³
-            pasar u_volume, u_saliency, u_transfer, u_step_size
-            ejecutar ray marching en render()
-
-src/render/DiagramRenderer.cpp
-  └── TODO: compilar diagram.vert + diagram.frag
-            VBO con vec2(birth, death) por punto
-            uniform de color por dimensión (H0=azul, H1=verde, H2=rojo)
-            dibujar la diagonal y = x (referencia de persistencia cero)
-
-src/render/ManifoldRenderer.cpp
-  └── TODO: compilar manifold.vert + manifold.frag
-            VBO con vec3(x,y,z) + label por ProjectedPoint
-            hit test para hover/click
-```
-
-**Estimación:** 3-4 días de trabajo.
-
-### Fase 3 — GradCAM real con gradientes
-
-La implementación actual usa perturbación de bloques (zeroing de parches) como aproximación. Es correcta semánticamente pero lenta O(n/block) inferencias.
-
-GradCAM verdadero requiere gradientes `∂score/∂activations`. Opciones:
-
-- **LibTorch C++ API**: reexportar el modelo PyTorch como TorchScript y usar `torch::autograd`.
-- **ONNX Runtime Training**: aún experimental para inferencia con gradientes.
-- **Opción pragmática**: Integrated Gradients por perturbación del input (más preciso que block zeroing, sin necesitar backprop).
-
-### Fase 4 — Dear ImGui UI
-
-Los ficheros `src/ui/*.cpp` están compilados pero vacíos. Implementar:
-
-- Panel izquierdo: parámetros TDA (threshold, max_ε, min_persistence).
-- Panel derecho: resultado de clasificación, confianza, transfer function editor.
-- Timeline (DCE-MRI): slider temporal para ver evolución de los diagramas de persistencia.
-
-### Fase 5 — Enlace entre vistas
-
-El callback `onDiagramClick` está registrado en `main.cpp` pero `voxelsForPersistenceRegion()` devuelve vacío. Para activarlo:
-
-- Durante `VietorisRips::compute()`, guardar un `map<simplex_handle, vector<int>>` que asocie cada simplice con los vóxeles que lo originaron.
-- Al hacer click en un punto `(birth, death, dim)`, buscar el simplice más crítico y resaltar sus vóxeles en el VolumeRenderer (usando un canal de selección en la textura 3D).
-
-### Fase 6 — Dataset real
-
-Para validación científica real se recomienda el dataset **CBIS-DDSM** (Curated Breast Imaging Subset of DDSM) disponible en The Cancer Imaging Archive:
-
-```
-https://www.cancerimagingarchive.net/collection/cbis-ddsm/
-```
-
-Requiere registro gratuito. Contiene 2620 mamografías con anotaciones de calcificaciones y masas. El DicomLoader actual es compatible directamente.
-
----
-
-## Datos de prueba sintéticos
-
-Los scripts en `scripts/` generan datos mínimos para verificar el pipeline sin datos médicos reales.
-
-### `scripts/gen_dicom.py`
-
-Genera 32 slices DICOM de 64×64 píxeles con:
-- Fondo de ruido gaussiano (μ=100, σ=15 HU).
-- Un blob gaussiano centrado que simula una masa o grupo de microcalcificaciones.
-- Metadatos DICOM válidos (Series UID, Instance Number, ImagePositionPatient).
-- Compatible con `itk::GDCMSeriesFileNames` (el loader de producción).
+Generados con `scripts/gen_realistic_phantom.py`:
+- **Volumen**: 128×128×48 vóxeles, 30 slices DICOM por caso.
+- **Maligno** (`--pattern malignant`): cluster lineal de microcalcificaciones (distribución ductal), masa irregular de alta densidad, bordes espiculados simulados.
+- **Benigno** (`--pattern benign`): calcificaciones dispersas de baja densidad, masa redondeada con bordes lisos.
 
 ```bash
-python3 scripts/gen_dicom.py data/samples/case001
-# Genera: data/samples/case001/slice_0000.dcm ... slice_0031.dcm
+# Generar un caso maligno de prueba
+python3 scripts/gen_realistic_phantom.py data/mi_caso --pattern malignant --seed 42
 ```
 
-### `scripts/gen_onnx_model.py`
+### Modelo entrenado
 
-Genera un MLP de dos capas:
+| Parámetro | Valor |
+|---|---|
+| Algoritmo | GradientBoostingClassifier (sklearn) + StandardScaler |
+| n_estimators | 200 |
+| max_depth | 4 |
+| learning_rate | 0.1 |
+| Datos entrenamiento | 30 casos sintéticos (15 mal + 15 ben) |
+| CV Accuracy | 0.967 ± 0.067 |
+| CV AUC | 1.000 ± 0.000 |
+| Formato ONNX | opset 17, IR version 8 |
+| Entradas | `image_features[1,512]` + `tda_features[1,192]` |
+| Salida | `logits[1,2]` (benigno, maligno) |
 
-```
-image_features [1, 512]  ─┐
-                            ├─ Concat[1,704] ─ Linear(704,128) ─ ReLU ─ Linear(128,2) ─ logits[1,2]
-tda_features   [1, 192]  ─┘
-```
-
-Los pesos son aleatorios (semilla=0), la arquitectura es válida y `onnx.checker.check_model()` la valida. Suficiente para verificar la integración con ONNX Runtime.
-
-```bash
-python3 scripts/gen_onnx_model.py
-# Genera: data/models/breast_cnn.onnx (354 KB)
-```
+> **Nota importante**: El modelo fue entrenado sobre phantoms sintéticos. Los resultados de clasificación en datos de entrenamiento son informativos pero no representan rendimiento clínico real. Para uso en investigación clínica, re-entrenar con CBIS-DDSM u otro dataset real.
 
 ---
 
 ## Configuración
 
-`config.toml` en el directorio de trabajo controla todos los parámetros en tiempo de ejecución:
+`config.toml` controla todos los parámetros en tiempo de ejecución:
 
 ```toml
 [io]
-dicom_dir           = "data/samples/case001"   # directorio DICOM o ruta .mha
+dicom_dir           = "data/samples/case001"
 model_path          = "data/models/breast_cnn.onnx"
 
 [tda]
-intensity_threshold = 0.85    # umbral [0,1] para extracción de punto cloud
-max_edge_length     = 5.0     # ε máximo en mm para la filtración Rips
-max_dimension       = 2       # calcular H0, H1, H2 (β0, β1, β2)
-min_persistence     = 0.3     # eliminar ruido topológico (persistence < esto)
-max_points          = 50000   # subsampling si el point cloud es mayor
+intensity_threshold = 0.85    # umbral para extracción de point cloud
+max_edge_length     = 5.0     # ε máximo en mm para filtración Rips
+max_dimension       = 2       # H0, H1, H2
+min_persistence     = 0.3     # eliminar ruido topológico
+max_points          = 50000   # subsampling si point cloud es mayor
 
 [nn]
-hook_layers         = ["layer3", "layer4"]  # capas CNN para GradCAM
-target_class        = -1                    # -1 = clase predicha
+hook_layers         = ["layer3", "layer4"]
+target_class        = -1      # -1 = clase predicha automáticamente
 
 [xai]
 umap_neighbors      = 15
@@ -492,46 +435,41 @@ umap_min_dist       = 0.1
 umap_epochs         = 200
 
 [render]
-width               = 1920
-height              = 1080
+width               = 1280
+height              = 720
 vsync               = true
-msaa                = true
-ray_step_size       = 0.003            # paso del ray marching (menor = más calidad)
+msaa                = false
+ray_step_size       = 0.003
 show_gradcam        = true
-transfer_fn         = "breast_default" # "breast_default" | "calcification"
+transfer_fn         = "breast_default"  # "breast_default" | "calcification"
 ```
 
 ---
 
 ## Tests unitarios
 
-Los tests validan el núcleo matemático del TDA independientemente del resto del sistema:
-
 ```bash
-cd build
-ctest --output-on-failure         # todos los tests
-./tests/test_tda --gtest_list_tests  # listar tests disponibles
-./tests/test_tda --gtest_filter=PersistenceDiagram.CSVRoundtrip  # test específico
+cd build && ctest --output-on-failure
 ```
 
-| Test | Lo que verifica |
+| Test | Verifica |
 |---|---|
-| `FeatureVectorSize` | El histograma de persistencia tiene exactamente `3 × 64 = 192` entradas y está L2-normalizado (norma ≈ 1). |
-| `FilteredRemovesNoise` | `filtered(min_persistence=0.1)` elimina features de corta vida y conserva los reales. |
-| `CSVRoundtrip` | `saveCSV` + `loadCSV` preservan birth, death y dimension sin pérdida de precisión. |
+| `FeatureVectorSize` | `toFeatureVector()` devuelve exactamente 192 elementos. |
+| `FilteredRemovesNoise` | `filtered(min_pers=0.1)` elimina ruido y conserva features reales. |
+| `CSVRoundtrip` | `saveCSV` + `loadCSV` preservan birth, death y dimension. |
 | `BottleneckDistanceSelf` | La distancia bottleneck de un diagrama consigo mismo es 0. |
+
+> **Pendiente**: Los tests de `toFeatureVector` verifican tamaño pero no el layout interno. Añadir tests que verifiquen que `feat[0]` == count_H0, etc., para detectar regresiones si cambia el layout.
 
 ---
 
 ## Notas técnicas de compilación
 
-Este proyecto usa **GCC 16.1.1** sobre **Arch Linux** con **CMake 4.3.2**. Esa combinación introduce varias incompatibilidades que el `CMakeLists.txt` resuelve explícitamente:
+Este proyecto usa **GCC 16** sobre **Arch Linux** con **CMake 4.3.x**, combinación con incompatibilidades conocidas resueltas en `CMakeLists.txt`:
 
 ### GCC 16 + CMake 4.3.x: feature tables vacías
 
-CMake 4.3.2 se publicó antes de que GCC 16 existiera. Cuando CMake intenta detectar las features de C++ soportadas por GCC 16, no tiene tabla de referencia y `CMAKE_CXX_COMPILE_FEATURES` queda vacío. Esto hace que cualquier `target_compile_features(cxx_std_20)` — incluyendo los de Eigen3 e ITK — falle con _"No known features for GNU 16.x"_.
-
-**Solución**: inyección manual de la tabla completa de features vía `CACHE STRING FORCE` antes de cualquier `find_package`:
+CMake 4.3 se publicó antes que GCC 16 y no tiene sus tablas de features C++. Se inyectan manualmente via `CACHE STRING FORCE`:
 
 ```cmake
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND
@@ -542,32 +480,35 @@ endif()
 
 ### `-isystem /usr/include` rompe `#include_next` en GCC 16
 
-En GCC 16, `<cstdlib>` usa `#include_next <stdlib.h>` para delegar en la versión C de la cabecera. Si `/usr/include` aparece como `-isystem /usr/include` en la línea de compilación, GCC 16 reordena el path de búsqueda de un modo que hace que `#include_next` no encuentre `stdlib.h`.
+`<cstdlib>` usa `#include_next <stdlib.h>`. Con `-isystem /usr/include`, GCC 16 reordena el search path y no encuentra `stdlib.h`. Solución: `set(CMAKE_NO_SYSTEM_FROM_IMPORTED TRUE)`.
 
-En Arch, el paquete de sistema de GTest exporta `INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "/usr/include"`. La variable `CMAKE_NO_SYSTEM_FROM_IMPORTED` solo suprime la promoción automática de `INTERFACE_INCLUDE_DIRECTORIES` a sistema — NO afecta a `INTERFACE_SYSTEM_INCLUDE_DIRECTORIES`, que siempre se emite como `-isystem`.
+### GLFW + GLEW en Wayland/XWayland
 
-**Solución**: limpiar explícitamente ambas propiedades en `tests/CMakeLists.txt`:
-
-```cmake
-foreach(_gt_tgt IN ITEMS GTest::gtest GTest::gtest_main GTest::gmock GTest::gmock_main)
-    if(TARGET ${_gt_tgt})
-        set_target_properties(${_gt_tgt} PROPERTIES
-            INTERFACE_SYSTEM_INCLUDE_DIRECTORIES ""
-            INTERFACE_INCLUDE_DIRECTORIES        "")
-    endif()
-endforeach()
-```
+En sistemas Wayland, GLEW necesita GLX. Se fuerza la plataforma X11 con `glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_X11)` y `glewExperimental = GL_TRUE` antes de `glewInit()`.
 
 ### GUDHI 3.10: `FetchContent_MakeAvailable` falla
 
-GUDHI tiene su propio `CMakeLists.txt` que no es compatible con `FetchContent_MakeAvailable` (intenta configurar su propio proyecto completo). Se usa `FetchContent_Populate` (nivel bajo) para solo descargar y extraer los fuentes, y luego crear manualmente el target `INTERFACE`:
+GUDHI no es compatible con `FetchContent_MakeAvailable`. Se usa `FetchContent_Populate` (solo descarga) y se crea el target INTERFACE manualmente:
 
 ```cmake
-FetchContent_Populate(gudhi)   # solo descarga, no configura
+FetchContent_Populate(gudhi)
 add_library(gudhi INTERFACE)
 target_include_directories(gudhi INTERFACE ${gudhi_SOURCE_DIR}/include)
 ```
 
-### GUDHI 3.10: namespace `Gudhi::` (mayúscula G)
+### GLSL 4.6: palabras reservadas
 
-Versiones anteriores de GUDHI usaban `gudhi::`. GUDHI 3.x usa `Gudhi::`. Todos los tipos en `VietorisRips.cpp` usan el namespace correcto.
+`sample` y `step` son palabras reservadas en GLSL 4.x. Los shaders usan `rgba` y `dt` como nombres de variables locales.
+
+### ONNX Runtime 1.17.0: compatibilidad de versiones
+
+ORT 1.17.0 soporta opset ≤ 20 e IR version ≤ 9. El modelo se exporta con opset 17 e IR 8. Si se regenera el modelo con una versión más nueva de `skl2onnx` o `onnx`, puede producir versiones superiores — aplicar:
+
+```python
+import onnx
+from onnx import version_converter
+model = onnx.load("data/models/breast_cnn.onnx")
+model = version_converter.convert_version(model, 17)
+model.ir_version = 8
+onnx.save(model, "data/models/breast_cnn.onnx")
+```
