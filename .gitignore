@@ -1,0 +1,9 @@
+build/
+*.o
+*.a
+*.so
+*.spv
+compile_commands.json
+.cache/
+data/samples/
+data/models/*.onnx
