@@ -1,0 +1,46 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "/home/nickhernd/Desktop/mammoviz-tda/build_test/_deps/gudhi-subbuild/CMakeFiles/gudhi-populate"
+		},
+		{
+			"file" : "/home/nickhernd/Desktop/mammoviz-tda/build_test/_deps/gudhi-subbuild/CMakeFiles/gudhi-populate.rule"
+		},
+		{
+			"file" : "/home/nickhernd/Desktop/mammoviz-tda/build_test/_deps/gudhi-subbuild/CMakeFiles/gudhi-populate-complete.rule"
+		},
+		{
+			"file" : "/home/nickhernd/Desktop/mammoviz-tda/build_test/_deps/gudhi-subbuild/gudhi-populate-prefix/src/gudhi-populate-stamp/gudhi-populate-build.rule"
+		},
+		{
+			"file" : "/home/nickhernd/Desktop/mammoviz-tda/build_test/_deps/gudhi-subbuild/gudhi-populate-prefix/src/gudhi-populate-stamp/gudhi-populate-configure.rule"
+		},
+		{
+			"file" : "/home/nickhernd/Desktop/mammoviz-tda/build_test/_deps/gudhi-subbuild/gudhi-populate-prefix/src/gudhi-populate-stamp/gudhi-populate-download.rule"
+		},
+		{
+			"file" : "/home/nickhernd/Desktop/mammoviz-tda/build_test/_deps/gudhi-subbuild/gudhi-populate-prefix/src/gudhi-populate-stamp/gudhi-populate-install.rule"
+		},
+		{
+			"file" : "/home/nickhernd/Desktop/mammoviz-tda/build_test/_deps/gudhi-subbuild/gudhi-populate-prefix/src/gudhi-populate-stamp/gudhi-populate-mkdir.rule"
+		},
+		{
+			"file" : "/home/nickhernd/Desktop/mammoviz-tda/build_test/_deps/gudhi-subbuild/gudhi-populate-prefix/src/gudhi-populate-stamp/gudhi-populate-patch.rule"
+		},
+		{
+			"file" : "/home/nickhernd/Desktop/mammoviz-tda/build_test/_deps/gudhi-subbuild/gudhi-populate-prefix/src/gudhi-populate-stamp/gudhi-populate-test.rule"
+		},
+		{
+			"file" : "/home/nickhernd/Desktop/mammoviz-tda/build_test/_deps/gudhi-subbuild/gudhi-populate-prefix/src/gudhi-populate-stamp/gudhi-populate-update.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"gudhi-populate"
+		],
+		"name" : "gudhi-populate"
+	}
+}

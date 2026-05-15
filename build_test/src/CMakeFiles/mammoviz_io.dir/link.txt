@@ -1,0 +1,2 @@
+/usr/bin/ar qc libmammoviz_io.a CMakeFiles/mammoviz_io.dir/io/DicomLoader.cpp.o CMakeFiles/mammoviz_io.dir/io/VolumeData.cpp.o
+/usr/bin/ranlib libmammoviz_io.a

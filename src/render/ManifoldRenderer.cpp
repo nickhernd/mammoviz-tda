@@ -10,7 +10,7 @@ ManifoldRenderer::~ManifoldRenderer() {
     if (m_vbo) glDeleteBuffers(1, &m_vbo);
 }
 
-void ManifoldRenderer::setPoints(const std::vector<xai::ManifoldProjector::ProjectedPoint>& pts) {
+void ManifoldRenderer::setPoints(const std::vector<xai::ProjectedPoint>& pts) {
     m_points = pts;
     LOG_INFO("Manifold: {} projected samples loaded", pts.size());
 }

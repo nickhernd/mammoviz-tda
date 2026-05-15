@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include <memory>
+#include <string>
 #include "xai/ManifoldProjector.h"
 
 namespace mmviz::render {
@@ -14,7 +15,7 @@ public:
     ManifoldRenderer();
     ~ManifoldRenderer();
 
-    void setPoints(const std::vector<xai::ManifoldProjector::ProjectedPoint>& pts);
+    void setPoints(const std::vector<xai::ProjectedPoint>& pts);
 
     // Highlight the currently selected sample
     void setSelectedSample(const std::string& sample_id);
@@ -34,7 +35,7 @@ private:
     unsigned int m_vao        = 0;
     unsigned int m_vbo        = 0;
 
-    std::vector<xai::ManifoldProjector::ProjectedPoint> m_points;
+    std::vector<xai::ProjectedPoint> m_points;
     std::string m_selected_id;
     bool        m_trajectories = false;
 };

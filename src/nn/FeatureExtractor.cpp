@@ -6,7 +6,7 @@
 
 namespace mmviz::nn {
 
-FeatureExtractor::FeatureExtractor(const Params& p) : m_params(p) {}
+FeatureExtractor::FeatureExtractor(const FeatureExtractorParams& p) : m_params(p) {}
 
 std::vector<float> FeatureExtractor::extract(const io::VolumeData& vol) const {
     const int P = m_params.patch_size;

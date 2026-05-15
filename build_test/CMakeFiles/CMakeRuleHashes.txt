@@ -1,0 +1,8 @@
+# Hashes of file build rules.
+0a8d33cb2809d03bc3568b77800070a3 /home/nickhernd/Desktop/mammoviz-tda/shaders/spirv/diagram.frag.spv
+271211423705ddb7adce6d8f447455e8 /home/nickhernd/Desktop/mammoviz-tda/shaders/spirv/diagram.vert.spv
+420f485d71ed1d0988ca742f5da8d7c1 /home/nickhernd/Desktop/mammoviz-tda/shaders/spirv/manifold.frag.spv
+eee8a76e7bff8935114740f8cf22a230 /home/nickhernd/Desktop/mammoviz-tda/shaders/spirv/manifold.vert.spv
+8d6b64479979e008f5422456035bb957 /home/nickhernd/Desktop/mammoviz-tda/shaders/spirv/volume_raycast.frag.spv
+389cbf906133fd0c1c32e7b86dae2c84 /home/nickhernd/Desktop/mammoviz-tda/shaders/spirv/volume_raycast.vert.spv
+8f0f71b22073cbec87b6773a4ddd36e4 shaders/CMakeFiles/shaders

@@ -1,0 +1,10 @@
+{
+	"InstallScripts" : 
+	[
+		"/home/nickhernd/Desktop/mammoviz-tda/build_test/cmake_install.cmake",
+		"/home/nickhernd/Desktop/mammoviz-tda/build_test/src/cmake_install.cmake",
+		"/home/nickhernd/Desktop/mammoviz-tda/build_test/shaders/cmake_install.cmake",
+		"/home/nickhernd/Desktop/mammoviz-tda/build_test/tests/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

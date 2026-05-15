@@ -10,7 +10,7 @@
 
 namespace mmviz::render {
 
-RenderEngine::RenderEngine(const Config& cfg) : m_cfg(cfg) {}
+RenderEngine::RenderEngine(const RenderConfig& cfg) : m_cfg(cfg) {}
 
 RenderEngine::~RenderEngine() { shutdown(); }
 

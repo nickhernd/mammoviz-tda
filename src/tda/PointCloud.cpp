@@ -7,7 +7,7 @@
 namespace mmviz::tda {
 
 PointCloud PointCloud::fromVolume(const io::VolumeData& vol,
-                                  const ExtractionParams& params) {
+                                  const PointCloudParams& params) {
     PointCloud pc;
     const int X = vol.shape[0], Y = vol.shape[1], Z = vol.shape[2];
     const auto& sp = vol.spacing;

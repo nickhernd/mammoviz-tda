@@ -1,0 +1,7 @@
+{
+	"InstallScripts" : 
+	[
+		"/home/nickhernd/Desktop/mammoviz-tda/build_test/_deps/gudhi-subbuild/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

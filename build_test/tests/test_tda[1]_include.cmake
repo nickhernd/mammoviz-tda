@@ -1,0 +1,5 @@
+if(EXISTS "/home/nickhernd/Desktop/mammoviz-tda/build_test/tests/test_tda[1]_tests.cmake")
+  include("/home/nickhernd/Desktop/mammoviz-tda/build_test/tests/test_tda[1]_tests.cmake")
+else()
+  add_test(test_tda_NOT_BUILT test_tda_NOT_BUILT)
+endif()

@@ -1,0 +1,2 @@
+/usr/bin/ar qc libmammoviz_utils.a CMakeFiles/mammoviz_utils.dir/utils/Logger.cpp.o CMakeFiles/mammoviz_utils.dir/utils/Config.cpp.o CMakeFiles/mammoviz_utils.dir/utils/Timer.cpp.o
+/usr/bin/ranlib libmammoviz_utils.a

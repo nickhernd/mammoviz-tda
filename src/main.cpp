@@ -70,7 +70,7 @@ int main(int argc, char** argv) {
 
     diag_renderer->setDiagram(diagram);
 
-    render::RenderEngine engine;
+    render::RenderEngine engine{render::RenderConfig{}};
     engine.setVolumeRenderer(vol_renderer);
     engine.setDiagramRenderer(diag_renderer);
     engine.setManifoldRenderer(mfld_renderer);

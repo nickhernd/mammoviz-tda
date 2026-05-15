@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include <cmath>
 #include "tda/PointCloud.h"
 #include "tda/VietorisRips.h"
 #include "tda/PersistenceDiagram.h"
@@ -15,7 +16,7 @@ static mmviz::tda::PointCloud makeCircle(int n = 30, float r = 1.0f) {
     vol.data.assign(n, 1.0f);
 
     // Build point cloud directly — circle in XY plane
-    mmviz::tda::PointCloud::ExtractionParams p;
+    mmviz::tda::PointCloudParams p;
     p.intensity_min  = 0.0f;
     p.apply_spacing  = false;
     p.max_points     = 10000;

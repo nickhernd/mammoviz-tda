@@ -1,0 +1,2 @@
+/usr/bin/ar qc libmammoviz_render.a CMakeFiles/mammoviz_render.dir/render/RenderEngine.cpp.o CMakeFiles/mammoviz_render.dir/render/VolumeRenderer.cpp.o CMakeFiles/mammoviz_render.dir/render/DiagramRenderer.cpp.o CMakeFiles/mammoviz_render.dir/render/ManifoldRenderer.cpp.o
+/usr/bin/ranlib libmammoviz_render.a

@@ -1,0 +1,2 @@
+/usr/bin/ar qc libmammoviz_nn.a CMakeFiles/mammoviz_nn.dir/nn/ModelInference.cpp.o CMakeFiles/mammoviz_nn.dir/nn/FeatureExtractor.cpp.o
+/usr/bin/ranlib libmammoviz_nn.a

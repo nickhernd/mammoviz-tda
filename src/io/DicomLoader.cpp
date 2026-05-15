@@ -20,11 +20,11 @@ using PixelType    = float;
 using ImageType3D  = itk::Image<PixelType, 3>;
 using ImageType4D  = itk::Image<PixelType, 4>;
 
-DicomLoader::DicomLoader(const LoadOptions& opts) : m_opts(opts) {}
+DicomLoader::DicomLoader(const DicomLoadOptions& opts) : m_opts(opts) {}
 
 static std::unique_ptr<VolumeData> itkImageToVolume(
     typename ImageType3D::Pointer img,
-    const DicomLoader::LoadOptions& opts)
+    const DicomLoadOptions& opts)
 {
     auto region  = img->GetLargestPossibleRegion();
     auto size    = region.GetSize();

@@ -1,0 +1,2 @@
+/usr/bin/ar qc libmammoviz_xai.a CMakeFiles/mammoviz_xai.dir/xai/GradCAM.cpp.o CMakeFiles/mammoviz_xai.dir/xai/ManifoldProjector.cpp.o
+/usr/bin/ranlib libmammoviz_xai.a
