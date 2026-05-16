@@ -19,10 +19,26 @@ public:
     };
 
     struct TransferFunction {
-        // Maps intensity [0,1] → RGBA color+opacity
-        std::vector<std::array<float,4>> lut;  // 256-entry lookup table
+        std::vector<std::array<float,4>> lut;
         static TransferFunction breastDefault();
         static TransferFunction calcificationHighlight();
+    };
+
+    // Per-layer rendering parameters (controlled from ImGui)
+    struct LayerParams {
+        struct Layer {
+            float r = 1.f, g = 1.f, b = 1.f;
+            float opacity = 1.f;
+            bool  visible = true;
+        };
+        Layer fat     = {0.95f, 0.82f, 0.35f, 1.f, true};  // warm yellow
+        Layer gland   = {0.85f, 0.45f, 0.55f, 1.f, true};  // rose pink
+        Layer dense   = {1.00f, 0.78f, 0.55f, 1.f, true};  // orange
+        Layer calc    = {1.00f, 0.97f, 0.65f, 1.f, true};  // bright yellow-white
+        float lesion_sal_thresh = 0.08f;
+        float lesion_opacity    = 1.00f;
+        bool  lesion_visible    = true;
+        float clip_x = 1.f, clip_y = 1.f, clip_z = 1.f;   // 1=no clip
     };
 
     VolumeRenderer();
@@ -33,6 +49,7 @@ public:
 
     void setRenderMode(RenderMode mode);
     void setTransferFunction(const TransferFunction& tf);
+    void setLayerParams(const LayerParams& lp);
     void setCameraPos(float x, float y, float z);
     void setGradCAM(bool enabled);
 
@@ -58,6 +75,7 @@ private:
 
     RenderMode     m_mode = RenderMode::GradCAMOverlay;
     TransferFunction m_tf;
+    LayerParams    m_layers;
     float m_cam_x = 0.5f, m_cam_y = 0.5f, m_cam_z = 2.5f;
     bool  m_gradcam_on = true;
 

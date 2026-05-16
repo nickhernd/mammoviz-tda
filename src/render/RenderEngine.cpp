@@ -144,12 +144,15 @@ void RenderEngine::initImGui() {
 
     ImGui_ImplGlfw_InitForOpenGL(m_window, true);
     ImGui_ImplOpenGL3_Init("#version 460 core");
+    m_imgui_initialized = true;
     LOG_INFO("ImGui initialized");
 #endif
 }
 
 void RenderEngine::shutdownImGui() {
 #ifdef HAVE_IMGUI
+    if (!m_imgui_initialized) return;
+    m_imgui_initialized = false;
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
@@ -212,12 +215,12 @@ void RenderEngine::renderFrame() {
     // Build orbit camera for volume
     float ex, ey, ez;
     orbitCamera(m_cam_azimuth, m_cam_elevation, m_cam_distance, ex, ey, ez);
-    if (m_volume) m_volume->setCameraPos(ex, ey, ez);
-    if (m_volume) m_volume->setGradCAM(m_show_gradcam);
-    if (m_volume && m_tf_mode == 1)
-        m_volume->setTransferFunction(VolumeRenderer::TransferFunction::calcificationHighlight());
-    else if (m_volume && m_tf_mode == 0)
-        m_volume->setTransferFunction(VolumeRenderer::TransferFunction::breastDefault());
+    if (m_volume) {
+        m_volume->setCameraPos(ex, ey, ez);
+        m_volume->setGradCAM(m_show_gradcam);
+        m_layers.lesion_visible = m_show_gradcam;
+        m_volume->setLayerParams(m_layers);
+    }
 
     // Left panel: volume (top 2/3 of render area)
     if (m_volume) {
@@ -345,20 +348,86 @@ void RenderEngine::renderImGui() {
     ImGui::Separator();
     ImGui::Spacing();
 
-    // ── Rendering controls ────────────────────────────────────────────────────
-    if (ImGui::CollapsingHeader("Rendering", ImGuiTreeNodeFlags_DefaultOpen)) {
-        ImGui::Checkbox("GradCAM overlay [G]", &m_show_gradcam);
+    // ── Anatomical layers ─────────────────────────────────────────────────────
+    if (ImGui::CollapsingHeader("Anatomical Layers", ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.70f,0.85f,1.0f,1.f));
+        ImGui::Text("Layer          Vis  Opacity");
+        ImGui::PopStyleColor();
+        ImGui::Separator();
+
+        // Helper lambda: one row per layer
+        auto layerRow = [&](const char* name, ImVec4 dot_col,
+                            bool& vis, float& opacity, float r, float g, float b) {
+            ImGui::PushID(name);
+            // Colored dot
+            ImVec2 p = ImGui::GetCursorScreenPos();
+            ImGui::GetWindowDrawList()->AddCircleFilled(
+                {p.x + 6, p.y + 8}, 5, IM_COL32(
+                    (int)(r*255),(int)(g*255),(int)(b*255),255));
+            ImGui::Dummy({14, 0}); ImGui::SameLine();
+            ImGui::Text("%-13s", name); ImGui::SameLine();
+            ImGui::Checkbox("##v", &vis); ImGui::SameLine();
+            ImGui::SetNextItemWidth(80);
+            ImGui::SliderFloat("##o", &opacity, 0.f, 1.f, "%.2f");
+            ImGui::PopID();
+        };
+
+        auto& ly = m_layers;
+        layerRow("Fat",        {}, ly.fat.visible,   ly.fat.opacity,   0.95f,0.82f,0.35f);
+        layerRow("Glandular",  {}, ly.gland.visible, ly.gland.opacity, 0.85f,0.45f,0.55f);
+        layerRow("Dense",      {}, ly.dense.visible, ly.dense.opacity, 1.00f,0.78f,0.55f);
+        layerRow("Calcif.",    {}, ly.calc.visible,  ly.calc.opacity,  1.00f,0.97f,0.65f);
+
         ImGui::Spacing();
-        const char* tf_items[] = { "Breast tissue", "Calcification" };
-        ImGui::Text("Transfer function:");
-        ImGui::Combo("##tf", &m_tf_mode, tf_items, 2);
+        ImGui::Separator();
+        // GradCAM / lesion overlay row
+        ImGui::PushID("lesion");
+        ImVec2 p2 = ImGui::GetCursorScreenPos();
+        ImGui::GetWindowDrawList()->AddCircleFilled(
+            {p2.x+6,p2.y+8}, 5, IM_COL32(255,40,20,255));
+        ImGui::Dummy({14,0}); ImGui::SameLine();
+        ImGui::Text("%-13s", "Lesion/CAM"); ImGui::SameLine();
+        ImGui::Checkbox("##v", &m_show_gradcam); ImGui::SameLine();
+        ImGui::SetNextItemWidth(80);
+        ImGui::SliderFloat("##o", &ly.lesion_opacity, 0.f, 1.f, "%.2f");
+        ImGui::PopID();
+
         ImGui::Spacing();
-        ImGui::Text("Camera [drag/scroll]");
-        ImGui::Text("  Az: %.1f  El: %.1f", m_cam_azimuth, m_cam_elevation);
-        ImGui::Text("  Dist: %.2f", m_cam_distance);
-        if (ImGui::Button("Reset camera [R]", {-1, 0})) {
-            m_cam_azimuth = 0.f; m_cam_elevation = 20.f; m_cam_distance = 2.5f;
+        ImGui::Text("CAM threshold:"); ImGui::SameLine();
+        ImGui::SetNextItemWidth(-1);
+        ImGui::SliderFloat("##sal", &ly.lesion_sal_thresh, 0.f, 0.8f, "%.2f");
+    }
+
+    ImGui::Separator();
+    ImGui::Spacing();
+
+    // ── Clip planes ───────────────────────────────────────────────────────────
+    if (ImGui::CollapsingHeader("Clip Planes (Peel)")) {
+        ImGui::TextDisabled("Slide left to peel away layers");
+        ImGui::Spacing();
+        ImGui::Text("X (Left→Right)");
+        ImGui::SetNextItemWidth(-1);
+        ImGui::SliderFloat("##cx", &m_layers.clip_x, 0.1f, 1.f, "%.2f");
+        ImGui::Text("Y (Bot→Top)");
+        ImGui::SetNextItemWidth(-1);
+        ImGui::SliderFloat("##cy", &m_layers.clip_y, 0.1f, 1.f, "%.2f");
+        ImGui::Text("Z (Front→Back)");
+        ImGui::SetNextItemWidth(-1);
+        ImGui::SliderFloat("##cz", &m_layers.clip_z, 0.1f, 1.f, "%.2f");
+        if (ImGui::Button("Reset planes", {-1,0})) {
+            m_layers.clip_x = m_layers.clip_y = m_layers.clip_z = 1.f;
         }
+    }
+
+    ImGui::Separator();
+    ImGui::Spacing();
+
+    // ── Camera ────────────────────────────────────────────────────────────────
+    if (ImGui::CollapsingHeader("Camera")) {
+        ImGui::Text("Az: %.1f  El: %.1f", m_cam_azimuth, m_cam_elevation);
+        ImGui::Text("Dist: %.2f", m_cam_distance);
+        if (ImGui::Button("Reset [R]", {-1, 0}))
+            m_cam_azimuth = 0.f, m_cam_elevation = 20.f, m_cam_distance = 2.5f;
     }
 
     ImGui::Separator();
@@ -366,7 +435,7 @@ void RenderEngine::renderImGui() {
 
     // ── Shortcuts footer ──────────────────────────────────────────────────────
     ImGui::TextDisabled("ESC  Exit");
-    ImGui::TextDisabled("G    Toggle GradCAM");
+    ImGui::TextDisabled("G    Toggle lesion");
     ImGui::TextDisabled("R    Reset camera");
 
     ImGui::End();

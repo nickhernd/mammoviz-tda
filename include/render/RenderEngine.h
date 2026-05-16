@@ -3,12 +3,12 @@
 #include <functional>
 #include <string>
 #include <vector>
+#include "render/VolumeRenderer.h"
 
 struct GLFWwindow;
 
 namespace mmviz::render {
 
-class VolumeRenderer;
 class DiagramRenderer;
 class ManifoldRenderer;
 
@@ -80,9 +80,13 @@ private:
     double m_last_mx = 0, m_last_my = 0;
 
     // UI toggles
-    bool m_show_gradcam   = true;
-    bool m_show_tda_panel = true;
-    int  m_tf_mode        = 0;  // 0=breast, 1=calcification highlight
+    bool m_show_gradcam        = true;
+    bool m_show_tda_panel      = true;
+    int  m_tf_mode             = 0;
+    bool m_imgui_initialized   = false;
+
+    // Anatomical layer state (mirrored to VolumeRenderer each frame)
+    VolumeRenderer::LayerParams m_layers;
 
     void processInput();
     void renderFrame();

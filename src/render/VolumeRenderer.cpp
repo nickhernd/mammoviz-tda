@@ -226,6 +226,7 @@ void VolumeRenderer::uploadSaliency(const xai::GradCAM::SaliencyMap& map) {
 void VolumeRenderer::setRenderMode(RenderMode mode) { m_mode = mode; }
 void VolumeRenderer::setCameraPos(float x, float y, float z) { m_cam_x=x; m_cam_y=y; m_cam_z=z; }
 void VolumeRenderer::setGradCAM(bool e) { m_gradcam_on = e; }
+void VolumeRenderer::setLayerParams(const LayerParams& lp) { m_layers = lp; }
 
 void VolumeRenderer::setTransferFunction(const TransferFunction& tf) {
     m_tf = tf;
@@ -264,6 +265,37 @@ void VolumeRenderer::render(const float* /*ext_view*/, const float* /*ext_proj*/
                 (float)m_vol_dims[0], (float)m_vol_dims[1], (float)m_vol_dims[2]);
     glUniform1i(glGetUniformLocation(m_shader, "u_show_gradcam"),
                 (m_sal_tex != 0 && m_gradcam_on) ? 1 : 0);
+
+    // ── Layer uniforms ────────────────────────────────────────────────────────
+    auto ul = [&](const char* n, GLint v){ glUniform1i(glGetUniformLocation(m_shader,n),v); };
+    auto uf = [&](const char* n, GLfloat v){ glUniform1f(glGetUniformLocation(m_shader,n),v); };
+    auto u3 = [&](const char* n, float r, float g, float b){
+        glUniform3f(glGetUniformLocation(m_shader,n), r, g, b); };
+
+    const auto& ly = m_layers;
+    u3("u_fat_color",   ly.fat.r,   ly.fat.g,   ly.fat.b);
+    uf("u_fat_opacity", ly.fat.opacity);
+    ul("u_fat_visible", ly.fat.visible ? 1 : 0);
+
+    u3("u_gland_color",   ly.gland.r,   ly.gland.g,   ly.gland.b);
+    uf("u_gland_opacity", ly.gland.opacity);
+    ul("u_gland_visible", ly.gland.visible ? 1 : 0);
+
+    u3("u_dense_color",   ly.dense.r,   ly.dense.g,   ly.dense.b);
+    uf("u_dense_opacity", ly.dense.opacity);
+    ul("u_dense_visible", ly.dense.visible ? 1 : 0);
+
+    u3("u_calc_color",   ly.calc.r,   ly.calc.g,   ly.calc.b);
+    uf("u_calc_opacity", ly.calc.opacity);
+    ul("u_calc_visible", ly.calc.visible ? 1 : 0);
+
+    uf("u_lesion_sal_thresh", ly.lesion_sal_thresh);
+    uf("u_lesion_opacity",    ly.lesion_opacity);
+    ul("u_lesion_visible",    ly.lesion_visible ? 1 : 0);
+
+    uf("u_clip_x", ly.clip_x);
+    uf("u_clip_y", ly.clip_y);
+    uf("u_clip_z", ly.clip_z);
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_3D, m_vol_tex);

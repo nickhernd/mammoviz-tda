@@ -200,6 +200,11 @@ src/CMakeFiles/mammoviz_render.dir/render/DiagramRenderer.cpp.o: \
  /usr/include/c++/15.2.1/bits/enable_special_members.h \
  /usr/include/c++/15.2.1/bits/node_handle.h \
  /usr/include/c++/15.2.1/bits/erase_if.h \
+ /home/nickhernd/Desktop/mammoviz-tda/include/render/VolumeRenderer.h \
+ /home/nickhernd/Desktop/mammoviz-tda/include/io/VolumeData.h \
+ /home/nickhernd/Desktop/mammoviz-tda/include/xai/GradCAM.h \
+ /home/nickhernd/Desktop/mammoviz-tda/include/nn/ModelInference.h \
+ /home/nickhernd/Desktop/mammoviz-tda/include/nn/FeatureExtractor.h \
  /home/nickhernd/Desktop/mammoviz-tda/include/utils/Logger.h \
  /usr/include/c++/15.2.1/format /usr/include/c++/15.2.1/charconv \
  /usr/include/c++/15.2.1/limits /usr/include/c++/15.2.1/locale \
