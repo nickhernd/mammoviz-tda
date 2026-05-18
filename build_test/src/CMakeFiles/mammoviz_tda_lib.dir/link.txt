@@ -1,2 +1,0 @@
-/usr/bin/ar qc libmammoviz_tda_lib.a CMakeFiles/mammoviz_tda_lib.dir/tda/PointCloud.cpp.o CMakeFiles/mammoviz_tda_lib.dir/tda/VietorisRips.cpp.o CMakeFiles/mammoviz_tda_lib.dir/tda/PersistenceDiagram.cpp.o
-/usr/bin/ranlib libmammoviz_tda_lib.a

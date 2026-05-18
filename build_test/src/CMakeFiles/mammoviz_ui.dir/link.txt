@@ -1,2 +1,0 @@
-/usr/bin/ar qc libmammoviz_ui.a CMakeFiles/mammoviz_ui.dir/ui/MainWindow.cpp.o CMakeFiles/mammoviz_ui.dir/ui/VolumePanel.cpp.o CMakeFiles/mammoviz_ui.dir/ui/DiagramPanel.cpp.o CMakeFiles/mammoviz_ui.dir/ui/ManifoldPanel.cpp.o
-/usr/bin/ranlib libmammoviz_ui.a
