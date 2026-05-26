@@ -3,6 +3,8 @@ build/
 *.a
 *.so
 *.spv
+*.png
+*.jpg
 compile_commands.json
 .cache/
 data/samples/
