@@ -1,0 +1,69 @@
+\chapter{Estado del arte}
+\label{cap:estado-arte}
+
+Este capítulo revisa los trabajos previos relevantes en dos líneas
+complementarias: el análisis automático de mamografías mediante aprendizaje
+profundo, y las aplicaciones del Análisis Topológico de Datos en imagen médica.
+
+\section{Análisis automático de mamografías}
+El análisis asistido por computador de mamografías tiene una larga trayectoria,
+desde los primeros sistemas CAD basados en características diseñadas manualmente
+(\textit{hand-crafted features}) hasta los actuales enfoques de aprendizaje
+profundo. Las redes neuronales convolucionales (CNN) se han consolidado como el
+paradigma dominante en visión por computador y en imagen médica, gracias a su
+capacidad para aprender jerarquías de características directamente de los
+datos~\cite{litjens2017survey, alieli2024survey}.
+
+En el ámbito específico de la mamografía, destacan trabajos orientados a la
+detección y clasificación de masas y microcalcificaciones, así como a la
+estimación del riesgo. Yala \textit{et al.}~\cite{yala2019} propusieron un
+modelo basado en \textit{deep learning} que mejora la predicción del riesgo de
+cáncer de mama a partir de la mamografía, superando a los modelos de riesgo
+tradicionales. El uso de \textit{transfer learning} a partir de redes
+preentrenadas en ImageNet (ResNet, DenseNet, EfficientNet, etc.) es una práctica
+habitual para mitigar la escasez de datos etiquetados en el dominio médico.
+
+\subsection{Conjuntos de datos públicos}
+Entre los conjuntos de datos públicos de mamografía más utilizados destaca
+\mbox{CBIS-DDSM}~\cite{lee2017cbisddsm}, una versión curada y estandarizada del
+clásico DDSM que incluye segmentaciones de ROI verificadas y etiquetas de
+patología. Otros recursos relevantes son INbreast y las bases de datos de
+ecografía mamaria.
+
+\subsection{Limitaciones}
+A pesar de sus buenos resultados, los modelos de \textit{deep learning} en
+mamografía presentan limitaciones bien conocidas:
+\begin{itemize}
+  \item \textbf{Interpretabilidad limitada}: su naturaleza de caja negra
+        dificulta la confianza clínica y la certificación.
+  \item \textbf{Dependencia de grandes volúmenes de datos} etiquetados.
+  \item \textbf{Riesgo de fuga de datos} (\textit{data leakage}) y de sesgos
+        de adquisición, que pueden producir métricas artificialmente altas si el
+        protocolo experimental no es riguroso.
+\end{itemize}
+Estas limitaciones motivan la búsqueda de representaciones más robustas e
+interpretables, como las que proporciona el TDA.
+
+\section{Análisis Topológico de Datos en imagen médica}
+El Análisis Topológico de Datos (TDA) engloba un conjunto de técnicas que
+estudian la forma de los datos mediante herramientas de topología
+algebraica~\cite{carlsson2009topology, edelsbrunner2010computational}. Su
+herramienta central, la \emph{homología persistente}, ha sido aplicada con éxito
+en diversos problemas de imagen médica: caracterización de texturas de tumores,
+análisis de imágenes histopatológicas, neuroimagen y detección de estructuras en
+radiología.
+
+En el contexto de la mamografía y del cáncer de mama, los descriptores
+topológicos permiten capturar patrones de conectividad y estructura (número de
+componentes conexas, agujeros, ramificaciones de conductos, distribución de
+microcalcificaciones) que resultan difíciles de modelar con características
+convencionales. Su robustez frente al ruido y su interpretabilidad geométrica
+los convierten en un complemento natural de las CNN.
+
+\section{Síntesis y aportación de este trabajo}
+La revisión anterior muestra que, si bien el \textit{deep learning} domina el
+análisis de mamografías, el TDA ofrece una vía prometedora y poco explorada para
+obtener representaciones interpretables y robustas. La aportación de este TFG es
+un estudio sistemático de descriptores topológicos sobre \mbox{CBIS-DDSM}, su
+evaluación como características para la clasificación benigno/maligno, y su
+comparación y combinación con un modelo de \textit{deep learning} de referencia.

@@ -1,0 +1,96 @@
+\chapter{Fundamentos teóricos}
+\label{cap:fundamentos}
+
+Este capítulo introduce los conceptos necesarios para comprender el trabajo: los
+fundamentos del Análisis Topológico de Datos, con énfasis en la homología
+persistente, y una breve descripción de los modelos de aprendizaje profundo
+empleados como referencia.
+
+\section{Análisis Topológico de Datos}
+El TDA parte de la idea de que los datos poseen una \emph{forma} y que dicha
+forma contiene información relevante. Formalmente, se construye a partir de los
+datos una familia de espacios topológicos y se estudia cómo evolucionan sus
+invariantes.
+
+\subsection{Complejos simpliciales y filtraciones}
+\begin{definicion}[Complejo simplicial]
+Un \emph{complejo simplicial} $K$ es un conjunto de símplices (vértices, aristas,
+triángulos, tetraedros, \dots) cerrado bajo la operación de tomar caras y tal
+que la intersección de dos símplices es una cara de ambos.
+\end{definicion}
+
+Para analizar datos se construye una \emph{filtración}, es decir, una familia
+anidada de complejos simpliciales
+\[
+  \emptyset = K_0 \subseteq K_1 \subseteq \cdots \subseteq K_n = K,
+\]
+indexada por un parámetro de escala. En imágenes, una filtración habitual es la
+\emph{filtración por sublevel sets} de la intensidad: se van incluyendo los
+píxeles cuyo valor es menor o igual que un umbral creciente.
+
+\subsection{Homología y números de Betti}
+La homología asocia a cada complejo una secuencia de grupos cuyos rangos, los
+\emph{números de Betti} $\beta_k$, cuentan las características topológicas de
+dimensión $k$:
+\begin{itemize}
+  \item $\beta_0$: número de \textbf{componentes conexas}.
+  \item $\beta_1$: número de \textbf{agujeros} o ciclos unidimensionales.
+  \item $\beta_2$: número de \textbf{cavidades} o huecos tridimensionales.
+\end{itemize}
+
+\subsection{Homología persistente}
+La \emph{homología persistente} rastrea el nacimiento (\textit{birth}) y la
+muerte (\textit{death}) de las características topológicas a lo largo de la
+filtración. Una característica que persiste durante un amplio rango de escalas se
+considera una propiedad estructural significativa, mientras que las de vida corta
+suelen corresponder a ruido.
+
+\begin{definicion}[Diagrama de persistencia]
+El \emph{diagrama de persistencia} es un multiconjunto de puntos
+$(b_i, d_i) \in \mathbb{R}^2$ con $b_i \le d_i$, donde cada punto representa una
+característica topológica que nace en la escala $b_i$ y muere en $d_i$. La
+\emph{persistencia} de la característica es $d_i - b_i$.
+\end{definicion}
+
+La misma información puede representarse como un \emph{código de barras}
+(\textit{barcode}), donde cada característica es un intervalo $[b_i, d_i]$.
+
+\subsection{Estabilidad y vectorización}
+Una propiedad fundamental es la \textbf{estabilidad}: pequeñas perturbaciones en
+los datos producen pequeñas variaciones en el diagrama de persistencia (medidas
+con la distancia \textit{bottleneck} o de Wasserstein). Esto explica la robustez
+del TDA frente al ruido.
+
+Para poder utilizar los diagramas como entrada de algoritmos de aprendizaje
+automático es necesario \emph{vectorizarlos}. Entre las representaciones más
+utilizadas destacan:
+\begin{itemize}
+  \item \textbf{Imágenes de persistencia} (\textit{persistence images}):
+        transforman el diagrama en una imagen (matriz) de tamaño fijo.
+  \item \textbf{Persistence landscapes}: funciones a trozos que resumen el
+        diagrama.
+  \item \textbf{Curvas de Betti} y estadísticos de persistencia.
+\end{itemize}
+
+\section{Aprendizaje profundo (referencia)}
+Como referencia comparativa se emplean redes neuronales convolucionales (CNN).
+
+\subsection{Redes neuronales convolucionales}
+Una CNN aprende, mediante capas convolucionales, jerarquías de características
+espaciales a partir de las imágenes. Combinada con capas de \textit{pooling} y
+capas totalmente conectadas, permite abordar tareas de clasificación de imagen.
+
+\subsection{Transfer learning}
+Dado el tamaño limitado de los conjuntos de datos médicos, se recurre al
+\textit{transfer learning}: se parte de una red preentrenada en un gran corpus
+(p.\,ej. ImageNet) y se ajusta (\textit{fine-tuning}) a la tarea de mamografía.
+En este trabajo se utiliza como referencia una arquitectura de la familia
+DenseNet/ResNet.
+
+\begin{ejemplo}[Intuición del enfoque topológico en mamografía]
+Una agrupación de microcalcificaciones puede caracterizarse por el número de
+componentes conexas ($\beta_0$) y su patrón de aparición a lo largo de la
+filtración de intensidad, mientras que la estructura de una masa espiculada
+puede reflejarse en la aparición y desaparición de ciclos ($\beta_1$). El TDA
+codifica estos patrones de forma compacta y robusta.
+\end{ejemplo}

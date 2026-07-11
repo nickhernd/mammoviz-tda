@@ -9,3 +9,31 @@ compile_commands.json
 .cache/
 data/samples/
 data/models/*.onnx
+
+# Datos (no versionar imagenes ni CSV descargados de CBIS-DDSM)
+data/csv/
+data/images/
+
+# Entorno Python
+.venv/
+__pycache__/
+*.pyc
+
+# LaTeX (archivos auxiliares de compilacion)
+tfg/*.aux
+tfg/*.bcf
+tfg/*.bbl
+tfg/*.blg
+tfg/*.fdb_latexmk
+tfg/*.fls
+tfg/*.lof
+tfg/*.log
+tfg/*.lot
+tfg/*.out
+tfg/*.run.xml
+tfg/*.toc
+tfg/capitulos/*.aux
+
+# Excepcion: SI versionar las figuras de la memoria
+!tfg/figuras/
+!tfg/figuras/**

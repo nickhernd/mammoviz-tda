@@ -1,0 +1,71 @@
+\chapter{Objetivos y metodología}
+\label{cap:objetivos}
+
+\section{Objetivo general}
+El objetivo general de este Trabajo de Fin de Grado es \textbf{investigar la
+aplicación del Análisis Topológico de Datos (TDA) a la clasificación y
+visualización de mamografías digitales}, evaluando su capacidad discriminativa
+entre lesiones benignas y malignas y su complementariedad con los modelos de
+aprendizaje profundo.
+
+\section{Objetivos específicos}
+Para alcanzar el objetivo general se plantean los siguientes objetivos
+específicos:
+
+\begin{enumerate}
+  \item[\textbf{O1.}] \textbf{Revisar el estado del arte} en (i) análisis
+        automático de mamografías y (ii) aplicaciones del TDA en imagen médica.
+  \item[\textbf{O2.}] \textbf{Preparar y preprocesar} el conjunto de datos
+        \mbox{CBIS-DDSM}: descarga, limpieza de metadatos, extracción de ROIs y
+        normalización de las imágenes.
+  \item[\textbf{O3.}] \textbf{Extraer descriptores topológicos} (diagramas de
+        persistencia, códigos de barras e imágenes de persistencia) a partir de
+        las mamografías mediante homología persistente.
+  \item[\textbf{O4.}] \textbf{Entrenar y evaluar clasificadores} sobre los
+        descriptores topológicos (p.\,ej. SVM, \textit{random forest}) para la
+        tarea benigno/maligno.
+  \item[\textbf{O5.}] \textbf{Comparar} el enfoque topológico con un modelo de
+        \textit{deep learning} de referencia (CNN con \textit{transfer
+        learning}) y \textbf{explorar su combinación} (fusión de
+        características).
+  \item[\textbf{O6.}] \textbf{Desarrollar herramientas de visualización} que
+        hagan interpretables los resultados topológicos para su uso como apoyo
+        al diagnóstico.
+\end{enumerate}
+
+\section{Metodología general}
+El desarrollo del trabajo sigue una metodología incremental e iterativa,
+estructurada en las siguientes fases, alineadas con los objetivos anteriores:
+
+\begin{enumerate}
+  \item \textbf{Fase de documentación} (O1): estudio de la bibliografía y de las
+        herramientas disponibles.
+  \item \textbf{Fase de datos} (O2): construcción de un \textit{pipeline}
+        reproducible de preparación de datos.
+  \item \textbf{Fase de extracción de características} (O3): implementación de la
+        extracción de descriptores topológicos.
+  \item \textbf{Fase de modelado} (O4, O5): entrenamiento, validación y
+        comparación de modelos, evitando la fuga de datos (\textit{data
+        leakage}) mediante una separación estricta \textit{train/validation/test}.
+  \item \textbf{Fase de análisis y visualización} (O6): interpretación de los
+        resultados y desarrollo de visualizaciones.
+  \item \textbf{Fase de redacción} de la memoria.
+\end{enumerate}
+
+\begin{table}[H]
+\centering
+\caption{Trazabilidad entre objetivos específicos y capítulos de la memoria.}
+\label{tab:trazabilidad}
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Objetivo} & \textbf{Descripción breve} & \textbf{Capítulo} \\
+\midrule
+O1 & Estado del arte            & \ref{cap:estado-arte} \\
+O2 & Preparación de datos       & \ref{cap:metodologia}, \ref{cap:implementacion} \\
+O3 & Descriptores topológicos   & \ref{cap:fundamentos}, \ref{cap:metodologia} \\
+O4 & Clasificadores sobre TDA   & \ref{cap:metodologia}, \ref{cap:resultados} \\
+O5 & Comparación con DL         & \ref{cap:resultados} \\
+O6 & Visualización              & \ref{cap:implementacion}, \ref{cap:resultados} \\
+\bottomrule
+\end{tabular}
+\end{table}

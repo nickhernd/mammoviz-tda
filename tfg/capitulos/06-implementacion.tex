@@ -1,0 +1,79 @@
+\chapter{Implementación}
+\label{cap:implementacion}
+
+Este capítulo describe las herramientas, la organización del código y los
+detalles de implementación del \textit{pipeline}.
+
+\section{Herramientas y librerías}
+El proyecto se desarrolla en \textbf{Python}. Las principales librerías son:
+
+\begin{table}[H]
+\centering
+\caption{Principales herramientas utilizadas.}
+\label{tab:herramientas}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Ámbito} & \textbf{Herramienta} \\
+\midrule
+Manipulación de datos      & pandas, NumPy \\
+Imagen                     & OpenCV, scikit-image, Pillow \\
+TDA / homología persistente& giotto-tda, Ripser, GUDHI \\
+Aprendizaje automático     & scikit-learn \\
+Aprendizaje profundo       & TensorFlow / Keras (o PyTorch) \\
+Visualización              & Matplotlib, seaborn \\
+Entorno                    & Jupyter Notebook \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Organización del código}
+El repositorio se estructura de la siguiente forma (véase el
+\texttt{README.md}):
+\begin{lstlisting}[language=bash, numbers=none]
+mammoviz-tda/
+  data/            # datos (no versionados)
+  src/             # codigo fuente del pipeline
+    data.py        # carga y particion por paciente
+    preprocessing.py  # preprocesado de imagenes
+    topology.py    # homologia persistente y vectorizacion
+    models.py      # clasificadores y CNN
+    evaluate.py    # metricas y visualizacion
+  notebooks/       # experimentos reproducibles
+  tfg/             # memoria en LaTeX
+\end{lstlisting}
+
+\section{Extracción de descriptores topológicos}
+El siguiente fragmento ilustra el cálculo de un diagrama de persistencia a partir
+de una imagen en escala de grises mediante una filtración por \textit{sublevel
+sets}, utilizando \texttt{giotto-tda}.
+
+\begin{lstlisting}[language=Python, caption={Ejemplo de extracción de un diagrama de persistencia.}, label={lst:tda}]
+import numpy as np
+from gtda.images import HeightFiltration, RadialFiltration
+from gtda.homology import CubicalPersistence
+from gtda.diagrams import PersistenceImage
+
+def descriptor_topologico(imagen_gris):
+    # imagen_gris: array 2D normalizado en [0, 1]
+    x = imagen_gris[None, :, :]              # (1, H, W)
+    cubical = CubicalPersistence(homology_dimensions=(0, 1))
+    diagramas = cubical.fit_transform(x)     # diagramas de persistencia
+    pi = PersistenceImage(n_bins=20)
+    vector = pi.fit_transform(diagramas)     # imagen de persistencia
+    return vector.reshape(len(x), -1)
+\end{lstlisting}
+
+\section{Reproducibilidad}
+Para garantizar la reproducibilidad de los experimentos:
+\begin{itemize}
+  \item Se fija una semilla aleatoria común.
+  \item Se documentan las versiones de las librerías (\texttt{requirements.txt}).
+  \item La partición de datos por paciente se guarda en disco para reutilizarla.
+  \item Cada experimento se ejecuta desde un \textit{notebook} autocontenido.
+\end{itemize}
+
+\section{Visualización}
+Se desarrollan visualizaciones específicas para el análisis topológico:
+diagramas de persistencia y códigos de barras superpuestos sobre la imagen,
+mapas de calor de las imágenes de persistencia, y comparación de las regiones
+más informativas frente a las activaciones de la CNN (p.\,ej. Grad-CAM).

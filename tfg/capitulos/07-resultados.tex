@@ -1,0 +1,55 @@
+\chapter{Experimentos y resultados}
+\label{cap:resultados}
+
+Este capítulo presenta el diseño experimental y los resultados obtenidos.
+\textit{(Este capítulo debe completarse con los resultados reales a medida que
+se ejecuten los experimentos; a continuación se proporciona la estructura y las
+plantillas de tablas y figuras.)}
+
+\section{Diseño experimental}
+Se definen los siguientes experimentos, alineados con los objetivos O4 y O5:
+\begin{description}
+  \item[E1.] Clasificación con descriptores topológicos + clasificador clásico.
+  \item[E2.] Clasificación con CNN (\textit{transfer learning}).
+  \item[E3.] Fusión de características topológicas y \textit{embeddings} de CNN.
+  \item[E4.] Análisis de robustez frente a ruido y a variaciones de adquisición.
+\end{description}
+
+\section{Configuración}
+Se detallan los hiperparámetros, la partición de datos por paciente, el número
+de repeticiones y el hardware utilizado.
+
+\section{Resultados}
+
+\begin{table}[H]
+\centering
+\caption{Resultados comparativos en el conjunto de test (plantilla).}
+\label{tab:resultados}
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+\textbf{Modelo} & \textbf{Exactitud} & \textbf{Sensib.} & \textbf{Especif.} &
+\textbf{F1} & \textbf{AUC} \\
+\midrule
+Baseline (clase mayoritaria) & -- & -- & -- & -- & -- \\
+TDA + SVM                    & -- & -- & -- & -- & -- \\
+TDA + Random Forest          & -- & -- & -- & -- & -- \\
+CNN (transfer learning)      & -- & -- & -- & -- & -- \\
+Fusión TDA + CNN             & -- & -- & -- & -- & -- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+% \includegraphics[width=0.7\textwidth]{figuras/roc.png}
+\fbox{\parbox[c][4cm][c]{0.7\textwidth}{\centering\itshape
+Curvas ROC de los distintos modelos. (Sustituir por la figura definitiva.)}}
+\caption{Comparación de curvas ROC.}
+\label{fig:roc}
+\end{figure}
+
+\section{Discusión}
+Se analizan los resultados a la luz de los objetivos: capacidad discriminativa de
+los descriptores topológicos, comparación con el \textit{deep learning},
+beneficio de la fusión, robustez frente al ruido e interpretabilidad. Se discuten
+también las limitaciones observadas.

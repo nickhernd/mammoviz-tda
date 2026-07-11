@@ -1,0 +1,19 @@
+# Datos e imagen
+numpy
+pandas
+openpyxl
+opencv-python
+scikit-image
+pillow
+
+# TDA / homologia persistente
+giotto-tda
+
+# Aprendizaje automatico y profundo
+scikit-learn
+tensorflow
+
+# Visualizacion y entorno
+matplotlib
+seaborn
+jupyter

@@ -1,0 +1,43 @@
+\chapter{Conclusiones y trabajo futuro}
+\label{cap:conclusiones}
+
+\section{Conclusiones}
+\textit{(Redactar a partir de los resultados obtenidos.)} En este Trabajo de Fin
+de Grado se ha estudiado la aplicación del Análisis Topológico de Datos a la
+clasificación y visualización de mamografías digitales del conjunto
+\mbox{CBIS-DDSM}. Las principales conclusiones, en relación con los objetivos
+planteados, son:
+
+\begin{itemize}
+  \item Se ha revisado el estado del arte en análisis de mamografías y en TDA
+        aplicado a imagen médica (O1).
+  \item Se ha construido un \textit{pipeline} reproducible de preparación de
+        datos con partición por paciente que evita la fuga de datos (O2).
+  \item Se han extraído y evaluado descriptores topológicos como características
+        para la clasificación benigno/maligno (O3, O4).
+  \item Se ha comparado el enfoque topológico con un modelo de \textit{deep
+        learning} de referencia y se ha explorado su combinación (O5).
+  \item Se han desarrollado visualizaciones que mejoran la interpretabilidad de
+        los resultados (O6).
+\end{itemize}
+
+\section{Grado de cumplimiento de los objetivos}
+Se valora el grado de cumplimiento de cada objetivo específico y las
+desviaciones respecto a la planificación inicial.
+
+\section{Limitaciones}
+Se discuten las limitaciones del trabajo: tamaño y sesgos del conjunto de datos,
+coste computacional de la homología persistente, y alcance de la validación
+clínica.
+
+\section{Trabajo futuro}
+Como líneas de trabajo futuro se proponen:
+\begin{itemize}
+  \item Extender el estudio a otras filtraciones y descriptores topológicos
+        (\textit{multiparameter persistence}).
+  \item Integrar el TDA directamente en arquitecturas de \textit{deep learning}
+        (capas topológicas diferenciables).
+  \item Validar el enfoque en otros conjuntos de datos (INbreast, datos propios).
+  \item Realizar una evaluación con radiólogos para medir la utilidad clínica de
+        las visualizaciones.
+\end{itemize}

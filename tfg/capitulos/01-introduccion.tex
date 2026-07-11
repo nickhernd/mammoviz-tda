@@ -1,0 +1,63 @@
+\chapter{Introducción}
+\label{cap:introduccion}
+
+\section{Motivación}
+El cáncer de mama es la neoplasia más frecuente en mujeres y una de las
+principales causas de mortalidad por cáncer a nivel mundial. La detección precoz
+mediante programas de cribado con mamografía reduce de forma significativa la
+mortalidad, ya que permite identificar lesiones en estadios tempranos y más
+tratables. Sin embargo, la interpretación de mamografías es una tarea compleja,
+sujeta a variabilidad inter-observador y a una carga de trabajo elevada para los
+radiólogos.
+
+En este contexto, los sistemas de diagnóstico asistido por computador
+(\textit{Computer-Aided Diagnosis}, CAD) y, más recientemente, las técnicas de
+aprendizaje profundo (\textit{deep learning}) se han convertido en herramientas
+de gran interés. Trabajos como el de Yala \textit{et al.}~\cite{yala2019} han
+demostrado que los modelos basados en mamografía pueden mejorar la predicción del
+riesgo de cáncer de mama. No obstante, estos modelos presentan limitaciones
+importantes: son difíciles de interpretar, requieren grandes cantidades de datos
+etiquetados y pueden ser sensibles al ruido y a las condiciones de adquisición.
+
+El \textbf{Análisis Topológico de Datos} (TDA) surge como un enfoque
+complementario que caracteriza la \emph{forma} intrínseca de los datos mediante
+herramientas de la topología algebraica. Su técnica principal, la
+\emph{homología persistente}, es robusta frente al ruido y proporciona
+descriptores interpretables geométricamente, lo que la hace especialmente
+atractiva para el análisis de imagen médica.
+
+\section{Contexto del problema}
+Una mamografía digital es una imagen de rayos X de la mama que revela
+estructuras como el tejido glandular, los conductos, las calcificaciones y
+posibles masas. La densidad mamaria (clasificada habitualmente según el sistema
+BI-RADS) y la morfología de las lesiones son factores clave en el diagnóstico.
+El conjunto de datos público \mbox{CBIS-DDSM}~\cite{lee2017cbisddsm} proporciona
+mamografías digitalizadas con anotaciones de lesiones (masas y
+microcalcificaciones), regiones de interés (ROI) segmentadas y etiquetas de
+patología (benigno/maligno), lo que lo convierte en un banco de pruebas
+adecuado para este trabajo.
+
+\section{Objetivos y alcance (resumen)}
+El objetivo general de este TFG es \textbf{estudiar y evaluar la aplicación del
+Análisis Topológico de Datos a la clasificación y visualización de mamografías},
+comparándolo y combinándolo con técnicas de aprendizaje profundo. Los objetivos
+específicos se detallan en el Capítulo~\ref{cap:objetivos}.
+
+\section{Estructura de la memoria}
+El resto de la memoria se organiza como sigue:
+\begin{itemize}
+  \item El \textbf{Capítulo~\ref{cap:objetivos}} formula los objetivos y la
+        metodología general del trabajo.
+  \item El \textbf{Capítulo~\ref{cap:estado-arte}} revisa el estado del arte en
+        análisis de mamografías y en TDA aplicado a imagen médica.
+  \item El \textbf{Capítulo~\ref{cap:fundamentos}} introduce los fundamentos
+        teóricos de la homología persistente y del aprendizaje profundo.
+  \item El \textbf{Capítulo~\ref{cap:metodologia}} describe la metodología
+        propuesta: datos, preprocesado, extracción de descriptores y modelos.
+  \item El \textbf{Capítulo~\ref{cap:implementacion}} detalla la implementación
+        y las herramientas utilizadas.
+  \item El \textbf{Capítulo~\ref{cap:resultados}} presenta y discute los
+        resultados experimentales.
+  \item El \textbf{Capítulo~\ref{cap:conclusiones}} recoge las conclusiones y
+        las líneas de trabajo futuro.
+\end{itemize}

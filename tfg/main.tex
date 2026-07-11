@@ -1,0 +1,106 @@
+%==============================================================================
+%  Trabajo de Fin de Grado (TFG)
+%  Análisis Topológico de Datos aplicado a la clasificación de mamografías
+%  Plantilla base -- generada como punto de partida
+%==============================================================================
+\documentclass[12pt,a4paper,twoside,openright]{book}
+
+%------------------------------- Codificación e idioma ------------------------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish,es-tabla]{babel}
+\usepackage{lmodern}
+
+%------------------------------- Márgenes y diseño ----------------------------
+\usepackage[a4paper,top=2.5cm,bottom=2.5cm,left=3cm,right=2.5cm]{geometry}
+\usepackage{setspace}
+\onehalfspacing
+\usepackage{emptypage}   % páginas en blanco realmente vacías
+
+%------------------------------- Gráficos y tablas ----------------------------
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{xcolor}
+
+%------------------------------- Matemáticas ----------------------------------
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{mathtools}
+
+%------------------------------- Código ---------------------------------------
+\usepackage{listings}
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  keywordstyle=\color{blue!70!black}\bfseries,
+  commentstyle=\color{green!40!black},
+  stringstyle=\color{red!60!black},
+  numbers=left, numberstyle=\tiny\color{gray},
+  frame=single, breaklines=true, showstringspaces=false,
+  captionpos=b, language=Python
+}
+
+%------------------------------- Referencias ----------------------------------
+\usepackage[hidelinks]{hyperref}
+\usepackage{cleveref}
+\usepackage[backend=biber,style=ieee,sorting=nyt]{biblatex}
+\addbibresource{bibliografia.bib}
+
+%------------------------------- Teoremas -------------------------------------
+\theoremstyle{definition}
+\newtheorem{definicion}{Definición}[chapter]
+\newtheorem{teorema}{Teorema}[chapter]
+\newtheorem{ejemplo}{Ejemplo}[chapter]
+
+%------------------------------- Encabezados ----------------------------------
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[LE,RO]{\thepage}
+\fancyhead[RE]{\leftmark}
+\fancyhead[LO]{\rightmark}
+\renewcommand{\headrulewidth}{0.4pt}
+
+%==============================================================================
+\begin{document}
+
+%------------------------------- Portada --------------------------------------
+\input{portada}
+
+\frontmatter
+\pagenumbering{roman}
+
+%------------------------------- Resumen --------------------------------------
+\chapter*{Resumen}
+\addcontentsline{toc}{chapter}{Resumen}
+\input{capitulos/00-resumen}
+
+%------------------------------- Índices --------------------------------------
+\tableofcontents
+\listoffigures
+\listoftables
+
+%------------------------------- Cuerpo ---------------------------------------
+\mainmatter
+\pagenumbering{arabic}
+
+\input{capitulos/01-introduccion}
+\input{capitulos/02-objetivos}
+\input{capitulos/03-estado-del-arte}
+\input{capitulos/04-fundamentos}
+\input{capitulos/05-metodologia}
+\input{capitulos/06-implementacion}
+\input{capitulos/07-resultados}
+\input{capitulos/08-conclusiones}
+
+%------------------------------- Bibliografía ---------------------------------
+\printbibliography[heading=bibintoc,title={Bibliografía}]
+
+%------------------------------- Apéndices ------------------------------------
+\appendix
+\input{capitulos/A-apendice}
+
+\end{document}

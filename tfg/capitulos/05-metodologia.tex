@@ -1,0 +1,103 @@
+\chapter{Metodología propuesta}
+\label{cap:metodologia}
+
+En este capítulo se describe la metodología propuesta para aplicar el TDA a la
+clasificación de mamografías, desde la preparación de los datos hasta la
+evaluación de los modelos.
+
+\section{Visión general del \textit{pipeline}}
+El sistema propuesto consta de cinco etapas:
+\begin{enumerate}
+  \item Preparación de datos (CBIS-DDSM).
+  \item Preprocesado de imágenes y extracción de ROIs.
+  \item Extracción de descriptores topológicos.
+  \item Clasificación (topológica, \textit{deep learning} y fusión).
+  \item Evaluación y visualización.
+\end{enumerate}
+
+\begin{figure}[H]
+\centering
+% \includegraphics[width=\textwidth]{figuras/pipeline.png}
+\fbox{\parbox[c][4cm][c]{0.9\textwidth}{\centering\itshape
+Diagrama del \textit{pipeline}: Datos $\rightarrow$ Preprocesado $\rightarrow$
+Homología persistente $\rightarrow$ Vectorización $\rightarrow$ Clasificador
+$\rightarrow$ Evaluación. \\ (Sustituir por la figura definitiva.)}}
+\caption{Esquema general del \textit{pipeline} propuesto.}
+\label{fig:pipeline}
+\end{figure}
+
+\section{Conjunto de datos}
+Se utiliza \mbox{CBIS-DDSM}~\cite{lee2017cbisddsm}. El fichero de metadatos
+disponible en el repositorio (\texttt{CBIS-DDSM-All-...\,.xlsx}) contiene la
+información de cada estudio: identificador de paciente, tipo de lesión (masa o
+calcificación), densidad de la mama (BI-RADS), vista (CC/MLO), y la etiqueta de
+patología (\texttt{BENIGN}, \texttt{MALIGNANT}, \texttt{BENIGN\_WITHOUT\_
+CALLBACK}).
+
+\begin{itemize}
+  \item \textbf{Tarea principal}: clasificación binaria benigno vs.\ maligno.
+  \item \textbf{Unidad de análisis}: región de interés (ROI) de la lesión y/o
+        imagen completa reescalada.
+\end{itemize}
+
+\subsection{Protocolo de evaluación y prevención de fuga de datos}
+Se adopta una partición estricta en \textbf{entrenamiento / validación / test}.
+Para evitar la fuga de datos (\textit{data leakage}), la separación se realiza
+\textbf{a nivel de paciente}: todas las imágenes de un mismo paciente pertenecen
+a una única partición. Se emplea estratificación por la etiqueta de patología
+para mantener la proporción de clases.
+
+\begin{quote}
+\textit{Nota metodológica.} En el material de partida
+(\texttt{Demo\_Notebook.ipynb}) se observaba una exactitud de entrenamiento del
+100\,\% desde la primera época y una exactitud de validación cercana al 100\,\%,
+lo que es un indicio claro de fuga de datos o de un problema en el
+\textit{pipeline}. Este trabajo corrige dicho protocolo mediante partición por
+paciente, control de la normalización y validación cruzada.
+\end{quote}
+
+\section{Preprocesado de imágenes}
+El preprocesado incluye:
+\begin{itemize}
+  \item Conversión y normalización de intensidades.
+  \item Recorte de la ROI a partir de las máscaras de segmentación.
+  \item Reescalado a un tamaño común (p.\,ej. $224\times224$).
+  \item Opcionalmente, realce de contraste (CLAHE) y filtrado de ruido.
+\end{itemize}
+
+\section{Extracción de descriptores topológicos}
+A partir de cada imagen (o ROI) se calcula la homología persistente mediante una
+filtración por \textit{sublevel sets} de la intensidad (para imágenes en escala
+de grises) o sobre nubes de puntos derivadas de las microcalcificaciones. Se
+obtienen los diagramas de persistencia en dimensiones $0$ y $1$, y a partir de
+ellos se generan los vectores de características:
+\begin{itemize}
+  \item Imágenes de persistencia.
+  \item Estadísticos de persistencia (número de puntos, persistencia total,
+        máxima, media; curvas de Betti).
+\end{itemize}
+
+\section{Modelos de clasificación}
+Se comparan tres enfoques:
+\begin{enumerate}
+  \item \textbf{Topológico}: clasificadores clásicos (SVM, \textit{random
+        forest}, regresión logística) sobre los descriptores topológicos.
+  \item \textbf{Deep learning}: CNN con \textit{transfer learning} sobre las
+        imágenes.
+  \item \textbf{Fusión}: combinación de las características topológicas con las
+        \textit{embeddings} de la CNN.
+\end{enumerate}
+
+\section{Métricas de evaluación}
+Dado el carácter clínico del problema, se emplean varias métricas
+complementarias:
+\begin{itemize}
+  \item \textbf{Exactitud} (\textit{accuracy}).
+  \item \textbf{Sensibilidad} (\textit{recall}) --- crítica para no pasar por
+        alto casos malignos.
+  \item \textbf{Especificidad} y \textbf{precisión}.
+  \item \textbf{F1-score} y \textbf{AUC-ROC}.
+  \item \textbf{Matriz de confusión}.
+\end{itemize}
+La sensibilidad recibe especial atención, ya que un falso negativo (no detectar
+un cáncer) tiene un coste clínico mucho mayor que un falso positivo.
