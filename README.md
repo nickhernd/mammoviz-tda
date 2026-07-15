@@ -93,12 +93,22 @@ cd tfg
 latexmk -pdf main.tex     # requiere una distribución LaTeX + biber
 ```
 
+## Notebooks
+
+- `notebooks/01_pipeline_demo.ipynb` — **demostración de extremo a extremo** del
+  pipeline (datos → preprocesado → topología → modelos → evaluación). Usa datos
+  **sintéticos** para poder ejecutarse sin CBIS-DDSM descargado, e incluye un
+  respaldo topológico basado en la **curva de Betti-0** (`scipy`) si `giotto-tda`
+  no está instalado. Ejecutado, da métricas realistas (accuracy ≈ 0.70, AUC ≈ 0.78).
+
 ## Estado del proyecto
 
-- [x] Estructura de memoria (capítulos 1–8 + apéndice)
+- [x] Estructura de memoria (capítulos 1–8 + apéndice), compila con MiKTeX
 - [x] Bibliografía inicial
-- [x] Esqueleto del pipeline (datos, preprocesado, TDA, modelos, evaluación)
+- [x] Pipeline (`src/`) documentado a nivel profesional
+- [x] Notebook de demostración ejecutable de extremo a extremo
 - [ ] Descarga completa de datos e imágenes de CBIS-DDSM
-- [ ] Ejecución de experimentos y resultados
-- [ ] Visualizaciones finales
+- [ ] Ejecución de experimentos con datos reales y resultados
+- [ ] Entrenamiento de la CNN de referencia y experimento de fusión
+- [ ] Visualizaciones finales para la memoria
 ```
