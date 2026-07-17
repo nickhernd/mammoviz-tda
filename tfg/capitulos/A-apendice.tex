@@ -10,9 +10,97 @@ pip install -r requirements.txt
 \end{lstlisting}
 
 \section{Descripción de los campos de CBIS-DDSM}
-Tabla de referencia con los campos del fichero de metadatos y su significado
-(densidad BI-RADS, tipo de lesión, vista, patología, etc.).
+
+\subsection{Manifiesto de TCIA (incluido en el repositorio)}
+El fichero \texttt{CBIS-DDSM-All-doiJNLP-zzWs5zfZ-nbia-digest.xlsx} es el
+manifiesto que genera TCIA al exportar una colección: identifica las series
+DICOM disponibles pero \textbf{no incluye la etiqueta de patología}. Sus
+campos más relevantes para el \textit{pipeline} son:
+
+\begin{table}[H]
+\centering
+\caption{Campos relevantes del manifiesto de TCIA.}
+\label{tab:campos-manifiesto}
+\begin{tabular}{@{}p{3.2cm}p{11cm}@{}}
+\toprule
+\textbf{Campo} & \textbf{Descripción} \\
+\midrule
+\texttt{Patient ID} & Identificador largo, p.\,ej.
+  \texttt{Mass-Training\_P\_01009\_RIGHT\_CC\_1}. \texttt{src.data.load\_manifest}
+  extrae de aquí el id real de paciente (\texttt{P\_01009}) con una expresión
+  regular, base de la partición por paciente. \\
+\texttt{Series Description} & Tipo de imagen de la serie: \texttt{full mammogram
+  images}, \texttt{ROI mask images} o \texttt{cropped images}. \\
+\texttt{Modality} & Modalidad DICOM; \texttt{MG} (mamografía) en todos los casos. \\
+\texttt{Body Part Examined} & Región anatómica (\texttt{BREAST}). \\
+\texttt{Image Count} & Número de imágenes DICOM de la serie. \\
+\texttt{File Size} & Tamaño en bytes de la serie (para estimar la descarga total). \\
+\texttt{Collection URI} & DOI de la colección en TCIA~\cite{lee2017cbisddsm}. \\
+\texttt{License Name} & \textit{Creative Commons Attribution 3.0 Unported}. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{CSV de descripción de casos (a descargar de TCIA)}
+Los ficheros \texttt{mass\_/calc\_case\_description\_\{train,test\}\_set.csv}
+--- no incluidos en el repositorio, véase la Sección~\ref{sec:estado-datos}
+--- sí contienen la etiqueta clínica. La función
+\texttt{load\_case\_descriptions} de \texttt{src/data.py} espera, entre otros,
+los campos \texttt{patient\_id}, \texttt{breast\_density}
+(densidad BI-RADS, 1--4), \texttt{left or right breast}, \texttt{image view}
+(CC/MLO), \texttt{abnormality type} (masa o calcificación), \texttt{assessment}
+(BI-RADS 0--5), \texttt{subtlety} y, sobre todo, \texttt{pathology}
+(\texttt{BENIGN}, \texttt{BENIGN\_WITHOUT\_CALLBACK}, \texttt{MALIGNANT}), que
+\texttt{src.data.to\_binary\_label} convierte en la etiqueta binaria 0/1 usada
+en todo el trabajo.
 
 \section{Fragmentos de código adicionales}
-Fragmentos de código relevantes que, por extensión, no se incluyen en el cuerpo
-de la memoria.
+
+\subsection{Selección automática de backend de homología persistente}
+Como \texttt{giotto-tda} no publica binarios para Python 3.13+
+(Sección~\ref{sec:backend-tda}), \texttt{src/topology.py} detecta en tiempo de
+importación qué backend usar, sin que el resto del \textit{pipeline} necesite
+saberlo:
+
+\begin{lstlisting}[language=Python, caption={Deteccion de backend en src/topology.py (fragmento).}, label={lst:backend-detection}]
+try:
+    from gtda.homology import CubicalPersistence
+    _HAS_GIOTTO = True
+except ImportError:
+    _HAS_GIOTTO = False
+
+try:
+    import gudhi
+    _HAS_GUDHI = True
+except ImportError:
+    _HAS_GUDHI = False
+
+def backend() -> str:
+    if _HAS_GIOTTO:
+        return "giotto-tda"
+    if _HAS_GUDHI:
+        return "gudhi"
+    return "none"
+\end{lstlisting}
+
+\subsection{Imagen de persistencia sin giotto-tda}
+Cuando el backend activo es \texttt{gudhi}, la imagen de persistencia se
+calcula a mano con un núcleo gaussiano ponderado por persistencia, sobre la
+rejilla fija $[0,1]\times[0,1]$ (las imágenes ya están normalizadas por
+\texttt{preprocessing.to\_grayscale\_float}, Sección~\ref{cap:metodologia}):
+
+\begin{lstlisting}[language=Python, caption={Imagen de persistencia manual (nucleo gaussiano), src/topology.py (fragmento).}, label={lst:persistence-image-manual}]
+grid = np.linspace(0.0, 1.0, n_bins)
+birth_grid, pers_grid = np.meshgrid(grid, grid, indexing="ij")
+sigma = 1.0 / n_bins
+
+for birth, pers, weight in zip(births, persistences, weights):
+    image += weight * np.exp(
+        -((birth_grid - birth) ** 2 + (pers_grid - pers) ** 2) / (2 * sigma ** 2)
+    )
+\end{lstlisting}
+
+Al fijar la rejilla de antemano (en vez de ajustarla, \textit{fit}, por lote
+como hace \texttt{giotto-tda}), todas las imágenes del conjunto de datos
+producen vectores de la misma longitud y directamente comparables entre sí,
+sin necesitar un paso de ajuste previo sobre el conjunto de entrenamiento.

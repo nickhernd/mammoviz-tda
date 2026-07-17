@@ -97,9 +97,12 @@ latexmk -pdf main.tex     # requiere una distribución LaTeX + biber
 
 - `notebooks/01_pipeline_demo.ipynb` — **demostración de extremo a extremo** del
   pipeline (datos → preprocesado → topología → modelos → evaluación). Usa datos
-  **sintéticos** para poder ejecutarse sin CBIS-DDSM descargado, e incluye un
-  respaldo topológico basado en la **curva de Betti-0** (`scipy`) si `giotto-tda`
-  no está instalado. Ejecutado, da métricas realistas (accuracy ≈ 0.70, AUC ≈ 0.78).
+  **sintéticos** para poder ejecutarse sin CBIS-DDSM descargado. El backend
+  topológico se elige automáticamente (`src.topology.backend()`): imágenes de
+  persistencia reales (H0+H1) con `gudhi` o `giotto-tda` si alguno está
+  instalado, o si no un respaldo basado en la **curva de Betti-0** (`scipy`).
+  Ejecutado con `gudhi`, da accuracy ≈ 0.67–0.73, sensibilidad ≈ 0.60–0.80,
+  AUC ≈ 0.83–0.84.
 
 ## Estado del proyecto
 
@@ -107,8 +110,20 @@ latexmk -pdf main.tex     # requiere una distribución LaTeX + biber
 - [x] Bibliografía inicial
 - [x] Pipeline (`src/`) documentado a nivel profesional
 - [x] Notebook de demostración ejecutable de extremo a extremo
+- [x] Tests unitarios de `src/` (`pytest`, datos sintéticos)
+- [x] Capítulos 7–8 con validación preliminar del *pipeline* (datos sintéticos)
 - [ ] Descarga completa de datos e imágenes de CBIS-DDSM
 - [ ] Ejecución de experimentos con datos reales y resultados
 - [ ] Entrenamiento de la CNN de referencia y experimento de fusión
 - [ ] Visualizaciones finales para la memoria
+
+## Tests
+
+```bash
+pip install -r requirements.txt
+pytest
 ```
+
+Los tests cubren `src/data.py`, `preprocessing.py`, `models.py` y `evaluate.py`
+con datos sintéticos (no requieren CBIS-DDSM descargado). Los de `topology.py`
+que necesitan `giotto-tda` se saltan automáticamente si no está instalado.

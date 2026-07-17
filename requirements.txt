@@ -7,7 +7,14 @@ scikit-image
 pillow
 
 # TDA / homologia persistente
-giotto-tda
+# gudhi + persim: backend portable (Python 3.10-3.14, incluye Windows).
+# giotto-tda es la implementacion de referencia usada en la memoria, pero solo
+# publica ruedas hasta Python 3.12; si tu interprete es 3.13+, comenta la
+# linea de giotto-tda y usa solo gudhi/persim (src/topology.py detecta
+# automaticamente cual esta instalado).
+gudhi
+persim
+giotto-tda; python_version < "3.13"
 
 # Aprendizaje automatico y profundo
 scikit-learn
@@ -17,3 +24,6 @@ tensorflow
 matplotlib
 seaborn
 jupyter
+
+# Tests
+pytest

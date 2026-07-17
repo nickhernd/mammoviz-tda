@@ -18,6 +18,7 @@ data/images/
 .venv/
 __pycache__/
 *.pyc
+.pytest_cache/
 
 # LaTeX (archivos auxiliares de compilacion)
 tfg/*.aux

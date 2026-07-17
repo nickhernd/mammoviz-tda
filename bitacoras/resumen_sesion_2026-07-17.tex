@@ -1,0 +1,174 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish]{babel}
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage[hidelinks]{hyperref}
+\usepackage{enumitem}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  frame=single, breaklines=true, showstringspaces=false,
+  columns=fullflexible
+}
+
+\title{Bitácora de sesión --- mammoviz-tda\\\large Resumen de trabajo del 17 de julio de 2026}
+\author{Sesión asistida con Claude Code}
+\date{2026-07-17}
+
+\begin{document}
+\maketitle
+
+\section*{Punto de partida}
+Al empezar la sesión, el repositorio \texttt{mammoviz-tda} (TFG sobre Análisis
+Topológico de Datos aplicado a la clasificación de mamografías CBIS-DDSM)
+tenía:
+\begin{itemize}[nosep]
+  \item Memoria LaTeX con 8 capítulos, de los cuales los capítulos 7
+        (Resultados) y 8 (Conclusiones) eran plantillas con marcadores de
+        posición (\textit{``--''}, \textit{``Redactar a partir de los
+        resultados obtenidos''}).
+  \item \textit{Pipeline} en \texttt{src/} (\texttt{data.py},
+        \texttt{preprocessing.py}, \texttt{topology.py}, \texttt{models.py},
+        \texttt{evaluate.py}) sin ningún test automatizado.
+  \item Un notebook de demostración (\texttt{01\_pipeline\_demo.ipynb}) que
+        funcionaba, pero caía a un descriptor de respaldo (curva de Betti-0)
+        porque \texttt{giotto-tda} no tiene binarios para Python 3.14 (versión
+        instalada en esta máquina).
+  \item Sin datos reales de CBIS-DDSM descargados (solo el manifiesto de TCIA).
+  \item Dos figuras de la memoria eran cuadros de texto de relleno
+        (\textit{``sustituir por la figura definitiva''}), no imágenes reales.
+\end{itemize}
+
+\section*{Trabajo realizado}
+
+\subsection*{1. Capítulos 7 y 8 de la memoria}
+Se sustituyeron los marcadores de posición por contenido real, basado en la
+ejecución efectiva del \textit{pipeline} (no en resultados inventados):
+diseño experimental (E1--E4), configuración, estado explícito de los datos
+pendientes de descargar, y una tabla de cumplimiento de objetivos (O1--O6)
+honesta sobre qué está implementado frente a qué falta validar con datos
+reales.
+
+\subsection*{2. Tests unitarios (\texttt{pytest})}
+Se creó el directorio \texttt{tests/} con suite completa para
+\texttt{src/}: \texttt{test\_data.py}, \texttt{test\_preprocessing.py},
+\texttt{test\_models.py}, \texttt{test\_evaluate.py} y tests de topología
+divididos en \texttt{test\_topology.py} (genérico),
+\texttt{test\_topology\_gudhi.py} y \texttt{test\_topology\_giotto.py}
+(específicos de cada backend, con \texttt{pytest.importorskip}).
+Se detectó y corrigió un error de diseño propio: un \texttt{importorskip} a
+mitad de fichero salta el \textbf{módulo entero}, no solo lo que viene
+después --- de ahí la separación en varios ficheros.
+Resultado final: \textbf{43 tests pasan, 2 se saltan} (los que requieren
+TensorFlow, no instalado en este entorno).
+
+\subsection*{3. Backend de homología persistente portable (gudhi)}
+\texttt{giotto-tda} solo publica binarios hasta Python 3.12. En vez de
+instalar una versión antigua de Python en paralelo, se identificó que
+\texttt{gudhi} + \texttt{persim} sí tienen binarios para Python 3.14 y
+calculan la misma homología persistente cúbica. Se reescribió
+\texttt{src/topology.py} para elegir automáticamente el mejor backend
+disponible (\texttt{giotto-tda} $\to$ \texttt{gudhi} $\to$ curva de Betti-0),
+con una función \texttt{backend()} para consultarlo, y una implementación
+propia de imagen de persistencia (núcleo gaussiano ponderado por
+persistencia) para cuando el backend activo es \texttt{gudhi}.
+
+\subsection*{4. Notebook y resultados actualizados}
+Se actualizó \texttt{01\_pipeline\_demo.ipynb} para usar \texttt{backend()} y
+reportar correctamente qué motor topológico está activo, y se volvió a
+ejecutar de extremo a extremo. Al pasar del descriptor de respaldo (Betti-0,
+solo H0) a la imagen de persistencia completa (H0+H1, backend \texttt{gudhi}),
+los resultados sobre el conjunto sintético mejoraron notablemente:
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}lccc@{}}
+\toprule
+& \textbf{Antes (Betti-0, solo H0)} & \textbf{Después (gudhi, H0+H1)} \\
+\midrule
+Sensibilidad (Random Forest) & 0.60 & 0.80 \\
+AUC (SVM / Random Forest)    & 0.74 / 0.78 & 0.844 / 0.833 \\
+Dimensión del vector         & 24 & 288 \\
+\bottomrule
+\end{tabular}
+\caption{Comparación de resultados sobre el conjunto sintético (120 imágenes),
+antes y después de disponer de un backend TDA real.}
+\end{table}
+
+\subsection*{5. Figuras reales en la memoria}
+Se sustituyeron los dos últimos cuadros de texto de relleno:
+\begin{itemize}[nosep]
+  \item El diagrama del \textit{pipeline} (Cap.\ 5) ahora es un diagrama TikZ
+        real (código, no imagen externa), corregido tras detectar que se
+        salía del margen a tamaño natural (\texttt{resizebox}).
+  \item Tres figuras extraídas de la ejecución real del notebook (Cap.\ 7):
+        ejemplos sintéticos benigno/maligno, matriz de confusión del mejor
+        modelo, y diagramas de persistencia H0+H1 de un caso de cada clase.
+\end{itemize}
+
+\subsection*{6. Apéndice ampliado}
+Se rellenó el apéndice (antes vacío/genérico) con una tabla real de los
+campos del manifiesto de TCIA (verificada contra el \texttt{.xlsx} presente en
+el repositorio), la descripción de los campos esperados en los CSV de casos
+(aún por descargar), y dos fragmentos de código relevantes (detección de
+backend, imagen de persistencia manual). De paso se detectaron y corrigieron
+dos tablas con columnas sin ajuste de texto que desbordaban la página (bug
+preexistente en el capítulo 8, agravado por la tabla nueva del apéndice).
+
+\subsection*{Verificación}
+Cada cambio se verificó activamente, no solo se asumió correcto:
+\begin{itemize}[nosep]
+  \item La memoria se recompiló (\texttt{latexmk + biber}) tras cada tanda de
+        cambios, comprobando 0 errores y 0 referencias sin resolver.
+  \item Las páginas con figuras y tablas nuevas se renderizaron a PNG
+        (\texttt{pdftoppm}) y se inspeccionaron visualmente para detectar
+        desbordamientos de márgen, no solo confiar en que ``compila''.
+  \item La suite de tests se ejecutó de principio a fin varias veces
+        (43 passed, 2 skipped, estable).
+\end{itemize}
+
+\section*{Estado del repositorio al cierre}
+\textbf{Nada de esto se ha commiteado} (a petición explícita). Ficheros
+modificados o nuevos en el árbol de trabajo:
+\begin{lstlisting}
+ M .gitignore
+ M README.md
+ M notebooks/01_pipeline_demo.ipynb
+ M requirements.txt
+ M src/topology.py
+ M tfg/capitulos/05-metodologia.tex
+ M tfg/capitulos/06-implementacion.tex
+ M tfg/capitulos/07-resultados.tex
+ M tfg/capitulos/08-conclusiones.tex
+ M tfg/main.pdf
+ M tfg/main.tex
+?? conftest.py
+?? pytest.ini
+?? tests/
+?? tfg/figuras/diagramas_persistencia_sintetico.png
+?? tfg/figuras/ejemplos_sinteticos.png
+?? tfg/figuras/matriz_confusion_sintetico.png
+\end{lstlisting}
+
+\section*{Pendiente (fuera del alcance de esta sesión)}
+Todo lo pendiente depende de un mismo bloqueo externo: la descarga real de
+CBIS-DDSM (CSV de casos + imágenes DICOM/máscaras vía NBIA Data Retriever,
+del orden de decenas de GB), que requiere cuenta en TCIA y no es automatizable
+desde este entorno. Una vez descargados los datos:
+\begin{enumerate}[nosep]
+  \item Ejecutar \texttt{src/topology.py} (ya operativo con \texttt{gudhi})
+        sobre las imágenes reales y rellenar la Tabla 7.2.
+  \item Entrenar la CNN de referencia (\texttt{src/models.py:build\_cnn}) ---
+        requiere además instalar TensorFlow.
+  \item Ejecutar el experimento de fusión TDA + CNN.
+  \item Generar las visualizaciones finales (Grad-CAM vs.\ diagramas de
+        persistencia) sobre casos reales.
+\end{enumerate}
+
+\end{document}

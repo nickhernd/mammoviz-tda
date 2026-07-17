@@ -17,12 +17,31 @@ El sistema propuesto consta de cinco etapas:
 
 \begin{figure}[H]
 \centering
-% \includegraphics[width=\textwidth]{figuras/pipeline.png}
-\fbox{\parbox[c][4cm][c]{0.9\textwidth}{\centering\itshape
-Diagrama del \textit{pipeline}: Datos $\rightarrow$ Preprocesado $\rightarrow$
-Homología persistente $\rightarrow$ Vectorización $\rightarrow$ Clasificador
-$\rightarrow$ Evaluación. \\ (Sustituir por la figura definitiva.)}}
-\caption{Esquema general del \textit{pipeline} propuesto.}
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[
+    node distance = 0.9cm and 1.1cm,
+    stage/.style = {
+      draw, rounded corners, align=center, font=\small,
+      minimum height=1.1cm, text width=2.2cm, fill=blue!6
+    },
+    arr/.style = {-Latex, thick}
+  ]
+  \node[stage] (datos)  {Datos\\[-2pt]\footnotesize CBIS-DDSM};
+  \node[stage, right=of datos]  (prep)  {Preprocesado\\[-2pt]\footnotesize ROI, CLAHE};
+  \node[stage, right=of prep]   (topo)  {Homología\\persistente};
+  \node[stage, right=of topo]   (vec)   {Vectorización\\[-2pt]\footnotesize imagen de persist.};
+  \node[stage, right=of vec]    (clf)   {Clasificador\\[-2pt]\footnotesize SVM/RF/CNN};
+  \node[stage, right=of clf]    (eval)  {Evaluación\\[-2pt]\footnotesize métricas clínicas};
+
+  \draw[arr] (datos) -- (prep);
+  \draw[arr] (prep)  -- (topo);
+  \draw[arr] (topo)  -- (vec);
+  \draw[arr] (vec)   -- (clf);
+  \draw[arr] (clf)   -- (eval);
+\end{tikzpicture}%
+}
+\caption{Esquema general del \textit{pipeline} propuesto: de los datos crudos a
+las métricas clínicas, pasando por la extracción de descriptores topológicos.}
 \label{fig:pipeline}
 \end{figure}
 

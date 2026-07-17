@@ -2,36 +2,119 @@
 \label{cap:conclusiones}
 
 \section{Conclusiones}
-\textit{(Redactar a partir de los resultados obtenidos.)} En este Trabajo de Fin
-de Grado se ha estudiado la aplicación del Análisis Topológico de Datos a la
-clasificación y visualización de mamografías digitales del conjunto
-\mbox{CBIS-DDSM}. Las principales conclusiones, en relación con los objetivos
-planteados, son:
+En este Trabajo de Fin de Grado se ha estudiado la aplicación del Análisis
+Topológico de Datos a la clasificación y visualización de mamografías digitales
+del conjunto \mbox{CBIS-DDSM}. El resultado principal es un \textbf{\textit{pipeline}
+completo y reproducible} --- desde la carga de metadatos hasta la evaluación
+clínica --- que corrige el problema de fuga de datos detectado en el material de
+partida y que ha sido validado de extremo a extremo, si bien todavía con datos
+sintéticos a falta de completar la descarga de \mbox{CBIS-DDSM}
+(Sección~\ref{sec:resultados-pendientes}). En relación con los objetivos
+específicos planteados en el Capítulo~\ref{cap:objetivos}:
 
 \begin{itemize}
-  \item Se ha revisado el estado del arte en análisis de mamografías y en TDA
-        aplicado a imagen médica (O1).
+  \item Se ha revisado el estado del arte en análisis automático de mamografías
+        y en aplicaciones del TDA a imagen médica (O1).
   \item Se ha construido un \textit{pipeline} reproducible de preparación de
-        datos con partición por paciente que evita la fuga de datos (O2).
-  \item Se han extraído y evaluado descriptores topológicos como características
-        para la clasificación benigno/maligno (O3, O4).
-  \item Se ha comparado el enfoque topológico con un modelo de \textit{deep
-        learning} de referencia y se ha explorado su combinación (O5).
-  \item Se han desarrollado visualizaciones que mejoran la interpretabilidad de
-        los resultados (O6).
+        datos (\texttt{src/data.py}) cuyo aporte metodológico central es la
+        \textbf{partición por paciente}, que corrige la fuga de datos observada
+        en el \texttt{Demo\_Notebook.ipynb} original (exactitud del 100\,\%
+        desde la primera época) (O2).
+  \item Se ha implementado la extracción de descriptores topológicos mediante
+        homología persistente cúbica (\texttt{src/topology.py}: diagramas de
+        persistencia, imágenes de persistencia H0+H1, estadísticos), con dos
+        backends intercambiables (\texttt{giotto-tda} y \texttt{gudhi}, este
+        último operativo en Python 3.14) para no depender de una versión
+        concreta de Python, y se ha entrenado y evaluado clasificadores
+        clásicos (SVM, \textit{random forest}) sobre estos descriptores, con
+        resultados preliminares coherentes ($\text{AUC} \approx 0.83$--$0.84$)
+        sobre datos sintéticos (O3 --- \textbf{cumplido a nivel de
+        implementación}; O4 --- \textbf{validado parcialmente}: falta repetir
+        el experimento sobre imágenes reales de CBIS-DDSM).
+  \item Se ha diseñado e implementado la CNN de referencia y el mecanismo de
+        fusión de características (\texttt{src/models.py:build\_cnn},
+        \texttt{fuse\_features}), pero \textbf{no se ha podido entrenar ni
+        comparar todavía} por falta del conjunto de imágenes real (O5 ---
+        \textbf{pendiente}).
+  \item Se han desarrollado utilidades de visualización (matriz de confusión,
+        diagrama de persistencia) en \texttt{src/evaluate.py}, integradas en el
+        notebook de demostración; queda pendiente su aplicación sobre casos
+        reales y su comparación con mapas de activación de la CNN (p.\,ej.\
+        Grad-CAM) (O6 --- \textbf{parcialmente cumplido}).
 \end{itemize}
 
 \section{Grado de cumplimiento de los objetivos}
-Se valora el grado de cumplimiento de cada objetivo específico y las
-desviaciones respecto a la planificación inicial.
+
+\begin{table}[H]
+\centering
+\caption{Grado de cumplimiento de los objetivos específicos.}
+\label{tab:cumplimiento}
+\begin{tabular}{@{}p{1.3cm}p{3.3cm}p{9.4cm}@{}}
+\toprule
+\textbf{Obj.} & \textbf{Estado} & \textbf{Observaciones} \\
+\midrule
+O1 & Cumplido            & Revisión bibliográfica completa (Cap.~\ref{cap:estado-arte}). \\
+O2 & Cumplido            & \textit{Pipeline} de datos y partición por paciente
+                            implementados y verificados. \\
+O3 & Cumplido (impl.)  & Extracción de imágenes de persistencia H0+H1
+                            implementada y validada sobre datos sintéticos con
+                            dos backends (gudhi, giotto-tda); falta validar
+                            sobre imágenes reales de CBIS-DDSM. \\
+O4 & Parcialmente cumplido & Clasificadores entrenados y evaluados sobre datos
+                            sintéticos; falta la ejecución sobre CBIS-DDSM. \\
+O5 & Pendiente            & CNN y fusión implementadas pero no entrenadas ni
+                            comparadas por falta de datos. \\
+O6 & Parcialmente cumplido & Visualizaciones básicas implementadas; falta
+                            aplicarlas a casos reales y compararlas con Grad-CAM. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+La principal desviación respecto a la planificación inicial es de naturaleza
+logística, no metodológica: el volumen y los tiempos de descarga de
+\mbox{CBIS-DDSM} (imágenes DICOM completas y máscaras de ROI, del orden de
+decenas de gigabytes) han retrasado la fase de experimentación con datos reales
+(O4, O5), a pesar de que el \textit{pipeline} que los consumirá está terminado,
+documentado y validado funcionalmente.
 
 \section{Limitaciones}
-Se discuten las limitaciones del trabajo: tamaño y sesgos del conjunto de datos,
-coste computacional de la homología persistente, y alcance de la validación
-clínica.
+Se identifican las siguientes limitaciones del trabajo en su estado actual:
+
+\begin{itemize}
+  \item \textbf{Ausencia de resultados sobre datos reales.} Las métricas
+        presentadas en el Capítulo~\ref{cap:resultados} se obtienen sobre datos
+        sintéticos (con el descriptor topológico completo, imágenes de
+        persistencia H0+H1 vía \texttt{gudhi}); no son extrapolables a la
+        capacidad diagnóstica real del enfoque sobre mamografías.
+  \item \textbf{Tamaño y sesgos del conjunto de datos.} CBIS-DDSM, aunque
+        curado, procede de un número limitado de centros y equipos de
+        adquisición, lo que puede limitar la generalización a otras
+        poblaciones o tecnologías de imagen.
+  \item \textbf{Coste computacional de la homología persistente.} El cálculo de
+        homología cúbica sobre imágenes completas de alta resolución es costoso;
+        en la práctica suele requerir trabajar sobre ROIs recortadas y
+        reescaladas, lo que introduce una decisión de diseño (tamaño y margen
+        del recorte) con impacto en el resultado.
+  \item \textbf{Alcance de la validación clínica.} Ni las métricas obtenidas ni
+        las que se obtengan sobre CBIS-DDSM constituyen una validación clínica:
+        falta contraste con radiólogos y con conjuntos de datos externos antes
+        de extraer conclusiones sobre utilidad diagnóstica real.
+\end{itemize}
 
 \section{Trabajo futuro}
-Como líneas de trabajo futuro se proponen:
+A corto plazo, para completar los objetivos O4--O6 sobre datos reales:
+\begin{itemize}
+  \item Completar la descarga de CBIS-DDSM (CSV de casos e imágenes/máscaras vía
+        NBIA Data Retriever) y ejecutar el \textit{pipeline} de extracción
+        topológica (ya operativo con \texttt{gudhi}/\texttt{giotto-tda}) sobre
+        las imágenes reales.
+  \item Entrenar la CNN de referencia y el experimento de fusión, y completar la
+        Tabla~\ref{tab:resultados}.
+  \item Generar las visualizaciones finales (diagramas de persistencia sobre
+        casos reales, comparación con Grad-CAM) para la memoria.
+\end{itemize}
+
+Como líneas de trabajo futuro de más largo alcance se proponen:
 \begin{itemize}
   \item Extender el estudio a otras filtraciones y descriptores topológicos
         (\textit{multiparameter persistence}).

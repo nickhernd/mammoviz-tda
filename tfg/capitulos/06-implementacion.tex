@@ -17,7 +17,7 @@ El proyecto se desarrolla en \textbf{Python}. Las principales librerías son:
 \midrule
 Manipulación de datos      & pandas, NumPy \\
 Imagen                     & OpenCV, scikit-image, Pillow \\
-TDA / homología persistente& giotto-tda, Ripser, GUDHI \\
+TDA / homología persistente& giotto-tda (referencia) / GUDHI + persim (portable) \\
 Aprendizaje automático     & scikit-learn \\
 Aprendizaje profundo       & TensorFlow / Keras (o PyTorch) \\
 Visualización              & Matplotlib, seaborn \\
@@ -43,7 +43,13 @@ mammoviz-tda/
 \end{lstlisting}
 
 \section{Extracción de descriptores topológicos}
-El siguiente fragmento ilustra el cálculo de un diagrama de persistencia a partir
+\texttt{giotto-tda} solo distribuye binarios precompilados hasta Python 3.12,
+por lo que \texttt{src/topology.py} detecta en tiempo de ejecución qué backend
+está disponible (\texttt{giotto-tda} o, si no, \texttt{gudhi + persim}, con
+soporte hasta Python 3.14) y expone la misma interfaz
+(\texttt{persistence\_diagram}, \texttt{extract\_features}) independientemente
+de cuál esté activo; \texttt{topology.backend()} permite consultarlo. El
+siguiente fragmento ilustra el cálculo de un diagrama de persistencia a partir
 de una imagen en escala de grises mediante una filtración por \textit{sublevel
 sets}, utilizando \texttt{giotto-tda}.
 

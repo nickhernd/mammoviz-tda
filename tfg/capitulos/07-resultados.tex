@@ -1,29 +1,155 @@
 \chapter{Experimentos y resultados}
 \label{cap:resultados}
 
-Este capítulo presenta el diseño experimental y los resultados obtenidos.
-\textit{(Este capítulo debe completarse con los resultados reales a medida que
-se ejecuten los experimentos; a continuación se proporciona la estructura y las
-plantillas de tablas y figuras.)}
+Este capítulo presenta el diseño experimental del trabajo y los resultados
+obtenidos hasta el momento. Como se detalla en la Sección~\ref{sec:estado-datos},
+la descarga completa de \mbox{CBIS-DDSM} (imágenes y máscaras de ROI) todavía no
+se ha completado; por ello, los resultados que se presentan aquí corresponden a
+una \textbf{validación preliminar del \textit{pipeline} completo con datos
+sintéticos} (Sección~\ref{sec:resultados-sinteticos}), y se deja preparada la
+estructura (tablas, figuras, apartados) que se rellenará con los resultados
+sobre el conjunto de datos real en cuanto estén disponibles
+(Sección~\ref{sec:resultados-pendientes}).
 
 \section{Diseño experimental}
-Se definen los siguientes experimentos, alineados con los objetivos O4 y O5:
+Se definen los siguientes experimentos, alineados con los objetivos O4 y O5
+(Capítulo~\ref{cap:objetivos}):
 \begin{description}
-  \item[E1.] Clasificación con descriptores topológicos + clasificador clásico.
-  \item[E2.] Clasificación con CNN (\textit{transfer learning}).
+  \item[E1.] Clasificación con descriptores topológicos + clasificador clásico
+        (SVM, \textit{random forest}).
+  \item[E2.] Clasificación con CNN (\textit{transfer learning}, DenseNet121).
   \item[E3.] Fusión de características topológicas y \textit{embeddings} de CNN.
   \item[E4.] Análisis de robustez frente a ruido y a variaciones de adquisición.
 \end{description}
 
 \section{Configuración}
-Se detallan los hiperparámetros, la partición de datos por paciente, el número
-de repeticiones y el hardware utilizado.
+En todos los experimentos se fija una semilla aleatoria común
+(\texttt{seed = 42}) para garantizar la reproducibilidad. La partición de datos
+se realiza \textbf{por paciente} (Capítulo~\ref{cap:metodologia}), con
+proporciones 70\,\% / 15\,\% / 15\,\% para entrenamiento, validación y
+test respectivamente, estratificadas por la etiqueta de patología. Los
+hiperparámetros de los clasificadores clásicos (\texttt{SVC(kernel='rbf')},
+\texttt{RandomForestClassifier(n\_estimators=300)}) se fijan a valores por
+defecto razonables en esta fase preliminar; en la fase de experimentación con
+datos reales se ajustarán mediante validación cruzada sobre el conjunto de
+validación.
 
-\section{Resultados}
+\subsection{Backend de homología persistente}
+\label{sec:backend-tda}
+La implementación de referencia de este trabajo usa \texttt{giotto-tda}
+(Sección~\ref{cap:implementacion}), pero esta librería solo distribuye
+binarios precompilados hasta Python 3.12. Para no depender de una versión
+concreta de Python, \texttt{src/topology.py} elige automáticamente, en este
+orden, el primer backend disponible en el entorno de ejecución:
+\begin{enumerate}
+  \item \textbf{giotto-tda} --- implementación de referencia.
+  \item \textbf{gudhi + persim} --- backend alternativo con soporte binario
+        hasta Python 3.14; se usa \texttt{gudhi.CubicalComplex} para el
+        diagrama de persistencia y una imagen de persistencia calculada
+        mediante un núcleo gaussiano ponderado por persistencia sobre la
+        rejilla fija $[0,1]\times[0,1]$ (las imágenes ya están normalizadas
+        por \texttt{preprocessing.to\_grayscale\_float}).
+  \item \textbf{Curva de Betti-0} (\texttt{scipy}) --- respaldo mínimo si
+        ningún backend anterior está instalado; cuenta cómo evoluciona el
+        número de componentes conexas al barrer el umbral de intensidad.
+\end{enumerate}
+Los resultados de este capítulo se obtuvieron con el backend \textbf{gudhi},
+por ser el que está instalado en el entorno de desarrollo (Python 3.14, donde
+\texttt{giotto-tda} no tiene binarios disponibles). Ambos backends calculan la
+misma homología persistente cúbica sobre H0 y H1; la diferencia está en la
+vectorización final (imagen de persistencia), por lo que los resultados no
+deberían diferir sustancialmente de los que produciría \texttt{giotto-tda}.
+
+\section{Validación preliminar del \textit{pipeline} con datos sintéticos}
+\label{sec:resultados-sinteticos}
+
+Antes de disponer del conjunto de datos real, se ha validado el
+\textit{pipeline} de extremo a extremo (\texttt{notebooks/01\_pipeline\_demo.ipynb})
+sobre un conjunto de \textbf{imágenes sintéticas} generadas para imitar de forma
+simplificada la textura y el contraste de una mamografía con lesión: $120$
+imágenes en escala de grises de $64\times64$ píxeles, con $60$ ejemplos de cada
+clase (benigno/maligno simulados mediante patrones con distinta rugosidad
+topológica). El objetivo de este experimento \textbf{no} es obtener conclusiones
+clínicas --- los datos son artificiales --- sino comprobar que las cinco etapas
+del \textit{pipeline} (datos $\rightarrow$ preprocesado $\rightarrow$ homología
+persistente $\rightarrow$ clasificación $\rightarrow$ evaluación) encajan
+correctamente y producen métricas coherentes, usando ya el descriptor
+topológico \textbf{completo} (imágenes de persistencia H0+H1, no la curva de
+Betti-0) gracias al backend \texttt{gudhi} (Sección~\ref{sec:backend-tda}).
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\textwidth]{figuras/ejemplos_sinteticos.png}
+\caption{Ejemplo de imagen sintética de cada clase: un \textit{blob} redondeado
+y suave (benigno) frente a una masa con espículas y micro-motas (maligno),
+ambas con ruido gaussiano fuerte para evitar un problema trivial.}
+\label{fig:ejemplos-sinteticos}
+\end{figure}
+
+Con partición $90/30$ (train/test) y un vector de $288$ características por
+imagen ($12\times12$ píxeles por imagen de persistencia, dos dimensiones de
+homología H0 y H1), se obtienen los siguientes resultados:
 
 \begin{table}[H]
 \centering
-\caption{Resultados comparativos en el conjunto de test (plantilla).}
+\caption{Resultados sobre datos sintéticos (validación del \textit{pipeline},
+imagen de persistencia H0+H1, backend gudhi).}
+\label{tab:resultados-sinteticos}
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+\textbf{Modelo} & \textbf{Exactitud} & \textbf{Sensib.} & \textbf{Especif.} &
+\textbf{F1} & \textbf{AUC} \\
+\midrule
+TDA + SVM (RBF)              & 0.667 & 0.600 & 0.733 & 0.643 & 0.844 \\
+TDA + Random Forest          & 0.733 & 0.800 & 0.667 & 0.750 & 0.833 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Con estos datos sintéticos, el \textit{random forest} obtiene la mejor
+sensibilidad y F1, y es el modelo seleccionado por F1 en el notebook; la SVM
+obtiene ligeramente mejor AUC. Ambos modelos superan claramente al azar
+(AUC $\approx 0.83$--$0.84$), y la sensibilidad del \textit{random forest}
+($0.80$) es notablemente mejor que la obtenida en una validación previa con el
+descriptor de respaldo Betti-0 ($0.60$, un vector de solo $24$ características
+frente a las $288$ de la imagen de persistencia), lo que es consistente con la
+hipótesis de que \textbf{la dimensión H1 (agujeros/ciclos), ausente en la
+curva de Betti-0, aporta información discriminativa} relevante para las
+morfologías espiculadas simuladas en la clase maligna.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.45\textwidth]{figuras/matriz_confusion_sintetico.png}
+\caption{Matriz de confusión del \textit{random forest} (mejor modelo por F1)
+sobre el conjunto sintético de test. Generada en
+\texttt{notebooks/01\_pipeline\_demo.ipynb}.}
+\label{fig:matriz-confusion-sintetico}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figuras/diagramas_persistencia_sintetico.png}
+\caption{Diagramas de persistencia (backend \texttt{gudhi}) de un ejemplo
+benigno y uno maligno del conjunto sintético. H0 (componentes conexas) en azul,
+H1 (agujeros/ciclos) en naranja; la diagonal discontinua marca birth = death.}
+\label{fig:diagramas-persistencia-sintetico}
+\end{figure}
+
+\section{Resultados pendientes con el conjunto de datos real}
+\label{sec:resultados-pendientes}
+
+La siguiente tabla mantiene la estructura de comparación planificada para los
+experimentos E1--E3 sobre \mbox{CBIS-DDSM} real, con el mismo descriptor
+topológico (imágenes de persistencia H0+H1) ya validado en la
+Sección~\ref{sec:resultados-sinteticos}, y el modelo de \textit{deep learning}
+de referencia. Se rellenará en cuanto se complete la descarga de datos
+(Sección~\ref{sec:estado-datos}) y se ejecuten los experimentos
+correspondientes.
+
+\begin{table}[H]
+\centering
+\caption{Resultados comparativos en el conjunto de test de CBIS-DDSM (plantilla,
+pendiente de completar).}
 \label{tab:resultados}
 \begin{tabular}{@{}lccccc@{}}
 \toprule
@@ -39,17 +165,58 @@ Fusión TDA + CNN             & -- & -- & -- & -- & -- \\
 \end{tabular}
 \end{table}
 
-\begin{figure}[H]
-\centering
-% \includegraphics[width=0.7\textwidth]{figuras/roc.png}
-\fbox{\parbox[c][4cm][c]{0.7\textwidth}{\centering\itshape
-Curvas ROC de los distintos modelos. (Sustituir por la figura definitiva.)}}
-\caption{Comparación de curvas ROC.}
-\label{fig:roc}
-\end{figure}
+\subsection{Estado de los datos}
+\label{sec:estado-datos}
+A fecha de redacción de este capítulo, el repositorio contiene únicamente el
+manifiesto de TCIA (\texttt{CBIS-DDSM-All-...-nbia-digest.xlsx}), que identifica
+las series pero no incluye la etiqueta de patología. Quedan pendientes:
+\begin{itemize}
+  \item Descargar los CSV de descripción de casos
+        (\texttt{mass\_/calc\_case\_description\_*.csv}) a \texttt{data/csv/}.
+  \item Descargar las imágenes DICOM y las máscaras de ROI a
+        \texttt{data/images/} mediante el NBIA Data Retriever.
+  \item Ejecutar \texttt{src/topology.py} (backend \texttt{gudhi} o
+        \texttt{giotto-tda}, ya operativo --- Sección~\ref{sec:backend-tda})
+        sobre las imágenes reales.
+  \item Entrenar y evaluar la CNN de referencia (\texttt{src/models.py:build\_cnn})
+        y el experimento de fusión.
+\end{itemize}
 
 \section{Discusión}
-Se analizan los resultados a la luz de los objetivos: capacidad discriminativa de
-los descriptores topológicos, comparación con el \textit{deep learning},
-beneficio de la fusión, robustez frente al ruido e interpretabilidad. Se discuten
-también las limitaciones observadas.
+\label{sec:discusion}
+Aunque los resultados sobre datos sintéticos no permiten extraer conclusiones
+clínicas, sí permiten adelantar algunas observaciones metodológicas relevantes
+para la fase de experimentación real:
+
+\begin{itemize}
+  \item \textbf{El \textit{pipeline} es funcionalmente correcto de extremo a
+        extremo y con el descriptor topológico completo}: la partición por
+        paciente, el preprocesado, la extracción de imágenes de persistencia
+        H0+H1 y la evaluación con métricas clínicas se ejecutan sin errores y
+        producen resultados coherentes (AUC $\approx 0.83$--$0.84$).
+  \item \textbf{La dimensión H1 aporta información que la curva de Betti-0 no
+        captura}: al pasar del descriptor de respaldo (Betti-0, solo H0,
+        $24$ características) a la imagen de persistencia completa (H0+H1,
+        $288$ características), la sensibilidad del \textit{random forest}
+        mejora de $0.60$ a $0.80$ sobre el mismo conjunto sintético. Es una
+        observación preliminar (mismo generador, tamaño de muestra pequeño),
+        pero apunta en la dirección esperada: los ciclos/agujeros (H1) deberían
+        ser relevantes para masas espiculadas y distribuciones de
+        microcalcificaciones.
+  \item \textbf{La sensibilidad sigue siendo sensible al tamaño de muestra}:
+        con solo $120$ imágenes sintéticas, la sensibilidad de la SVM
+        ($0.60$) queda por debajo de su especificidad ($0.73$), lo que
+        anticipa la necesidad de vigilar el desbalance de clases y el tamaño
+        muestral al pasar a datos reales (CBIS-DDSM tiene más casos benignos
+        que malignos).
+  \item \textbf{Comparación con \textit{deep learning} y fusión}: quedan
+        pendientes de ejecutar sobre datos reales; la discusión sobre si el
+        enfoque topológico aporta información complementaria a la CNN (y no
+        solo redundante) solo puede responderse con el experimento E3 de
+        fusión.
+\end{itemize}
+
+Las limitaciones específicas de esta fase preliminar (tamaño de muestra,
+naturaleza sintética de los datos, ausencia de comparación con CNN) se retoman
+en el Capítulo~\ref{cap:conclusiones} junto con las limitaciones generales del
+trabajo.
