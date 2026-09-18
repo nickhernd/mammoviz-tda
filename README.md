@@ -63,8 +63,21 @@ TCIA**: describe las series pero **no contiene la etiqueta benigno/maligno**.
 Para reproducir los experimentos necesitas descargar de CBIS-DDSM:
 
 1. Los **CSV de descripción de casos** (`mass_case_description_train_set.csv`,
-   `calc_case_description_*.csv`, …) → colócalos en `data/csv/`.
-2. Las **imágenes** (mamografías completas y máscaras de ROI) → `data/images/`.
+   `calc_case_description_*.csv`, …) → descárgalos con:
+   ```bash
+   curl -O https://www.cancerimagingarchive.net/wp-content/uploads/mass_case_description_train_set.csv
+   # (y lo mismo para mass_case_description_test_set.csv, calc_case_description_train_set.csv,
+   #  calc_case_description_test_set.csv) -> colócalos todos en data/csv/
+   ```
+2. Las **imágenes** (mamografías completas y máscaras de ROI): el dataset completo son
+   163.5 GB (6775 series DICOM), demasiado para descargar de golpe. Usa el script
+   incremental, que descarga un piloto balanceado benigno/maligno y se puede
+   relanzar cuando quieras para ampliarlo:
+   ```bash
+   python scripts/download_cbis_ddsm.py --add 15 15 --category mass
+   ```
+   Va directamente contra la API REST de TCIA (no hace falta el NBIA Data
+   Retriever), cachea el índice de series y no repite descargas ya hechas.
 
 > ⚠️ **Nota metodológica importante.** El notebook original
 > (`Demo_Notebook.ipynb`) alcanzaba una exactitud del 100 % desde la primera
@@ -75,19 +88,32 @@ Para reproducir los experimentos necesitas descargar de CBIS-DDSM:
 
 ## Uso rápido
 
+Para ejecutar el pipeline completo de un tirón (carga real → preprocesado →
+topología → clasificador → métricas clínicas) sobre los casos ya descargados:
+
+```bash
+python scripts/run_pipeline.py
+```
+
+Guarda en `results/` la matriz de confusión, un diagrama de persistencia de
+ejemplo y `metrics.txt`. Si prefieres ir paso a paso o integrarlo en tu propio
+notebook, las mismas piezas están disponibles por separado:
+
 ```python
-from src.data import load_manifest, split_by_patient
+from src.data import load_case_descriptions, split_by_patient
 from src.preprocessing import preprocess
-from src.topology import extract_features
+from src.topology import persistence_diagram, persistence_image_vector
 from src.models import build_svm
 from src.evaluate import clinical_metrics
 
-# 1. Cargar metadatos y particionar por paciente
-manifest = load_manifest("CBIS-DDSM-All-doiJNLP-zzWs5zfZ-nbia-digest.xlsx")
+# 1. Cargar metadatos reales y particionar por paciente
+df = load_case_descriptions("data/csv")
+partitions = split_by_patient(df)
 
 # 2. Preprocesar imagen -> 3. extraer descriptor topológico
 # img_pp = preprocess(imagen, mascara)
-# feat   = extract_features(img_pp, method="image")
+# diagrama = persistence_diagram(img_pp)
+# feat = persistence_image_vector(diagrama)
 
 # 4. Entrenar clasificador y 5. evaluar con métricas clínicas
 # clf = build_svm(); clf.fit(X_train, y_train)

@@ -1,0 +1,9 @@
+backend TDA: gudhi
+clasificador: svm
+n_train=47 n_test=9
+accuracy: 0.6667
+sensibilidad_recall: 0.6000
+especificidad: 0.7500
+precision: 0.7500
+f1: 0.6667
+auc: 0.6500

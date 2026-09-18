@@ -3,13 +3,17 @@
 Cuarta etapa del pipeline. Reune los tres enfoques que compara el TFG:
   1) TOPOLOGICO: un clasificador clasico (SVM o Random Forest) que aprende
      directamente sobre los vectores de caracteristicas topologicas.
-  2) DEEP LEARNING: una CNN de referencia (DenseNet121 con transfer learning)
-     que aprende sobre las imagenes.
+  2) DEEP LEARNING: una CNN de referencia (DenseNet121 con transfer learning,
+     via PyTorch/torchvision) que aprende sobre las imagenes.
   3) FUSION: combinar ambas fuentes de informacion.
 
-Nota de diseno: las dependencias pesadas de deep learning (TensorFlow) se
+Nota de diseno: las dependencias pesadas de deep learning (PyTorch) se
 importan DENTRO de la funcion que las necesita, para que importar este modulo
-sea rapido y no obligue a tener TF instalado si solo se usa la via topologica.
+sea rapido y no obligue a tener PyTorch instalado si solo se usa la via
+topologica. La CNN se eligio en PyTorch (en vez de TensorFlow/Keras) porque
+las librerias de referencia de explicabilidad usadas en F2/F3 (Grad-CAM,
+Captum para Integrated Gradients, SHAP) tienen mejor soporte y mantenimiento
+sobre PyTorch.
 """
 from __future__ import annotations
 
@@ -53,41 +57,42 @@ def build_random_forest(n_estimators: int = 300, seed: int = 42) -> RandomForest
 
 
 def build_cnn(input_shape=(224, 224, 3), n_classes: int = 2):
-    """CNN de referencia con transfer learning (DenseNet121).
+    """CNN de referencia con transfer learning (DenseNet121, PyTorch/torchvision).
 
     Estrategia habitual en imagen medica, donde hay pocos datos etiquetados:
       1) Partimos de DenseNet121 preentrenada en ImageNet (millones de imagenes).
-      2) CONGELAMOS la base (base.trainable = False) y entrenamos solo una
-         cabeza ligera nueva. Asi reaprovechamos las caracteristicas visuales
-         genericas sin sobreajustar.
+      2) CONGELAMOS la base (``requires_grad = False`` en ``features``) y
+         entrenamos solo una cabeza ligera nueva. Asi reaprovechamos las
+         caracteristicas visuales genericas sin sobreajustar.
       3) (Fase 2, opcional) se descongelan las ultimas capas para 'fine-tuning'.
 
-    La cabeza: pooling global -> normalizacion -> dropout (regularizacion) ->
-    capa densa softmax con una salida por clase.
+    La cabeza: pooling global (ya incluido en ``DenseNet.forward``) ->
+    normalizacion -> dropout (regularizacion) -> capa lineal con una salida
+    por clase. A diferencia de Keras, el modelo devuelve LOGITS sin softmax:
+    en PyTorch el softmax se aplica dentro de la funcion de perdida
+    (``nn.CrossEntropyLoss``) o explicitamente al predecir
+    (``torch.softmax(model(x), dim=1)``), no dentro del modelo.
+
+    ``input_shape`` se mantiene por compatibilidad con el resto del pipeline
+    (formato ``(H, W, C)``, como en Keras); torchvision no lo necesita para
+    construir el modelo porque ``AdaptiveAvgPool2d`` admite cualquier tamano
+    de entrada razonable, pero documenta el tamano esperado por preprocessing.py.
     """
-    import tensorflow as tf
-    from tensorflow.keras import layers
-    from tensorflow.keras.applications import DenseNet121
+    from torch import nn
+    from torchvision.models import DenseNet121_Weights, densenet121
 
-    # Base preentrenada SIN la capa de clasificacion original (include_top=False).
-    base = DenseNet121(include_top=False, weights="imagenet", input_shape=input_shape)
-    base.trainable = False  # congelamos: no se actualizan sus pesos en la fase 1
+    # Base preentrenada SIN la capa de clasificacion original.
+    base = densenet121(weights=DenseNet121_Weights.IMAGENET1K_V1)
+    for param in base.features.parameters():
+        param.requires_grad = False  # congelamos: no se actualizan sus pesos en la fase 1
 
-    # Definicion funcional del modelo (entrada -> base -> cabeza -> salida).
-    inputs = tf.keras.Input(shape=input_shape)
-    x = base(inputs, training=False)          # training=False: BatchNorm en modo inferencia
-    x = layers.GlobalAveragePooling2D()(x)    # resume cada mapa de activacion en un numero
-    x = layers.BatchNormalization()(x)
-    x = layers.Dropout(0.4)(x)                # apaga el 40% de neuronas -> reduce sobreajuste
-    outputs = layers.Dense(n_classes, activation="softmax")(x)
-
-    model = tf.keras.Model(inputs, outputs)
-    model.compile(
-        optimizer=tf.keras.optimizers.Adam(1e-4),  # learning rate pequeno para fine-tuning
-        loss="sparse_categorical_crossentropy",     # etiquetas enteras (0/1), no one-hot
-        metrics=["accuracy"],
+    n_features = base.classifier.in_features  # 1024 en DenseNet121
+    base.classifier = nn.Sequential(
+        nn.BatchNorm1d(n_features),
+        nn.Dropout(0.4),          # apaga el 40% de neuronas -> reduce sobreajuste
+        nn.Linear(n_features, n_classes),
     )
-    return model
+    return base
 
 
 def fuse_features(topo: np.ndarray, cnn_embeddings: np.ndarray) -> np.ndarray:

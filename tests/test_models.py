@@ -62,18 +62,23 @@ def test_build_random_forest_fits_and_predicts():
 
 
 # ---------------------------------------------------------------------------
-# build_cnn (requiere TensorFlow, no siempre disponible)
+# build_cnn (requiere PyTorch/torchvision, no siempre disponible)
 # ---------------------------------------------------------------------------
 
-def test_build_cnn_compiles_model():
-    tf = pytest.importorskip("tensorflow")
+def test_build_cnn_forward_pass_shape():
+    torch = pytest.importorskip("torch")
+    pytest.importorskip("torchvision")
 
     from src.models import build_cnn
 
-    model = build_cnn(input_shape=(32, 32, 3), n_classes=2)
+    model = build_cnn(n_classes=2)
+    model.eval()
 
-    assert model.input_shape == (None, 32, 32, 3)
-    assert model.output_shape == (None, 2)
+    x = torch.randn(2, 3, 224, 224)
+    with torch.no_grad():
+        logits = model(x)
+
+    assert logits.shape == (2, 2)
 
 
 # ---------------------------------------------------------------------------
