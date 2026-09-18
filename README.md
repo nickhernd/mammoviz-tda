@@ -1,4 +1,12 @@
 # mammoviz-tda
+## Enunciado TFG
+El cáncer de mama es uno de los problemas de salud más relevantes a nivel mundial, y la mamografía sigue siendo una de las herramientas principales para su detección temprana. Sin embargo, interpretar una mamografía no es sencillo: las lesiones pueden ser pequeñas, sutiles o difíciles de distinguir del tejido mamario normal. En este TFG se propone desarrollar un sistema de inteligencia artificial capaz de analizar mamografías y detectar automáticamente posibles regiones sospechosas.
+El trabajo permitirá al estudiante introducirse en uno de los campos más activos de la IA médica: el diagnóstico asistido por ordenador. Se utilizarán bases de datos públicas de mamografía, como CBIS-DDSM o VinDr-Mammo, que contienen imágenes anotadas por especialistas. A partir de estas imágenes, se entrenarán modelos de aprendizaje profundo para identificar masas, microcalcificaciones u otras anomalías asociadas al cáncer de mama.
+El proyecto incluirá tareas de preprocesamiento de imagen médica, mejora de contraste, extracción de regiones de interés y entrenamiento de redes neuronales convolucionales o modelos actuales de visión artificial. Una parte especialmente interesante será la explicabilidad: no bastará con que el modelo prediga si una imagen es sospechosa, sino que deberá mostrar qué zonas de la mamografía han influido en su decisión mediante técnicas como Grad-CAM o mapas de activación.
+El resultado final será un prototipo capaz de cargar una mamografía, estimar la probabilidad de lesión sospechosa y visualizar las regiones más relevantes para el modelo.
+
+
+
 
 **Análisis Topológico de Datos (TDA) aplicado a la clasificación y visualización de mamografías digitales.**
 
