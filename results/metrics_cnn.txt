@@ -1,0 +1,9 @@
+modelo: DenseNet121 (PyTorch, base congelada)
+epochs=2 lr=0.0001 batch_size=8
+n_train=158 n_test=37
+accuracy: 0.4865
+sensibilidad_recall: 0.5500
+especificidad: 0.4118
+precision: 0.5238
+f1: 0.5366
+auc: 0.4794
