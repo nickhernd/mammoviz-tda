@@ -18,7 +18,12 @@ giotto-tda; python_version < "3.13"
 
 # Aprendizaje automatico y profundo
 scikit-learn
-tensorflow
+torch
+torchvision
+
+# Descarga de datos reales (CBIS-DDSM: CSV via TCIA, imagenes DICOM via API NBIA)
+pydicom
+requests
 
 # Visualizacion y entorno
 matplotlib

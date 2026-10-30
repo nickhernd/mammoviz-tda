@@ -1,4 +1,5 @@
 backend TDA: gudhi
+<<<<<<< HEAD
 clasificador: rf
 n_train=158 n_test=37
 accuracy: 0.3243
@@ -9,3 +10,13 @@ f1: 0.3243
 auc: 0.3676
 auc_cv_train_mean: 0.5648
 auc_cv_train_std: 0.0561
+=======
+clasificador: svm
+n_train=47 n_test=9
+accuracy: 0.6667
+sensibilidad_recall: 0.6000
+especificidad: 0.7500
+precision: 0.7500
+f1: 0.6667
+auc: 0.6500
+>>>>>>> e390e825276fbf3efe5f64ce937a44cfb6c70cd5

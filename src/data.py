@@ -46,6 +46,26 @@ _PATHOLOGY_MAP = {
 _PATIENT_RE = re.compile(r"(P_\d+)")
 
 
+def case_folder_key(
+    prefix: str, patient_id: str, side: str, view: str, abnormality_id: int | None = None
+) -> str:
+    """Reconstruye el nombre de carpeta real de TCIA para un caso de CBIS-DDSM.
+
+    p.ej. ``case_folder_key("Mass-Training", "P_00001", "LEFT", "CC")`` ->
+    ``"Mass-Training_P_00001_LEFT_CC"`` (mamografia completa), o con
+    ``abnormality_id=1`` -> ``"Mass-Training_P_00001_LEFT_CC_1"`` (carpeta de
+    la lesion, que contiene el recorte y/o la mascara de ROI).
+
+    Usado tanto por ``scripts/download_cbis_ddsm.py`` (para saber que serie
+    de la API de TCIA pedir) como por ``scripts/run_pipeline.py`` (para saber
+    donde buscar los DICOM ya descargados en ``data/images/``).
+    """
+    key = f"{prefix}_{patient_id}_{side}_{view}"
+    if abnormality_id is not None:
+        key = f"{key}_{abnormality_id}"
+    return key
+
+
 # ---------------------------------------------------------------------------
 # Carga de ficheros
 # ---------------------------------------------------------------------------
@@ -83,12 +103,22 @@ def load_case_descriptions(csv_dir: str | Path) -> pd.DataFrame:
     """
     csv_dir = Path(csv_dir)
     # Buscamos todos los ficheros cuyo nombre contenga "case_description".
-    frames = [pd.read_csv(p) for p in sorted(csv_dir.glob("*case_description*.csv"))]
-    if not frames:
+    paths = sorted(csv_dir.glob("*case_description*.csv"))
+    if not paths:
         raise FileNotFoundError(
             f"No se encontraron CSV de descripcion en {csv_dir}. "
             "Descargalos de CBIS-DDSM (TCIA)."
         )
+    frames = []
+    for path in paths:
+        df = pd.read_csv(path)
+        # Prefijo real de carpeta en TCIA ("Mass-Training", "Calc-Test", ...),
+        # derivado del propio nombre de fichero. Necesario para localizar los
+        # DICOM ya descargados con case_folder_key() (ver scripts/run_pipeline.py).
+        category = "Mass" if path.name.startswith("mass") else "Calc"
+        split = "Training" if "train" in path.name else "Test"
+        df["_prefix"] = f"{category}-{split}"
+        frames.append(df)
     # Unimos los CSV de masas y calcificaciones (train y test) en un unico DataFrame.
     df = pd.concat(frames, ignore_index=True)
     # Normalizamos nombres de columna: sin espacios y con guion bajo
