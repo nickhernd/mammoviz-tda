@@ -34,6 +34,10 @@ tfg/*.out
 tfg/*.run.xml
 tfg/*.toc
 tfg/capitulos/*.aux
+docs/*.aux
+docs/*.log
+docs/*.out
+docs/*.toc
 
 # Excepcion: SI versionar las figuras de la memoria
 !tfg/figuras/

@@ -170,11 +170,14 @@ def _persistence_image_manual(diagrams: np.ndarray, n_bins: int = 20) -> np.ndar
     """
     diagrams = np.asarray(diagrams, dtype=np.float64)
     n_samples = diagrams.shape[0]
-    dims = (
-        sorted({int(d) for sample in diagrams for d in sample[:, 2]})
-        if diagrams.size
-        else [0, 1]
-    )
+    # Dimensiones siempre fijas a (0, 1), NUNCA inferidas de los datos: si una
+    # imagen concreta no tiene ningun punto H1 (plausible en fondos lisos, o
+    # en lotes de 1 imagen como hacen build_dataset en los scripts), inferir
+    # dims a partir de lo presente producia un vector mas corto que el del
+    # resto del conjunto -> vectores de distinta longitud, imposibles de
+    # apilar en una sola matriz de features. Con dims fijas, esa dimension
+    # simplemente sale a cero en vez de desaparecer.
+    dims = [0, 1]
 
     grid = np.linspace(0.0, 1.0, n_bins)
     birth_grid, pers_grid = np.meshgrid(grid, grid, indexing="ij")
@@ -223,11 +226,7 @@ def _persistence_statistics_manual(diagrams: np.ndarray) -> np.ndarray:
     """Persistencia total y numero de puntos por dimension, sin giotto-tda."""
     diagrams = np.asarray(diagrams, dtype=np.float64)
     n_samples = diagrams.shape[0]
-    dims = (
-        sorted({int(d) for sample in diagrams for d in sample[:, 2]})
-        if diagrams.size
-        else [0, 1]
-    )
+    dims = [0, 1]  # fijas, ver nota en _persistence_image_manual
 
     out = np.zeros((n_samples, 2 * len(dims)))
     for s in range(n_samples):

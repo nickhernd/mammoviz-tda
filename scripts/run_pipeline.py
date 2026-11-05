@@ -16,22 +16,15 @@ Hace, en este orden:
   4. Calcula el descriptor topologico de cada imagen (src.topology: diagrama
      de persistencia H0/H1 + Persistence Image) con el backend disponible
      (giotto-tda o gudhi, ver `python -c "import src.topology as t; print(t.backend())"`).
-<<<<<<< HEAD
   5. Entrena un clasificador clasico (Random Forest por defecto) sobre las
      features topologicas del split de train, y lo evalua con metricas
      clinicas sobre el split de test (src.evaluate.clinical_metrics).
-=======
-  5. Entrena un clasificador clasico (SVM por defecto) sobre las features
-     topologicas del split de train, y lo evalua con metricas clinicas sobre
-     el split de test (src.evaluate.clinical_metrics).
->>>>>>> e390e825276fbf3efe5f64ce937a44cfb6c70cd5
   6. Guarda en results/: un diagrama de persistencia de ejemplo, la matriz de
      confusion y un resumen en texto (metrics.txt) con las metricas finales.
 
 Piloto pequeno == particiones pequenas: con ~30-60 casos, val/test pueden
 tener muy pocos pacientes. Es esperado en esta fase (F1); los numeros no son
 concluyentes hasta ampliar el dataset (issue #82, F3).
-<<<<<<< HEAD
 
 Hiperparametros (issue #77): con pocos cientos de casos, el clasificador por
 defecto (n_bins=4, RF con parametros por defecto de sklearn) infra-ajusta un
@@ -39,8 +32,6 @@ poco. Usa `--tune` para buscar por GridSearchCV los mejores hiperparametros
 del clasificador SOBRE EL TRAIN ACTUAL en cada ejecucion (en vez de fijar unos
 valores a fuego que solo valdrian para el tamano de piloto de hoy): con 126
 pacientes (158 casos train) esto subio el AUC por CV de ~0.58 a ~0.68.
-=======
->>>>>>> e390e825276fbf3efe5f64ce937a44cfb6c70cd5
 """
 from __future__ import annotations
 
@@ -130,7 +121,6 @@ def build_dataset(df, n_bins: int = 20):
     return np.asarray(features), np.asarray(labels), kept_rows
 
 
-<<<<<<< HEAD
 def tune_classifier(classifier_name: str, X_train: np.ndarray, y_train: np.ndarray):
     """Busca por GridSearchCV los mejores hiperparametros del clasificador
     SOBRE EL TRAIN ACTUAL (5-fold CV), en vez de fijar valores a fuego que
@@ -178,12 +168,6 @@ def main() -> None:
                          help="Ajustar hiperparametros del clasificador por GridSearchCV sobre "
                               "el train actual, en vez de usar los valores por defecto de "
                               "src/models.py (ver issue #77).")
-=======
-def main() -> None:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--classifier", choices=["svm", "rf"], default="svm")
-    parser.add_argument("--n-bins", type=int, default=20, help="Resolucion de la Persistence Image (ver issue #77).")
->>>>>>> e390e825276fbf3efe5f64ce937a44cfb6c70cd5
     args = parser.parse_args()
 
     print(f"Backend TDA activo: {backend()}")
@@ -207,7 +191,6 @@ def main() -> None:
         print("Amplia el piloto con: python scripts/download_cbis_ddsm.py --add 15 15")
         return
 
-<<<<<<< HEAD
     if args.tune:
         print(f"Ajustando hiperparametros ({args.classifier}) por GridSearchCV...")
         clf = tune_classifier(args.classifier, X_train, y_train)
@@ -215,11 +198,6 @@ def main() -> None:
         print(f"Entrenando clasificador ({args.classifier})...")
         clf = build_svm() if args.classifier == "svm" else build_random_forest()
         clf.fit(X_train, y_train)
-=======
-    print(f"Entrenando clasificador ({args.classifier})...")
-    clf = build_svm() if args.classifier == "svm" else build_random_forest()
-    clf.fit(X_train, y_train)
->>>>>>> e390e825276fbf3efe5f64ce937a44cfb6c70cd5
 
     y_pred = clf.predict(X_test)
     y_score = clf.predict_proba(X_test)[:, 1] if hasattr(clf, "predict_proba") else None
@@ -229,7 +207,6 @@ def main() -> None:
     for name, value in metrics.items():
         print(f"  {name}: {value:.3f}")
 
-<<<<<<< HEAD
     # Con un test set tan pequeno (piloto F1), un solo split es MUY ruidoso: el
     # AUC de arriba puede variar mucho de una ejecucion a otra sin que el
     # pipeline haya cambiado. La media de validacion cruzada sobre train es una
@@ -244,8 +221,6 @@ def main() -> None:
             print(f"\nAUC por validacion cruzada ({cv_folds}-fold, sobre train, mas estable "
                   f"que el test de {len(X_test)} casos): {cv_auc.mean():.3f} +/- {cv_auc.std():.3f}")
 
-=======
->>>>>>> e390e825276fbf3efe5f64ce937a44cfb6c70cd5
     RESULTS_DIR.mkdir(exist_ok=True)
     ax = plot_confusion(y_test, y_pred)
     ax.figure.savefig(RESULTS_DIR / "confusion_matrix.png", dpi=150, bbox_inches="tight")
@@ -262,12 +237,9 @@ def main() -> None:
         f.write(f"n_train={len(X_train)} n_test={len(X_test)}\n")
         for name, value in metrics.items():
             f.write(f"{name}: {value:.4f}\n")
-<<<<<<< HEAD
         if cv_auc is not None:
             f.write(f"auc_cv_train_mean: {cv_auc.mean():.4f}\n")
             f.write(f"auc_cv_train_std: {cv_auc.std():.4f}\n")
-=======
->>>>>>> e390e825276fbf3efe5f64ce937a44cfb6c70cd5
 
     print(f"\nResultados guardados en {RESULTS_DIR}/ (confusion_matrix.png, "
           f"persistence_diagram_example.png, metrics.txt)")
