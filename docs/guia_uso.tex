@@ -1,0 +1,289 @@
+%==============================================================================
+%  mammoviz-tda — Guía de uso del entorno de trabajo
+%  Documento independiente de la memoria del TFG (tfg/main.tex)
+%==============================================================================
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish,es-tabla]{babel}
+\usepackage{lmodern}
+
+\usepackage[a4paper,top=2.5cm,bottom=2.5cm,left=2.8cm,right=2.8cm]{geometry}
+\usepackage{setspace}
+\onehalfspacing
+\usepackage{emptypage}
+
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{caption}
+\usepackage{xcolor}
+\definecolor{bg}{rgb}{0.96,0.96,0.96}
+\definecolor{accent}{rgb}{0.11,0.35,0.60}
+
+\usepackage{listings}
+\lstset{
+  basicstyle=\ttfamily\small,
+  backgroundcolor=\color{bg},
+  keywordstyle=\color{blue!70!black}\bfseries,
+  commentstyle=\color{green!40!black},
+  stringstyle=\color{red!60!black},
+  frame=single, breaklines=true, showstringspaces=false,
+  captionpos=b, language=bash, columns=flexible,
+}
+\newcommand{\cmd}[1]{\lstinline[language=bash]|#1|}
+
+\usepackage[hidelinks,colorlinks=true,linkcolor=accent,urlcolor=accent]{hyperref}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{mammoviz-tda — guía de uso}
+\fancyhead[R]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\title{\textbf{mammoviz-tda}\\[4pt]\large Guía de uso del entorno de trabajo}
+\author{}
+\date{Noviembre 2026}
+
+\begin{document}
+\maketitle
+\thispagestyle{empty}
+
+\begin{abstract}
+\noindent Este documento es una guía práctica, independiente de la memoria
+del TFG, para instalar el entorno, ejecutar el pipeline con datos reales de
+CBIS-DDSM y trabajar de forma interactiva en un notebook. No reemplaza la
+memoria (\texttt{tfg/main.pdf}): aquí solo se documenta \emph{cómo usar el
+código}.
+\end{abstract}
+
+\tableofcontents
+
+%==============================================================================
+\section{Visión general}
+
+El proyecto combina Análisis Topológico de Datos (TDA) y \textit{deep
+learning} sobre mamografías reales de \href{https://www.cancerimagingarchive.net/collection/cbis-ddsm/}{CBIS-DDSM},
+con el objetivo de estudiar la detección anticipada de cáncer de mama mediante
+comparación longitudinal de exploraciones sucesivas (ver los issues del
+milestone \texttt{F0'} en GitHub para el contexto completo de esta hipótesis).
+
+\subsection{Estructura del repositorio}
+
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Carpeta/fichero} & \textbf{Contenido} \\
+\midrule
+\texttt{src/} & Librería: carga de datos, preprocesado, TDA, modelos, evaluación \\
+\texttt{scripts/} & Ejecutables de un solo comando (ver Sección~\ref{sec:comandos}) \\
+\texttt{notebooks/} & Entorno de trabajo interactivo (ver Sección~\ref{sec:notebook}) \\
+\texttt{tests/} & Tests automáticos (\texttt{pytest}) \\
+\texttt{data/} & Datos descargados (NO versionado en git; hay que descargarlos) \\
+\texttt{results/} & Salidas de los scripts (métricas, figuras) \\
+\texttt{tfg/} & Memoria del TFG en LaTeX \\
+\texttt{bib/} & PDFs de la bibliografía \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Importante — qué NO persiste entre sesiones.} La carpeta \texttt{data/}
+está en \texttt{.gitignore} a propósito (163\,GB en el dataset completo,
+imposible de versionar). Cada vez que empiece de cero en un equipo nuevo, o si
+la carpeta desaparece por limpieza/sincronización, hay que volver a ejecutar
+los comandos de descarga de la Sección~\ref{sec:comandos}.
+
+%==============================================================================
+\section{Instalación}
+
+\begin{lstlisting}
+# 1. Entorno virtual
+python -m venv .venv
+.venv\Scripts\activate          # Windows
+source .venv/bin/activate       # Linux/Mac
+
+# 2. Dependencias
+pip install -r requirements.txt
+
+# 3. Verificar que todo funciona
+pytest
+\end{lstlisting}
+
+\texttt{requirements.txt} incluye \texttt{gudhi}/\texttt{giotto-tda} (TDA),
+\texttt{torch}/\texttt{torchvision} (CNN), \texttt{pydicom}/\texttt{requests}
+(descarga de datos reales) y \texttt{pytest}. En Python~3.13+ \texttt{giotto-tda}
+no publica ruedas: el código detecta automáticamente qué backend TDA hay
+instalado (\texttt{src.topology.backend()}) y usa \texttt{gudhi} de respaldo.
+
+Si \texttt{pytest} da 45 tests en verde (1 \textit{skip} esperado si no tienes
+\texttt{giotto-tda}), el entorno está listo.
+
+%==============================================================================
+\section{Comandos, en el orden en que se usan}
+\label{sec:comandos}
+
+\subsection{1. Descargar los metadatos reales (CSV)}
+
+Los 4 CSV de descripción de casos de CBIS-DDSM (con la etiqueta real
+benigno/maligno) se descargan directamente, sin necesidad de registro:
+
+\begin{lstlisting}
+mkdir -p data/csv
+curl -O https://www.cancerimagingarchive.net/wp-content/uploads/mass_case_description_train_set.csv
+curl -O https://www.cancerimagingarchive.net/wp-content/uploads/mass_case_description_test_set.csv
+curl -O https://www.cancerimagingarchive.net/wp-content/uploads/calc_case_description_train_set.csv
+curl -O https://www.cancerimagingarchive.net/wp-content/uploads/calc_case_description_test_set.csv
+# mover los 4 ficheros .csv descargados a data/csv/
+\end{lstlisting}
+
+\subsection{2. Descargar imágenes reales (piloto incremental)}
+
+El dataset completo de imágenes son 163{,}5\,GB — demasiado para descargar de
+golpe. Este comando descarga un piloto balanceado benigno/maligno
+directamente contra la API REST de TCIA (no hace falta el NBIA Data
+Retriever), y se puede volver a lanzar cuantas veces se quiera: nunca repite
+descargas ya hechas, solo añade pacientes nuevos.
+
+\begin{lstlisting}
+python scripts/download_cbis_ddsm.py --add 15 15 --category mass
+\end{lstlisting}
+
+\texttt{--add 15 15} añade 15 pacientes benignos y 15 malignos \emph{nuevos}.
+Tarda varios minutos (cada mamografía completa son decenas de MB). Se puede
+relanzar en segundo plano y comprobar el progreso en el fichero de log.
+
+\subsection{3. Pipeline TDA completo}
+
+Un único comando: carga datos reales $\to$ partición por paciente (sin fuga
+de datos) $\to$ preprocesado $\to$ homología persistente $\to$ clasificador
+$\to$ métricas clínicas.
+
+\begin{lstlisting}
+python scripts/run_pipeline.py
+python scripts/run_pipeline.py --classifier rf --n-bins 4   # valores por defecto
+python scripts/run_pipeline.py --tune                       # ajusta hiperparametros por GridSearchCV
+\end{lstlisting}
+
+Guarda en \texttt{results/}: \texttt{confusion\_matrix.png},
+\texttt{persistence\_diagram\_example.png} y \texttt{metrics.txt} (incluye el
+AUC por validación cruzada, más fiable que el de un test pequeño).
+
+\subsection{4. CNN de referencia (PyTorch)}
+
+\begin{lstlisting}
+python scripts/train_cnn.py --epochs 10
+\end{lstlisting}
+
+Entrena una DenseNet121 (base congelada, cabeza nueva) sobre las mismas
+imágenes y partición que el pipeline TDA. Semilla fija: resultados
+reproducibles entre ejecuciones.
+
+\subsection{5. Comparar TDA vs. CNN vs. fusión}
+
+\begin{lstlisting}
+python scripts/fuse_and_evaluate.py
+\end{lstlisting}
+
+Entrena ambos modelos sobre los mismos casos y reporta accuracy/AUC (test y
+validación cruzada) para las 3 vías: TDA sola, CNN sola, fusión de
+características (\texttt{src.models.fuse\_features}).
+
+\subsection{6. Validación de la hipótesis longitudinal (datos sintéticos)}
+
+Mientras se gestiona el acceso a un dataset longitudinal real (CSAW-CC o
+EMBED, ambos bajo solicitud formal — ver issue \texttt{\#92} en GitHub):
+
+\begin{lstlisting}
+python scripts/synthetic_longitudinal_validation.py
+python scripts/synthetic_longitudinal_validation.py --sweep   # analisis de sensibilidad
+\end{lstlisting}
+
+%==============================================================================
+\section{Entorno de trabajo interactivo: notebook}
+\label{sec:notebook}
+
+Para explorar, depurar o visualizar resultados celda a celda (en vez de
+ejecutar un script de un tirón), usa:
+
+\begin{center}
+\texttt{notebooks/02\_real\_data\_pipeline.ipynb}
+\end{center}
+
+Reutiliza exactamente las mismas funciones que los scripts de la
+Sección~\ref{sec:comandos} (\texttt{run\_pipeline.py},
+\texttt{train\_cnn.py}, \texttt{synthetic\_longitudinal\_validation.py}), así
+que nunca hay dos implementaciones del mismo cálculo que puedan divergir.
+Las secciones del notebook son:
+
+\begin{enumerate}[leftmargin=1.2cm]
+  \item Imports y configuración.
+  \item Carga de metadatos reales + partición por paciente.
+  \item Visualización de un caso real (mamografía + máscara ROI).
+  \item Preprocesado y diagrama de persistencia de ese mismo caso.
+  \item Construcción del dataset completo (todos los casos ya descargados).
+  \item Clasificador topológico + métricas clínicas.
+  \item Validación por validación cruzada (más fiable que un test pequeño).
+  \item CNN de referencia + fusión (opcional, más lento).
+  \item Validación sintética de la hipótesis longitudinal.
+\end{enumerate}
+
+\begin{lstlisting}
+jupyter notebook notebooks/02_real_data_pipeline.ipynb
+\end{lstlisting}
+
+El notebook original con datos sintéticos
+(\texttt{notebooks/01\_pipeline\_demo.ipynb}) sigue disponible para quien
+quiera ejecutar sin tener CBIS-DDSM descargado.
+
+\subsection{Si quieres encadenar varios notebooks}
+
+Para un flujo de trabajo más largo (p.\,ej. separar exploración de datos,
+experimentos de TDA y experimentos de CNN en notebooks distintos), la forma
+recomendada de \emph{no} duplicar código es que cada notebook nuevo importe
+las mismas funciones compartidas, igual que hace
+\texttt{02\_real\_data\_pipeline.ipynb}:
+
+\begin{lstlisting}
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path.cwd().parent))          # raiz del repo
+sys.path.insert(0, str(Path.cwd().parent / "scripts"))
+
+import run_pipeline as rp
+import train_cnn as tc
+import synthetic_longitudinal_validation as slv
+\end{lstlisting}
+
+Así cada notebook es una \emph{vista} distinta sobre el mismo pipeline, no una
+copia del código.
+
+%==============================================================================
+\section{Problemas conocidos y cómo evitarlos}
+
+\begin{description}
+  \item[\texttt{data/} ha desaparecido.] Normal (está en \texttt{.gitignore}).
+    Repite los pasos 1 y 2 de la Sección~\ref{sec:comandos}.
+  \item[Un script falla con \texttt{SyntaxError} en un marcador de conflicto de Git.]
+    El fichero quedó con un conflicto de Git sin
+    resolver (pasó una vez con \texttt{scripts/run\_pipeline.py}, causado por
+    una herramienta de backup automático que hace commits sin supervisión).
+    Busca y resuelve el conflicto a mano, o pide ayuda para resolverlo.
+    Verifica que no quede ninguno con:
+    \begin{lstlisting}
+grep -rln "^<<<<<<<" --include="*.py" .
+    \end{lstlisting}
+  \item[Backups automáticos revierten cambios recientes.] Se ha observado que
+    algún commit automático (\texttt{"Backup automatico: ..."}) restaura
+    versiones antiguas de ficheros concretos. Si algo que arreglaste
+    "vuelve" a su estado anterior, no es un error tuyo: compruébalo con
+    \texttt{git log --oneline -- <fichero>} y vuelve a aplicar el cambio.
+  \item[AUC muy distinto entre ejecuciones.] Con pilotos pequeños (pocas
+    decenas de pacientes), el AUC sobre un test de pocos casos es ruidoso.
+    Usa siempre el AUC por validación cruzada que reportan los scripts, no
+    solo el del test.
+\end{description}
+
+\end{document}
