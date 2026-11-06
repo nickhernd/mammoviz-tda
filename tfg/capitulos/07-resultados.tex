@@ -2,14 +2,17 @@
 \label{cap:resultados}
 
 Este capítulo presenta el diseño experimental del trabajo y los resultados
-obtenidos hasta el momento. Como se detalla en la Sección~\ref{sec:estado-datos},
-la descarga completa de \mbox{CBIS-DDSM} (imágenes y máscaras de ROI) todavía no
-se ha completado; por ello, los resultados que se presentan aquí corresponden a
-una \textbf{validación preliminar del \textit{pipeline} completo con datos
-sintéticos} (Sección~\ref{sec:resultados-sinteticos}), y se deja preparada la
-estructura (tablas, figuras, apartados) que se rellenará con los resultados
-sobre el conjunto de datos real en cuanto estén disponibles
-(Sección~\ref{sec:resultados-pendientes}).
+obtenidos hasta el momento. Primero se describe una
+\textbf{validación preliminar del \textit{pipeline} completo con datos
+sintéticos} (Sección~\ref{sec:resultados-sinteticos}), que sirvió para
+comprobar que las cinco etapas encajaban correctamente antes de tener datos
+reales; a continuación se presentan los \textbf{resultados ya obtenidos sobre
+el piloto real} de CBIS-DDSM, 30 pacientes descargados con
+\texttt{scripts/download\_cbis\_ddsm.py} (Sección~\ref{sec:resultados-reales}
+y Sección~\ref{sec:estado-datos}). La hipótesis longitudinal principal del
+trabajo (O7--O8) se valida por separado, de momento solo con datos
+sintéticos, en la Sección~\ref{sec:metodologia-longitudinal} del
+Capítulo~\ref{cap:metodologia}.
 
 \section{Diseño experimental}
 Se definen los siguientes experimentos, alineados con los objetivos O4 y O5
@@ -135,51 +138,106 @@ H1 (agujeros/ciclos) en naranja; la diagonal discontinua marca birth = death.}
 \label{fig:diagramas-persistencia-sintetico}
 \end{figure}
 
-\section{Resultados pendientes con el conjunto de datos real}
-\label{sec:resultados-pendientes}
+\section{Resultados sobre el piloto real de CBIS-DDSM}
+\label{sec:resultados-reales}
 
-La siguiente tabla mantiene la estructura de comparación planificada para los
-experimentos E1--E3 sobre \mbox{CBIS-DDSM} real, con el mismo descriptor
-topológico (imágenes de persistencia H0+H1) ya validado en la
-Sección~\ref{sec:resultados-sinteticos}, y el modelo de \textit{deep learning}
-de referencia. Se rellenará en cuanto se complete la descarga de datos
-(Sección~\ref{sec:estado-datos}) y se ejecuten los experimentos
-correspondientes.
+El repositorio dispone ya de un \textbf{piloto real descargado}:
+30 pacientes de \mbox{CBIS-DDSM} (casos de tipo masa), con sus mamografías
+completas y máscaras de ROI en \texttt{data/images/}, descargados de forma
+incremental y balanceada benigno/maligno con
+\texttt{scripts/download\_cbis\_ddsm.py} directamente contra la API REST de
+TCIA. La partición por paciente (Sección~\ref{cap:metodologia}) deja, sobre
+este piloto, $40$ casos usables de entrenamiento y $8$ de test (el resto de
+filas de los CSV originales corresponden a pacientes todavía no descargados y
+se omiten automáticamente).
 
 \begin{table}[H]
 \centering
-\caption{Resultados comparativos en el conjunto de test de CBIS-DDSM (plantilla,
-pendiente de completar).}
+\caption{Resultados reales sobre el piloto de CBIS-DDSM (30 pacientes,
+\texttt{scripts/run\_pipeline.py} y \texttt{scripts/fuse\_and\_evaluate.py},
+\texttt{n\_bins=4}, Random Forest). El AUC por validación cruzada (5-fold
+sobre train) es la columna fiable; el test de solo $8$ casos es muy ruidoso
+(ver discusión debajo de la tabla).}
 \label{tab:resultados}
-\begin{tabular}{@{}lccccc@{}}
+\begin{tabular}{@{}lccc@{}}
 \toprule
-\textbf{Modelo} & \textbf{Exactitud} & \textbf{Sensib.} & \textbf{Especif.} &
-\textbf{F1} & \textbf{AUC} \\
+\textbf{Modelo} & \textbf{AUC (test, $n=8$)} & \textbf{AUC (CV, train)} & \textbf{Sensib. (test)} \\
 \midrule
-Baseline (clase mayoritaria) & -- & -- & -- & -- & -- \\
-TDA + SVM                    & -- & -- & -- & -- & -- \\
-TDA + Random Forest          & -- & -- & -- & -- & -- \\
-CNN (transfer learning)      & -- & -- & -- & -- & -- \\
-Fusión TDA + CNN             & -- & -- & -- & -- & -- \\
+TDA (Persistence Image)      & 0.000 & $0.850 \pm 0.143$ & 0.000 \\
+CNN (DenseNet121, embeddings) & 0.208 & $0.933 \pm 0.097$ & 0.167 \\
+Fusión TDA + CNN              & 0.333 & $0.883 \pm 0.194$ & 0.167 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
+\subsection{Por qué el AUC de test es tan malo (y por qué no es alarmante)}
+\label{sec:test-ruidoso}
+El AUC de test de la fila TDA es $0.000$: con solo $8$ casos de test, el
+\textit{random forest} invirtió literalmente las $8$ predicciones
+respecto a la etiqueta real
+(\texttt{y\_test}=\texttt{[1,1,0,0,1,1,1,1]} frente a
+\texttt{y\_pred}=\texttt{[0,0,1,1,0,0,0,0]}). Esto no revela un error del
+\textit{pipeline}: con un test tan pequeño, una sola partición concreta puede
+caer, por puro azar, en el extremo contrario de la distribución de aciertos.
+Es exactamente el fenómeno ya anticipado al corregir el sobreajuste del
+clasificador (issue \#77): el AUC de un único \textit{split} pequeño es
+\textbf{demasiado ruidoso para ser la métrica de referencia}. Por eso la
+columna fiable de la Tabla~\ref{tab:resultados} es el AUC por validación
+cruzada de 5 particiones sobre el conjunto de entrenamiento ($n=40$), que
+promedia sobre varias particiones en vez de depender de una sola.
+
+Con esa métrica, los tres modelos superan claramente el azar ($\text{AUC}
+\geq 0.85$), con la CNN ligeramente por delante de la fusión y de TDA en
+solitario en este piloto concreto; la desviación típica de la fusión
+($\pm 0.194$) es, sin embargo, la más alta de las tres, lo que indica que el
+orden entre modelos todavía no está establecido con el tamaño de muestra
+actual. Ampliar el piloto (issue \#82, O7 del Capítulo~\ref{cap:objetivos})
+es el paso natural para reducir esa incertidumbre antes de poder afirmar
+cuál de los tres enfoques es preferible.
+
+\subsection{Sanity check visual: masa espiculada benigna vs. maligna}
+\label{sec:sanity-check-espiculada}
+Como comprobación cualitativa independiente de las métricas anteriores
+(issue \#56), la Figura~\ref{fig:sanity-check-espiculada} compara dos casos
+reales de CBIS-DDSM con el mismo tipo de margen de masa (\texttt{SPICULATED}
+en el campo \texttt{mass\_margins} del CSV de descripción): uno benigno
+(\texttt{P\_00692}) y uno maligno (\texttt{P\_00734}). Ambos tienen una
+morfología visualmente similar --- precisamente el tipo de caso donde
+interesa que el descriptor topológico aporte algo más allá de lo evidente a
+simple vista --- y sus diagramas de persistencia difieren tanto en el número
+de puntos de $H_1$ (ciclos) como en su persistencia (distancia a la
+diagonal), consistente con la intuición de que una masa espiculada maligna
+real genera una textura de borde más irregular que una espiculación benigna.
+Esta observación es cualitativa y sobre un único par de casos; no sustituye
+a la validación cuantitativa de la Tabla~\ref{tab:resultados}, pero sirve de
+comprobación de sentido común de que el descriptor no es ciego a la
+diferencia clínica relevante.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{figuras/sanity_check_espiculada_real.png}
+\caption{Caso real benigno (\texttt{P\_00692}, arriba) y maligno
+(\texttt{P\_00734}, abajo) con margen de masa espiculado, con su diagrama de
+persistencia H0/H1 (backend \texttt{gudhi}).}
+\label{fig:sanity-check-espiculada}
+\end{figure}
+
 \subsection{Estado de los datos}
 \label{sec:estado-datos}
-A fecha de redacción de este capítulo, el repositorio contiene únicamente el
-manifiesto de TCIA (\texttt{CBIS-DDSM-All-...-nbia-digest.xlsx}), que identifica
-las series pero no incluye la etiqueta de patología. Quedan pendientes:
+El piloto real cubre, de momento, $30$ pacientes de tipo masa. Queda
+pendiente, no ya la descarga en sí (ya resuelta y automatizada), sino
+\textbf{ampliarla}:
 \begin{itemize}
-  \item Descargar los CSV de descripción de casos
-        (\texttt{mass\_/calc\_case\_description\_*.csv}) a \texttt{data/csv/}.
-  \item Descargar las imágenes DICOM y las máscaras de ROI a
-        \texttt{data/images/} mediante el NBIA Data Retriever.
-  \item Ejecutar \texttt{src/topology.py} (backend \texttt{gudhi} o
-        \texttt{giotto-tda}, ya operativo --- Sección~\ref{sec:backend-tda})
-        sobre las imágenes reales.
-  \item Entrenar y evaluar la CNN de referencia (\texttt{src/models.py:build\_cnn})
-        y el experimento de fusión.
+  \item Relanzar \texttt{scripts/download\_cbis\_ddsm.py --add N N} para
+        crecer el piloto y reducir la varianza de la Tabla~\ref{tab:resultados}
+        (issue \#82).
+  \item Incorporar los casos de tipo calcificación (\texttt{Calc-*}), de
+        momento excluidos del piloto (Sección~\ref{cap:metodologia}).
+  \item Una vez conseguido acceso a un dataset longitudinal real (issue
+        \#92), repetir la validación de la Sección~\ref{sec:metodologia-longitudinal}
+        del Capítulo~\ref{cap:metodologia} --- ahora mismo solo validada con
+        datos sintéticos --- sobre pacientes reales con exploraciones
+        sucesivas, que es la hipótesis principal del trabajo (O8).
 \end{itemize}
 
 \section{Discusión}
@@ -209,14 +267,18 @@ para la fase de experimentación real:
         anticipa la necesidad de vigilar el desbalance de clases y el tamaño
         muestral al pasar a datos reales (CBIS-DDSM tiene más casos benignos
         que malignos).
-  \item \textbf{Comparación con \textit{deep learning} y fusión}: quedan
-        pendientes de ejecutar sobre datos reales; la discusión sobre si el
-        enfoque topológico aporta información complementaria a la CNN (y no
-        solo redundante) solo puede responderse con el experimento E3 de
-        fusión.
+  \item \textbf{Comparación con \textit{deep learning} y fusión}: ya
+        ejecutada sobre el piloto real (Sección~\ref{sec:resultados-reales}):
+        en esta iteración concreta, la CNN sola (AUC por CV $0.933$) supera
+        tanto a TDA solo ($0.850$) como a la fusión ($0.883$), al contrario
+        de lo anticipado aquí con datos sintéticos; con una desviación
+        típica de la fusión del orden de $0.19$, no puede todavía
+        descartarse que el orden cambie al ampliar el piloto (issue \#82).
 \end{itemize}
 
-Las limitaciones específicas de esta fase preliminar (tamaño de muestra,
-naturaleza sintética de los datos, ausencia de comparación con CNN) se retoman
-en el Capítulo~\ref{cap:conclusiones} junto con las limitaciones generales del
-trabajo.
+Las observaciones anteriores, obtenidas con datos sintéticos antes de tener
+el conjunto real, se contrastan con los resultados reales en la
+Sección~\ref{sec:resultados-reales}; las limitaciones específicas de ambas
+fases (tamaño de muestra del piloto real, naturaleza sintética de la
+validación longitudinal) se retoman en el Capítulo~\ref{cap:conclusiones}
+junto con las limitaciones generales del trabajo.

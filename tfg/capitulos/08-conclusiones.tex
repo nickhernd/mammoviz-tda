@@ -2,45 +2,68 @@
 \label{cap:conclusiones}
 
 \section{Conclusiones}
-En este Trabajo de Fin de Grado se ha estudiado la aplicación del Análisis
-Topológico de Datos a la clasificación y visualización de mamografías digitales
-del conjunto \mbox{CBIS-DDSM}. El resultado principal es un \textbf{\textit{pipeline}
-completo y reproducible} --- desde la carga de metadatos hasta la evaluación
-clínica --- que corrige el problema de fuga de datos detectado en el material de
-partida y que ha sido validado de extremo a extremo, si bien todavía con datos
-sintéticos a falta de completar la descarga de \mbox{CBIS-DDSM}
-(Sección~\ref{sec:resultados-pendientes}). En relación con los objetivos
-específicos planteados en el Capítulo~\ref{cap:objetivos}:
+Este Trabajo de Fin de Grado parte de la clasificación benigno/maligno sobre
+una mamografía aislada mediante Análisis Topológico de Datos (TDA), pero su
+objetivo principal es más ambicioso: estudiar si esos mismos descriptores
+topológicos permiten \textbf{detección anticipada}, comparando la
+exploración previa (normal) y la exploración donde se diagnostica el cáncer
+en la misma paciente (Capítulo~\ref{cap:objetivos}, objetivos O7--O8). Este
+pivote --- documentado en detalle en el registro de decisión del
+repositorio --- sustituye al planteamiento inicial centrado en comparar la
+interpretabilidad del TDA frente a Grad-CAM/SHAP/LIME sobre una imagen
+aislada, que se mantiene como línea secundaria si el tiempo lo permite, pero
+ya no como contribución central.
+
+El resultado principal hasta la fecha es un \textbf{\textit{pipeline}
+completo, reproducible y ya ejecutado sobre datos reales} de CBIS-DDSM
+--- no solo sintéticos --- desde la carga de metadatos hasta la evaluación
+clínica, que corrige el problema de fuga de datos detectado en el material
+de partida (partición estricta por paciente), junto con una
+\textbf{validación metodológica de la hipótesis longitudinal sobre datos
+sintéticos} (Sección~\ref{sec:metodologia-longitudinal} del
+Capítulo~\ref{cap:metodologia}) mientras se tramita el acceso a un dataset
+longitudinal real. En relación con los objetivos específicos:
 
 \begin{itemize}
-  \item Se ha revisado el estado del arte en análisis automático de mamografías
-        y en aplicaciones del TDA a imagen médica (O1).
+  \item Se ha revisado el estado del arte en análisis automático de
+        mamografías, aplicaciones del TDA a imagen médica y predicción de
+        riesgo/análisis longitudinal (O1).
   \item Se ha construido un \textit{pipeline} reproducible de preparación de
         datos (\texttt{src/data.py}) cuyo aporte metodológico central es la
-        \textbf{partición por paciente}, que corrige la fuga de datos observada
-        en el \texttt{Demo\_Notebook.ipynb} original (exactitud del 100\,\%
-        desde la primera época) (O2).
-  \item Se ha implementado la extracción de descriptores topológicos mediante
-        homología persistente cúbica (\texttt{src/topology.py}: diagramas de
-        persistencia, imágenes de persistencia H0+H1, estadísticos), con dos
-        backends intercambiables (\texttt{giotto-tda} y \texttt{gudhi}, este
-        último operativo en Python 3.14) para no depender de una versión
-        concreta de Python, y se ha entrenado y evaluado clasificadores
-        clásicos (SVM, \textit{random forest}) sobre estos descriptores, con
-        resultados preliminares coherentes ($\text{AUC} \approx 0.83$--$0.84$)
-        sobre datos sintéticos (O3 --- \textbf{cumplido a nivel de
-        implementación}; O4 --- \textbf{validado parcialmente}: falta repetir
-        el experimento sobre imágenes reales de CBIS-DDSM).
-  \item Se ha diseñado e implementado la CNN de referencia y el mecanismo de
-        fusión de características (\texttt{src/models.py:build\_cnn},
-        \texttt{fuse\_features}), pero \textbf{no se ha podido entrenar ni
-        comparar todavía} por falta del conjunto de imágenes real (O5 ---
-        \textbf{pendiente}).
-  \item Se han desarrollado utilidades de visualización (matriz de confusión,
-        diagrama de persistencia) en \texttt{src/evaluate.py}, integradas en el
-        notebook de demostración; queda pendiente su aplicación sobre casos
-        reales y su comparación con mapas de activación de la CNN (p.\,ej.\
-        Grad-CAM) (O6 --- \textbf{parcialmente cumplido}).
+        \textbf{partición por paciente}, que corrige la fuga de datos
+        observada en el \texttt{Demo\_Notebook.ipynb} original (exactitud
+        del 100\,\% desde la primera época); se ha descargado y usado un
+        piloto real de 30 pacientes de CBIS-DDSM (O2).
+  \item Se ha implementado y ejecutado sobre datos reales la extracción de
+        descriptores topológicos mediante homología persistente cúbica
+        (\texttt{src/topology.py}: diagramas de persistencia, imágenes de
+        persistencia H0+H1), con dos backends intercambiables
+        (\texttt{giotto-tda} y \texttt{gudhi}, este último operativo en
+        Python 3.14) (O3), y se han entrenado y evaluado clasificadores
+        clásicos (SVM, \textit{random forest}) sobre estos descriptores
+        sobre el piloto real, con AUC por validación cruzada
+        $\approx 0.85$ (Sección~\ref{sec:resultados-reales}) (O4).
+  \item Se ha migrado la CNN de referencia a PyTorch (DenseNet121 con
+        \textit{transfer learning}), se ha entrenado de forma determinista
+        sobre el piloto real, y se ha implementado y evaluado la fusión de
+        características topológicas y \textit{embeddings} de la CNN, con
+        AUC por CV $\approx 0.93$ (CNN) y $\approx 0.88$ (fusión) sobre el
+        piloto actual (O5).
+  \item Se han desarrollado utilidades de visualización (matriz de
+        confusión, diagrama de persistencia, comparación visual benigno vs.
+        maligno espiculado con datos reales) en \texttt{src/evaluate.py} y
+        en el notebook interactivo (O6).
+  \item Se ha diseñado la metodología de comparación longitudinal (señales
+        de \textit{anticipación} y \textit{deriva} topológica entre
+        exploraciones sucesivas) y se ha \textbf{validado con datos
+        sintéticos}, incluido un análisis de sensibilidad que muestra que la
+        deriva no es sensible a la sutileza del precursor mientras que la
+        anticipación sí lo es --- un hallazgo metodológico que condiciona
+        qué señal priorizar sobre datos reales (O7).
+  \item Queda \textbf{pendiente} la evaluación de la hipótesis de detección
+        anticipada sobre datos longitudinales reales, bloqueada por el
+        acceso a CSAW-CC o EMBED, ambos bajo solicitud formal de acceso, no
+        descarga directa (O8).
 \end{itemize}
 
 \section{Grado de cumplimiento de los objetivos}
@@ -53,74 +76,99 @@ específicos planteados en el Capítulo~\ref{cap:objetivos}:
 \toprule
 \textbf{Obj.} & \textbf{Estado} & \textbf{Observaciones} \\
 \midrule
-O1 & Cumplido            & Revisión bibliográfica completa (Cap.~\ref{cap:estado-arte}). \\
+O1 & Cumplido            & Revisión bibliográfica completa, incluida la línea
+                            longitudinal/predicción de riesgo (Cap.~\ref{cap:estado-arte}). \\
 O2 & Cumplido            & \textit{Pipeline} de datos y partición por paciente
-                            implementados y verificados. \\
-O3 & Cumplido (impl.)  & Extracción de imágenes de persistencia H0+H1
-                            implementada y validada sobre datos sintéticos con
-                            dos backends (gudhi, giotto-tda); falta validar
-                            sobre imágenes reales de CBIS-DDSM. \\
-O4 & Parcialmente cumplido & Clasificadores entrenados y evaluados sobre datos
-                            sintéticos; falta la ejecución sobre CBIS-DDSM. \\
-O5 & Pendiente            & CNN y fusión implementadas pero no entrenadas ni
-                            comparadas por falta de datos. \\
-O6 & Parcialmente cumplido & Visualizaciones básicas implementadas; falta
-                            aplicarlas a casos reales y compararlas con Grad-CAM. \\
+                            implementados y verificados sobre un piloto real
+                            de 30 pacientes; dataset longitudinal (CSAW-CC/EMBED)
+                            bajo solicitud de acceso (O8). \\
+O3 & Cumplido             & Extracción de imágenes de persistencia H0+H1
+                            implementada y ejecutada sobre el piloto real con
+                            dos backends (gudhi, giotto-tda). \\
+O4 & Cumplido             & Clasificadores entrenados y evaluados sobre el
+                            piloto real (AUC por CV $\approx 0.85$); tamaño de
+                            muestra todavía pequeño (issue \#82). \\
+O5 & Cumplido             & CNN (PyTorch/DenseNet121) y fusión entrenadas y
+                            comparadas sobre el piloto real. \\
+O6 & Cumplido (parcial)   & Visualizaciones implementadas y aplicadas a casos
+                            reales; comparación con Grad-CAM/SHAP/LIME
+                            relegada a línea secundaria tras el pivote. \\
+O7 & Cumplido             & Metodología de comparación longitudinal diseñada
+                            y validada con datos sintéticos
+                            (Sección~\ref{sec:metodologia-longitudinal}). \\
+O8 & Pendiente            & Bloqueado por el acceso a un dataset longitudinal
+                            real (CSAW-CC/EMBED, issue \#92); es el objetivo
+                            más importante y el único que depende de un
+                            trámite externo, no de trabajo de implementación. \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-La principal desviación respecto a la planificación inicial es de naturaleza
-logística, no metodológica: el volumen y los tiempos de descarga de
-\mbox{CBIS-DDSM} (imágenes DICOM completas y máscaras de ROI, del orden de
-decenas de gigabytes) han retrasado la fase de experimentación con datos reales
-(O4, O5), a pesar de que el \textit{pipeline} que los consumirá está terminado,
-documentado y validado funcionalmente.
+La principal desviación respecto a la planificación inicial ya no es
+logística (la descarga de CBIS-DDSM, que motivó el retraso inicial, está
+resuelta y automatizada), sino de \textbf{alcance}: la hipótesis central del
+trabajo (O8) depende de un recurso --- un dataset longitudinal real --- cuyo
+acceso no está bajo el control directo del proyecto, y cuyo trámite de
+solicitud formal sigue abierto (issue \#92).
 
 \section{Limitaciones}
 Se identifican las siguientes limitaciones del trabajo en su estado actual:
 
 \begin{itemize}
-  \item \textbf{Ausencia de resultados sobre datos reales.} Las métricas
-        presentadas en el Capítulo~\ref{cap:resultados} se obtienen sobre datos
-        sintéticos (con el descriptor topológico completo, imágenes de
-        persistencia H0+H1 vía \texttt{gudhi}); no son extrapolables a la
-        capacidad diagnóstica real del enfoque sobre mamografías.
-  \item \textbf{Tamaño y sesgos del conjunto de datos.} CBIS-DDSM, aunque
-        curado, procede de un número limitado de centros y equipos de
-        adquisición, lo que puede limitar la generalización a otras
-        poblaciones o tecnologías de imagen.
-  \item \textbf{Coste computacional de la homología persistente.} El cálculo de
-        homología cúbica sobre imágenes completas de alta resolución es costoso;
-        en la práctica suele requerir trabajar sobre ROIs recortadas y
-        reescaladas, lo que introduce una decisión de diseño (tamaño y margen
-        del recorte) con impacto en el resultado.
-  \item \textbf{Alcance de la validación clínica.} Ni las métricas obtenidas ni
-        las que se obtengan sobre CBIS-DDSM constituyen una validación clínica:
-        falta contraste con radiólogos y con conjuntos de datos externos antes
-        de extraer conclusiones sobre utilidad diagnóstica real.
+  \item \textbf{La hipótesis principal no se ha evaluado todavía sobre datos
+        reales.} La validación de la Sección~\ref{sec:metodologia-longitudinal}
+        usa un generador sintético de precursores topológicos; confirma que
+        la metodología de comparación funciona cuando la señal existe, pero
+        no dice nada sobre si existe en mamografías reales.
+  \item \textbf{Tamaño del piloto real.} 30 pacientes (40 casos de
+        entrenamiento, 8 de test tras la partición por paciente) es
+        suficiente para validar que el \textit{pipeline} funciona de
+        extremo a extremo, pero demasiado pequeño para que las métricas de
+        la Tabla~\ref{tab:resultados} sean concluyentes: el AUC de un único
+        \textit{split} de test con $n=8$ resultó, en una ejecución, ser
+        \textbf{peor que el azar por pura casualidad} (Sección~\ref{sec:test-ruidoso}),
+        lo que ilustra por qué se reporta el AUC por validación cruzada como
+        métrica principal y no el de un solo \textit{split}.
+  \item \textbf{Sesgos del conjunto de datos.} CBIS-DDSM, aunque curado,
+        procede de un número limitado de centros y equipos de adquisición,
+        lo que puede limitar la generalización a otras poblaciones o
+        tecnologías de imagen; además, el piloto actual solo incluye casos
+        de tipo masa, no de calcificación.
+  \item \textbf{Alcance de la validación clínica.} Ninguna de las métricas
+        obtenidas constituye una validación clínica: falta contraste con
+        radiólogos y con conjuntos de datos externos antes de extraer
+        conclusiones sobre utilidad diagnóstica real.
 \end{itemize}
 
 \section{Trabajo futuro}
-A corto plazo, para completar los objetivos O4--O6 sobre datos reales:
+A corto plazo, para completar el objetivo O8 (el único pendiente):
 \begin{itemize}
-  \item Completar la descarga de CBIS-DDSM (CSV de casos e imágenes/máscaras vía
-        NBIA Data Retriever) y ejecutar el \textit{pipeline} de extracción
-        topológica (ya operativo con \texttt{gudhi}/\texttt{giotto-tda}) sobre
-        las imágenes reales.
-  \item Entrenar la CNN de referencia y el experimento de fusión, y completar la
-        Tabla~\ref{tab:resultados}.
-  \item Generar las visualizaciones finales (diagramas de persistencia sobre
-        casos reales, comparación con Grad-CAM) para la memoria.
+  \item Completar la solicitud formal de acceso a CSAW-CC o EMBED (issue
+        \#92) y, en cuanto se conceda, repetir sobre datos reales la
+        validación longitudinal ya hecha con datos sintéticos
+        (Sección~\ref{sec:metodologia-longitudinal}), priorizando la señal
+        de \textbf{anticipación} sobre la de \textbf{deriva} según el
+        hallazgo de sensibilidad de esa misma sección.
+  \item Ampliar el piloto real de CBIS-DDSM más allá de 30 pacientes (issue
+        \#82) para reducir la varianza de las métricas de la
+        Tabla~\ref{tab:resultados} e incorporar los casos de calcificación.
 \end{itemize}
 
 Como líneas de trabajo futuro de más largo alcance se proponen:
 \begin{itemize}
+  \item Comparar la señal de anticipación topológica con modelos de
+        predicción de riesgo basados en \textit{deep learning} ya
+        publicados sobre datos longitudinales reales (p.\,ej.
+        LongiMam~\cite{rakez2025longimam}, STA-Risk~\cite{zhou2025starisk}).
+  \item Retomar, como línea secundaria, la métrica de acuerdo
+        topológico-clínico (TDA vs.\ Grad-CAM/SHAP/LIME) sobre una
+        mamografía aislada, descartada como eje central tras el pivote a la
+        hipótesis longitudinal pero no descartada como posible aportación
+        adicional si el tiempo del TFG lo permite.
   \item Extender el estudio a otras filtraciones y descriptores topológicos
-        (\textit{multiparameter persistence}).
-  \item Integrar el TDA directamente en arquitecturas de \textit{deep learning}
-        (capas topológicas diferenciables).
-  \item Validar el enfoque en otros conjuntos de datos (INbreast, datos propios).
-  \item Realizar una evaluación con radiólogos para medir la utilidad clínica de
-        las visualizaciones.
+        (\textit{multiparameter persistence}) para la señal de deriva entre
+        exploraciones.
+  \item Validar el enfoque longitudinal en otros conjuntos de datos
+        (además de CSAW-CC/EMBED) y, si procede, con radiólogos, para medir
+        la utilidad clínica real de una ventana de detección anticipada.
 \end{itemize}

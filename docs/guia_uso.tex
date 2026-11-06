@@ -231,8 +231,13 @@ Las secciones del notebook son:
 \end{enumerate}
 
 \begin{lstlisting}
-jupyter notebook notebooks/02_real_data_pipeline.ipynb
+jupyter lab notebooks/02_real_data_pipeline.ipynb
 \end{lstlisting}
+
+El requirements.txt instala \texttt{jupyterlab}, no el paquete antiguo
+\texttt{notebook}: el comando correcto es \texttt{jupyter lab}, no
+\texttt{jupyter notebook} (este último da ``command not found'' si no se
+instala también el paquete \texttt{notebook}).
 
 El notebook original con datos sintéticos
 (\texttt{notebooks/01\_pipeline\_demo.ipynb}) sigue disponible para quien

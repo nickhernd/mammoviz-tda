@@ -1,34 +1,39 @@
+# Issue #87: versiones fijadas a las usadas para generar los resultados de la
+# memoria (Python 3.14, Windows), para que el pipeline sea reproducible.
+# Si necesitas otra version concreta por compatibilidad en tu maquina, cambia
+# el numero en la linea correspondiente en vez de borrar el pin.
+
 # Datos e imagen
-numpy
-pandas
-openpyxl
-opencv-python
-scikit-image
-pillow
+numpy==2.5.1
+pandas==3.0.3
+openpyxl==3.1.5
+opencv-python==5.0.0.93
+pillow==12.3.0
 
 # TDA / homologia persistente
 # gudhi + persim: backend portable (Python 3.10-3.14, incluye Windows).
 # giotto-tda es la implementacion de referencia usada en la memoria, pero solo
-# publica ruedas hasta Python 3.12; si tu interprete es 3.13+, comenta la
-# linea de giotto-tda y usa solo gudhi/persim (src/topology.py detecta
-# automaticamente cual esta instalado).
-gudhi
-persim
+# publica ruedas hasta Python 3.12; si tu interprete es 3.13+, esta linea se
+# omite automaticamente y src/topology.py usa solo gudhi/persim (detecta
+# automaticamente cual backend esta instalado).
+gudhi==3.13.0
+persim==0.3.8
 giotto-tda; python_version < "3.13"
 
 # Aprendizaje automatico y profundo
-scikit-learn
-torch
-torchvision
+scikit-learn==1.9.0
+torch==2.14.0
+torchvision==0.29.0
 
 # Descarga de datos reales (CBIS-DDSM: CSV via TCIA, imagenes DICOM via API NBIA)
-pydicom
-requests
+pydicom==3.0.2
+requests==2.34.2
 
-# Visualizacion y entorno
-matplotlib
-seaborn
-jupyter
+# Visualizacion y entorno interactivo
+matplotlib==3.11.0
+jupyterlab==4.6.5
+ipykernel==7.3.0
+nbconvert==7.17.1
 
 # Tests
-pytest
+pytest==9.1.1
