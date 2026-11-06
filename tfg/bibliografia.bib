@@ -125,8 +125,11 @@
   journal = {Radiology: Artificial Intelligence},
   year    = {2023},
   doi     = {10.1148/ryai.220047},
-  note    = {Subconjunto del 20\% publico sin autenticacion via AWS Open Data
-            (s3://embed-dataset-open/); dataset completo bajo solicitud}
+  note    = {Acceso controlado (``Controlled Access''): requiere solicitud
+            formal a traves del portal data.hitilab.com; verificado
+            empiricamente (boto3 sin firmar y HTTP directo) que el bucket de
+            AWS Open Data no permite listado anonimo (AccessDenied). No existe
+            un subconjunto publico sin autenticacion}
 }
 
 % ---- Mamografía y deep learning -------------------------------------------

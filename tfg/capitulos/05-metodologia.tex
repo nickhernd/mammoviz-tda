@@ -85,6 +85,7 @@ El preprocesado incluye:
 \end{itemize}
 
 \section{Extracción de descriptores topológicos}
+\label{sec:descriptores-topologicos}
 A partir de cada imagen (o ROI) se calcula la homología persistente mediante una
 filtración por \textit{sublevel sets} de la intensidad (para imágenes en escala
 de grises) o sobre nubes de puntos derivadas de las microcalcificaciones. Se
@@ -120,3 +121,134 @@ complementarias:
 \end{itemize}
 La sensibilidad recibe especial atención, ya que un falso negativo (no detectar
 un cáncer) tiene un coste clínico mucho mayor que un falso positivo.
+
+\section{Metodología longitudinal (hipótesis principal)}
+\label{sec:metodologia-longitudinal}
+
+Las secciones anteriores describen la clasificación benigno/maligno sobre una
+mamografía \textbf{aislada}, que constituye la base necesaria del trabajo
+(objetivos O3--O6). La hipótesis \textbf{principal} del TFG, sin embargo, es
+de naturaleza distinta: no preguntar si una imagen ya diagnosticada es
+maligna, sino si la exploración \textbf{anterior} de la misma paciente ---
+leída clínicamente como normal --- ya contenía una señal topológica de la
+lesión que se diagnosticaría después.
+
+\subsection{Definición de las señales longitudinales}
+Para una paciente con dos exploraciones sucesivas, $t-1$ (previa, sin
+diagnóstico) y $t$ (donde se diagnostica la lesión), se calculan los
+diagramas de persistencia $D_{t-1}$ y $D_t$ mediante el mismo procedimiento
+de la Sección~\ref{sec:descriptores-topologicos} y se derivan dos señales
+candidatas:
+
+\begin{itemize}
+  \item \textbf{Anticipación}: el vector de características topológicas
+        (imagen de persistencia, estadísticos) calculado \textbf{únicamente}
+        sobre $D_{t-1}$. Mide si la exploración previa, por sí sola, ya es
+        distinguible de la de una paciente control.
+  \item \textbf{Deriva} (\textit{drift}): la distancia \textit{bottleneck} (o
+        Wasserstein) entre $D_{t-1}$ y $D_t$,
+        $d(D_{t-1}, D_t)$, calculada por dimensión de homología ($H_0$,
+        $H_1$) con la librería \texttt{persim}. Mide cuánto cambia la
+        topología entre ambas exploraciones.
+  \item \textbf{Combinada}: concatenación de ambas señales anteriores.
+\end{itemize}
+
+Cada señal se evalúa como entrada de un clasificador binario (paciente
+``incidente'', que desarrolla la lesión en $t$, frente a paciente
+``control'', sin lesión en ninguna de las dos exploraciones), reportando el
+AUC por validación cruzada de 5 particiones en vez de un único \textit{split}
+de test, dado el tamaño reducido de las cohortes disponibles (mismo criterio
+de robustez estadística aplicado en la clasificación aislada, ver
+Capítulo~\ref{cap:resultados}).
+
+\subsection{Validación de la metodología con datos sintéticos}
+\label{subsec:validacion-sintetica}
+Antes de poder evaluar la hipótesis sobre un dataset longitudinal real (ver
+limitación de acceso más abajo), es necesario comprobar que el
+\textit{pipeline} de comparación es capaz de detectar la señal cuando esta
+existe. Para ello se implementó un generador sintético
+(\texttt{scripts/\allowbreak synthetic\_longitudinal\_validation.py}) que
+produce, para cada paciente:
+
+\begin{itemize}
+  \item \textbf{Casos control}: dos imágenes de fondo con textura y ruido
+        similares a una mamografía, sin ninguna lesión, en $t-1$ y en $t$.
+  \item \textbf{Casos incidentes}: en $t-1$, la misma textura de fondo con un
+        \textbf{precursor sutil} (una lesión de bordes espiculados, radio y
+        amplitud de contraste pequeños); en $t$, la misma lesión pero
+        crecida y más prominente (mayor radio y amplitud), simulando la
+        progresión hasta el momento del diagnóstico.
+\end{itemize}
+
+Con 60 pacientes por clase (parámetros por defecto del script, semilla fija
+para reproducibilidad) se obtuvo:
+
+\begin{table}[H]
+\centering
+\caption{AUC por validación cruzada (5-fold) de cada señal longitudinal
+sobre datos sintéticos.}
+\label{tab:longitudinal-sintetico}
+\begin{tabular}{@{}lc@{}}
+\toprule
+\textbf{Señal} & \textbf{AUC (CV, media $\pm$ desv.)} \\
+\midrule
+Anticipación (solo $D_{t-1}$)        & $0.871 \pm 0.089$ \\
+Deriva ($d(D_{t-1}, D_t)$)           & $0.937 \pm 0.063$ \\
+Combinada                             & $0.924 \pm 0.055$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Estos resultados confirman que, cuando existe un precursor topológico real
+en $t-1$, el \textit{pipeline} es capaz de recuperar esa señal muy por
+encima del azar, validando la metodología antes de aplicarla a datos reales.
+
+\subsection{Análisis de sensibilidad: anticipación frente a deriva}
+Un hallazgo metodológico relevante surge de un barrido de sensibilidad
+(\texttt{--sweep}) que reduce progresivamente la amplitud del precursor en
+$t-1$ (de $0.25$ a $0.03$, manteniendo fija la lesión madura en $t$), es
+decir, simulando precursores cada vez más sutiles y clínicamente más
+difíciles de anticipar:
+
+\begin{itemize}
+  \item El AUC de \textbf{anticipación} degrada de forma clara y monótona,
+        de $0.871$ (precursor claro) a $0.510$ (precursor casi
+        indistinguible del fondo) --- el comportamiento esperado de una
+        señal que de verdad depende de la sutileza del precursor.
+  \item El AUC de \textbf{deriva}, en cambio, se mantiene prácticamente
+        constante ($\approx 0.95$--$0.96$) en todo el barrido,
+        \textbf{independientemente} de cuán sutil sea el precursor en
+        $t-1$.
+\end{itemize}
+
+La razón es que la deriva mide sobre todo el \textbf{crecimiento} de la
+lesión entre $t-1$ y $t$ (que en el generador sintético es siempre grande,
+por construcción), no la \textbf{presencia de un precursor anticipable}. Es
+decir, la deriva es un buen detector de ``algo cambió'', pero no sirve para
+responder a la pregunta central del TFG (``¿ya se podía anticipar antes del
+diagnóstico?''); para eso, la señal relevante es la de \textbf{anticipación}
+sobre $D_{t-1}$ en solitario. Este resultado condiciona qué señal se
+prioriza al evaluar la hipótesis sobre datos reales (Capítulo~\ref{cap:resultados}).
+
+\subsection{Limitación de acceso a datos longitudinales reales}
+La validación anterior usa datos sintéticos porque, a fecha de redacción de
+esta memoria, no existe un dataset longitudinal público de mamografía con
+descarga directa. Se han identificado dos candidatos:
+
+\begin{quote}
+\textit{CSAW-CC}~\cite{dataset_csawcc}, cohorte real del Karolinska
+Institutet con 8723 pacientes y 24694 exploraciones (75.5\,\% con dos o más
+exploraciones), cuyas imágenes DICOM/PNG ($\sim$2.5\,TB) requieren solicitud
+formal de acceso, no descarga directa; y \textit{EMBED}~\cite{jeong2021embed},
+de Emory, con acceso controlado (\textit{Controlled Access}) a través de un
+portal dedicado, verificado empíricamente que no ofrece ningún subconjunto
+público sin autenticación.
+\end{quote}
+
+Mientras se tramita el acceso a alguno de estos dos conjuntos (ver también
+Capítulo~\ref{cap:conclusiones}), la Sección~\ref{subsec:validacion-sintetica}
+constituye la validación disponible de la metodología, y el trabajo
+reconocidamente comparable más cercano en la literatura es
+LongiMam~\cite{rakez2025longimam}, que también explota pares longitudinales
+de mamografía pero con un modelo de \textit{deep learning} end-to-end, no
+con descriptores topológicos.
