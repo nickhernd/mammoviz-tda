@@ -45,6 +45,7 @@ Estas limitaciones motivan la búsqueda de representaciones más robustas e
 interpretables, como las que proporciona el TDA.
 
 \section{Análisis Topológico de Datos en imagen médica}
+\label{sec:tda-imagen-medica}
 El Análisis Topológico de Datos (TDA) engloba un conjunto de técnicas que
 estudian la forma de los datos mediante herramientas de topología
 algebraica~\cite{carlsson2009topology, edelsbrunner2010computational}. Su
@@ -60,10 +61,57 @@ microcalcificaciones) que resultan difíciles de modelar con características
 convencionales. Su robustez frente al ruido y su interpretabilidad geométrica
 los convierten en un complemento natural de las CNN.
 
+\section{Predicción de riesgo y análisis longitudinal de mamografía}
+\label{sec:estado-arte-longitudinal}
+Una línea de trabajo más reciente y directamente relevante para la hipótesis
+principal de este TFG (Capítulo~\ref{cap:objetivos}) es la que usa
+\textbf{varias exploraciones sucesivas} de la misma paciente, en vez de una
+única mamografía, para predecir el riesgo de cáncer. Dadsetan \textit{et
+al.}~\cite{dadsetan2022longitudinal} fueron de los primeros en mostrar que un
+modelo de \textit{deep learning} entrenado sobre pares longitudinales de
+mamografías mejora la predicción de riesgo frente a usar solo la exploración
+más reciente. Trabajos más recientes refinan esta idea: LongiMam
+\cite{rakez2025longimam} combina explícitamente la exploración actual y las
+previas en un único modelo; STA-Risk~\cite{zhou2025starisk} explota
+asimetrías espacio-temporales entre exploraciones; Karimian \textit{et
+al.}~\cite{karimian2026privileged} proponen destilar el historial longitudinal
+hacia un modelo que solo necesita la exploración actual en inferencia
+(\textit{privileged information}); y Thrun \textit{et
+al.}~\cite{thrun2025alignment} estudian específicamente el problema --- no
+trivial --- de \textbf{alinear espacialmente} exploraciones de distinta fecha
+antes de compararlas. Kooi y Karssemeijer~\cite{kooi2017temporal} y Bai
+\textit{et al.}~\cite{bai2023unsupervised} abordan variantes anteriores del
+mismo problema (cambio temporal y simetría entre mamas) con CNN y modelos no
+supervisados, respectivamente.
+
+\textbf{Todos estos trabajos son de \textit{deep learning} end-to-end sobre
+píxeles}; ninguno usa descriptores topológicos. En paralelo, la aplicación de
+TDA a mamografía (Sección~\ref{sec:tda-imagen-medica} y
+\cite{fanning2025wavelet}) trabaja siempre sobre una \textbf{única
+exploración por caso}. Una búsqueda sistemática (arXiv, Google Scholar;
+2026-10-07) combinando "persistent homology"/"topological data analysis" con
+"longitudinal"/"temporal" y "mammography"/"breast cancer" no encontró ningún
+trabajo que combine ambas líneas. Un \textit{survey} de aplicaciones de TDA en
+oncología citado en esa búsqueda llega a sugerir explícitamente el análisis de
+series temporales en cáncer como dirección futura no explorada, lo que
+corrobora el hueco. Esto deja planteada la pregunta que motiva la hipótesis
+principal de este trabajo: \textbf{¿aporta la homología persistente, aplicada
+al cambio topológico entre exploraciones sucesivas, una señal predictiva que
+los modelos de \textit{deep learning} longitudinal actuales no capturan --- o
+capturan de forma menos interpretable?}
+
 \section{Síntesis y aportación de este trabajo}
-La revisión anterior muestra que, si bien el \textit{deep learning} domina el
-análisis de mamografías, el TDA ofrece una vía prometedora y poco explorada para
-obtener representaciones interpretables y robustas. La aportación de este TFG es
-un estudio sistemático de descriptores topológicos sobre \mbox{CBIS-DDSM}, su
-evaluación como características para la clasificación benigno/maligno, y su
-comparación y combinación con un modelo de \textit{deep learning} de referencia.
+La revisión anterior muestra dos líneas activas que, hasta donde se ha podido
+verificar, no se han combinado todavía: el TDA aplicado a una mamografía
+aislada (prometedor pero poco explorado frente al \textit{deep learning}
+dominante) y la predicción de riesgo mediante \textit{deep learning} sobre
+exploraciones longitudinales (activa y reciente, pero exclusivamente basada en
+píxeles). La aportación de este TFG parte de un estudio sistemático de
+descriptores topológicos sobre \mbox{CBIS-DDSM} para la clasificación
+benigno/maligno sobre una mamografía aislada --- necesario como base, y
+comparado y combinado con un modelo de \textit{deep learning} de referencia
+--- pero su objetivo central es extender esa base al caso longitudinal: usar
+la homología persistente para comparar la exploración previa (normal) con la
+exploración donde se diagnostica el cáncer, y evaluar si ya existía una señal
+topológica medible antes del diagnóstico (Capítulo~\ref{cap:metodologia},
+Sección~\ref{sec:metodologia-longitudinal}).
