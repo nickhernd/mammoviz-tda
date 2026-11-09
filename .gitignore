@@ -14,6 +14,10 @@ data/models/*.onnx
 data/csv/
 data/images/
 
+# Datos de EMBED (acceso controlado via AWS, NUNCA versionar: ni las
+# imagenes ni las credenciales de acceso, ver ~/.aws/credentials)
+data/embed/
+
 # Entorno Python
 .venv/
 __pycache__/
