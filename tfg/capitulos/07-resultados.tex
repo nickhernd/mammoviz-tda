@@ -7,7 +7,7 @@ obtenidos hasta el momento. Primero se describe una
 sintéticos} (Sección~\ref{sec:resultados-sinteticos}), que sirvió para
 comprobar que las cinco etapas encajaban correctamente antes de tener datos
 reales; a continuación se presentan los \textbf{resultados ya obtenidos sobre
-el piloto real} de CBIS-DDSM, 30 pacientes descargados con
+el piloto real} de CBIS-DDSM, 70 pacientes descargados con
 \texttt{scripts/download\_cbis\_ddsm.py} (Sección~\ref{sec:resultados-reales}
 y Sección~\ref{sec:estado-datos}). La hipótesis longitudinal principal del
 trabajo (O7--O8) se valida por separado, de momento solo con datos
@@ -142,58 +142,65 @@ H1 (agujeros/ciclos) en naranja; la diagonal discontinua marca birth = death.}
 \label{sec:resultados-reales}
 
 El repositorio dispone ya de un \textbf{piloto real descargado}:
-30 pacientes de \mbox{CBIS-DDSM} (casos de tipo masa), con sus mamografías
+70 pacientes de \mbox{CBIS-DDSM} (casos de tipo masa), con sus mamografías
 completas y máscaras de ROI en \texttt{data/images/}, descargados de forma
 incremental y balanceada benigno/maligno con
 \texttt{scripts/download\_cbis\_ddsm.py} directamente contra la API REST de
-TCIA. La partición por paciente (Sección~\ref{cap:metodologia}) deja, sobre
-este piloto, $40$ casos usables de entrenamiento y $8$ de test (el resto de
-filas de los CSV originales corresponden a pacientes todavía no descargados y
-se omiten automáticamente).
+TCIA (ampliado desde los 30 pacientes iniciales, issue \#82). La partición
+por paciente (Sección~\ref{cap:metodologia}) deja, sobre este piloto, $101$
+casos usables de entrenamiento y $21$ de test (el resto de filas de los CSV
+originales corresponden a pacientes todavía no descargados y se omiten
+automáticamente).
 
 \begin{table}[H]
 \centering
-\caption{Resultados reales sobre el piloto de CBIS-DDSM (30 pacientes,
+\caption{Resultados reales sobre el piloto de CBIS-DDSM (70 pacientes,
 \texttt{scripts/run\_pipeline.py} y \texttt{scripts/fuse\_and\_evaluate.py},
-\texttt{n\_bins=4}, Random Forest). El AUC por validación cruzada (5-fold
-sobre train) es la columna fiable; el test de solo $8$ casos es muy ruidoso
-(ver discusión debajo de la tabla).}
+\texttt{n\_bins=4}, Random Forest por defecto). El AUC por validación
+cruzada (5-fold sobre train) es la columna fiable; el test de solo $21$
+casos sigue siendo ruidoso (ver discusión debajo de la tabla).}
 \label{tab:resultados}
 \begin{tabular}{@{}lccc@{}}
 \toprule
-\textbf{Modelo} & \textbf{AUC (test, $n=8$)} & \textbf{AUC (CV, train)} & \textbf{Sensib. (test)} \\
+\textbf{Modelo} & \textbf{AUC (test, $n=21$)} & \textbf{AUC (CV, train)} & \textbf{Sensib. (test)} \\
 \midrule
-TDA (Persistence Image)      & 0.000 & $0.850 \pm 0.143$ & 0.000 \\
-CNN (DenseNet121, embeddings) & 0.208 & $0.933 \pm 0.097$ & 0.167 \\
-Fusión TDA + CNN              & 0.333 & $0.883 \pm 0.194$ & 0.167 \\
+TDA (Persistence Image)      & 0.490 & $0.658 \pm 0.134$ & 0.429 \\
+CNN (DenseNet121, embeddings) & 0.668 & $0.798 \pm 0.122$ & 0.643 \\
+Fusión TDA + CNN              & 0.714 & $0.796 \pm 0.117$ & 0.714 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\subsection{Por qué el AUC de test es tan malo (y por qué no es alarmante)}
+\subsection{El AUC baja al ampliar el piloto (y por qué es una buena noticia)}
 \label{sec:test-ruidoso}
-El AUC de test de la fila TDA es $0.000$: con solo $8$ casos de test, el
-\textit{random forest} invirtió literalmente las $8$ predicciones
-respecto a la etiqueta real
-(\texttt{y\_test}=\texttt{[1,1,0,0,1,1,1,1]} frente a
-\texttt{y\_pred}=\texttt{[0,0,1,1,0,0,0,0]}). Esto no revela un error del
-\textit{pipeline}: con un test tan pequeño, una sola partición concreta puede
-caer, por puro azar, en el extremo contrario de la distribución de aciertos.
-Es exactamente el fenómeno ya anticipado al corregir el sobreajuste del
-clasificador (issue \#77): el AUC de un único \textit{split} pequeño es
-\textbf{demasiado ruidoso para ser la métrica de referencia}. Por eso la
-columna fiable de la Tabla~\ref{tab:resultados} es el AUC por validación
-cruzada de 5 particiones sobre el conjunto de entrenamiento ($n=40$), que
-promedia sobre varias particiones en vez de depender de una sola.
+Con el piloto de 30 pacientes (Sección~\ref{sec:resultados-reales} en una
+versión anterior de este capítulo), el CV-AUC de TDA llegaba a
+$0.850 \pm 0.143$; con 70 pacientes baja a $0.658 \pm 0.134$. A primera
+vista parece un empeoramiento, pero es justo lo contrario: con solo $40$
+casos de entrenamiento, una sola partición de validación cruzada podía caer,
+por puro azar, en el extremo favorable de la distribución de aciertos ---
+el mismo fenómeno, en la dirección opuesta, que llevó a un AUC de test de
+$0.000$ en aquel piloto cuando el \textit{random forest} invirtió
+literalmente las $8$ predicciones de un test diminuto. El número de $0.658$
+sobre $101$ casos de entrenamiento es \textbf{menos vistoso pero más
+creíble}: la desviación típica también baja (de $\pm 0.143$ a $\pm 0.134$),
+señal de que la estimación se está estabilizando al crecer la muestra, tal
+como anticipaba la Sección~\ref{sec:refinamiento-clasificacion} de la
+versión anterior de este capítulo. Es exactamente el fenómeno ya anticipado
+al corregir el sobreajuste del clasificador (issue \#77): el AUC de un
+único \textit{split} pequeño --- y, por extensión, el de una validación
+cruzada sobre muy pocos casos --- es \textbf{demasiado ruidoso para
+tomarse al pie de la letra}, y solo ampliar el piloto permite distinguir
+una estimación real de un golpe de suerte.
 
-Con esa métrica, los tres modelos superan claramente el azar ($\text{AUC}
-\geq 0.85$), con la CNN ligeramente por delante de la fusión y de TDA en
-solitario en este piloto concreto; la desviación típica de la fusión
-($\pm 0.194$) es, sin embargo, la más alta de las tres, lo que indica que el
-orden entre modelos todavía no está establecido con el tamaño de muestra
-actual. Ampliar el piloto (issue \#82, O7 del Capítulo~\ref{cap:objetivos})
-es el paso natural para reducir esa incertidumbre antes de poder afirmar
-cuál de los tres enfoques es preferible.
+Con el piloto ampliado, los tres modelos superan el azar
+($\text{AUC} \geq 0.66$), con la CNN y la fusión claramente por delante de
+TDA en solitario (a diferencia del piloto de 30 pacientes, donde los tres
+estaban más igualados) y con un orden más estable: la fusión iguala o
+mejora ligeramente a la CNN sola en la mayoría de las configuraciones
+probadas (Sección~\ref{sec:refinamiento-clasificacion}). Seguir ampliando
+el piloto (issue \#82, O7 del Capítulo~\ref{cap:objetivos}) sigue siendo el
+camino natural para reducir más la incertidumbre.
 
 \subsection{Refinamiento: ajuste de hiperparámetros por vía (issue \#77)}
 \label{sec:refinamiento-clasificacion}
@@ -209,39 +216,40 @@ su fusión de 1056.
 
 \begin{table}[H]
 \centering
-\caption{AUC por validación cruzada (5-fold, train) antes y después de
-ajustar hiperparámetros por vía. ``Mejor encontrado'' es el máximo entre
-\textit{random forest} por defecto (Tabla~\ref{tab:resultados}) y SVM
-ajustada por \texttt{GridSearchCV} ($n\_bins=4$, $C \in \{0.01,\ldots,100\}$,
-kernel lineal/RBF).}
+\caption{AUC por validación cruzada (5-fold, train, piloto de 70 pacientes)
+con \textit{random forest} por defecto, \textit{random forest} ajustada y
+SVM ajustada por \texttt{GridSearchCV} ($n\_bins=4$,
+$C \in \{0.01,\ldots,100\}$, kernel lineal/RBF). ``Mejor encontrado'' es el
+máximo de las tres.}
 \label{tab:refinamiento}
-\begin{tabular}{@{}lccc@{}}
+\begin{tabular}{@{}lcccc@{}}
 \toprule
-\textbf{Vía} & \textbf{RF por defecto} & \textbf{SVM ajustada (\texttt{--tune})} & \textbf{Mejor encontrado} \\
+\textbf{Vía} & \textbf{RF por defecto} & \textbf{RF ajustada} & \textbf{SVM ajustada} & \textbf{Mejor encontrado} \\
 \midrule
-TDA sola           & $0.850 \pm 0.143$ & $0.850 \pm 0.143$ & $0.850 \pm 0.143$ \\
-CNN sola           & $0.933 \pm 0.097$ & $0.850 \pm 0.186$ & $\mathbf{0.933 \pm 0.097}$ (RF) \\
-Fusión TDA + CNN   & $0.883 \pm 0.194$ & $\mathbf{0.967 \pm 0.067}$ & $\mathbf{0.967 \pm 0.067}$ (SVM) \\
+TDA sola           & $0.658 \pm 0.134$ & $0.658 \pm 0.134$ & $0.653 \pm 0.201$ & $\mathbf{0.658 \pm 0.134}$ (RF) \\
+CNN sola           & $0.798 \pm 0.122$ & $0.798 \pm 0.127$ & $\mathbf{0.827 \pm 0.110}$ & $\mathbf{0.827 \pm 0.110}$ (SVM) \\
+Fusión TDA + CNN   & $0.796 \pm 0.117$ & $0.813 \pm 0.104$ & $\mathbf{0.819 \pm 0.113}$ & $\mathbf{0.819 \pm 0.113}$ (SVM) \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-El hallazgo más relevante no es que "ajustar siempre mejora" --- de hecho,
-para la CNN sola el ajuste \textbf{empeora} el resultado frente al
-\textit{random forest} por defecto (de $0.933$ a $0.850$) --- sino que
-\textbf{la mejor configuración depende de qué características se usan}: el
-\textit{random forest} por defecto generaliza mejor sobre el
-\textit{embedding} de 1024 dimensiones de la CNN, mientras que una SVM con
-regularización fuerte ($C=0.01$) generaliza mejor sobre el vector fusionado
-de 1056 dimensiones, donde sube de $0.883$ a $\mathbf{0.967 \pm 0.067}$ ---
-el mejor resultado de todo el piloto, y también el de \textbf{menor
-varianza} de las seis configuraciones probadas. Es un resultado alentador
-para la hipótesis de fusión (O5): cuando se ajustan bien los
-hiperparámetros, combinar TDA y CNN sí aporta sobre cualquiera de los dos
-enfoques por separado, aunque con el tamaño de piloto actual conviene leer
-esta mejora con cautela (issue \#77: \textit{look-elsewhere effect} al
-probar varias configuraciones y quedarse con la mejor) y confirmarla cuando
-el piloto crezca (issue \#82).
+A diferencia del piloto de 30 pacientes (donde el ajuste de hiperparámetros
+producía un resultado llamativo de $0.967$ para la fusión, muy por encima
+de cualquier otra configuración), con 70 pacientes el panorama es más
+estable y menos espectacular: \textbf{ajustar hiperparámetros aporta una
+mejora modesta y consistente} (entre $0$ y $0.03$ puntos de AUC según la
+vía), no el salto grande que sugería el piloto pequeño --- una confirmación
+directa de la cautela que ya se pedía en la versión anterior de esta
+sección sobre el \textit{look-elsewhere effect} (issue \#77). La SVM
+ajustada es ahora la mejor opción tanto para la CNN sola como para la
+fusión, mientras que para TDA el \textit{random forest} por defecto ya es
+difícil de mejorar. La fusión y la CNN sola quedan prácticamente empatadas
+($0.819$ vs.\ $0.827$, diferencia muy por debajo de sus desviaciones
+típicas): con el tamaño de piloto actual \textbf{no se puede afirmar que la
+fusión aporte una mejora clara} sobre la CNN sola, a diferencia de lo que
+sugería --- de forma demasiado optimista --- el piloto de 30 pacientes.
+Confirmar si la fusión aporta algo real requiere seguir ampliando el piloto
+(issue \#82).
 
 \subsection{Sanity check visual: masa espiculada benigna vs. maligna}
 \label{sec:sanity-check-espiculada}
@@ -445,12 +453,14 @@ para la fase de experimentación real:
         muestral al pasar a datos reales (CBIS-DDSM tiene más casos benignos
         que malignos).
   \item \textbf{Comparación con \textit{deep learning} y fusión}: ya
-        ejecutada sobre el piloto real (Sección~\ref{sec:resultados-reales}):
-        en esta iteración concreta, la CNN sola (AUC por CV $0.933$) supera
-        tanto a TDA solo ($0.850$) como a la fusión ($0.883$), al contrario
-        de lo anticipado aquí con datos sintéticos; con una desviación
-        típica de la fusión del orden de $0.19$, no puede todavía
-        descartarse que el orden cambie al ampliar el piloto (issue \#82).
+        ejecutada sobre el piloto real, ampliado a 70 pacientes
+        (Sección~\ref{sec:resultados-reales}): la CNN sola y la fusión
+        quedan prácticamente empatadas (AUC por CV $0.827$ y $0.819$ tras
+        ajustar hiperparámetros), ambas claramente por delante de TDA en
+        solitario ($0.658$), al contrario de lo anticipado aquí con datos
+        sintéticos (donde TDA solo ya superaba el azar con holgura). El
+        tamaño de piloto sigue siendo insuficiente para afirmar si la
+        fusión aporta una mejora real sobre la CNN sola (issue \#82).
 \end{itemize}
 
 Las observaciones anteriores, obtenidas con datos sintéticos antes de tener

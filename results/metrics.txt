@@ -1,11 +1,11 @@
 backend TDA: gudhi
-clasificador: svm
-n_train=40 n_test=8
-accuracy: 0.2500
-sensibilidad_recall: 0.0000
-especificidad: 1.0000
-precision: 0.0000
-f1: 0.0000
-auc: 0.0000
-auc_cv_train_mean: 0.8500
-auc_cv_train_std: 0.1434
+clasificador: rf
+n_train=101 n_test=21
+accuracy: 0.5238
+sensibilidad_recall: 0.4286
+especificidad: 0.7143
+precision: 0.7500
+f1: 0.5455
+auc: 0.4898
+auc_cv_train_mean: 0.6580
+auc_cv_train_std: 0.1339

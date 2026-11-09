@@ -33,7 +33,7 @@ longitudinal real. En relación con los objetivos específicos:
         \textbf{partición por paciente}, que corrige la fuga de datos
         observada en el \texttt{Demo\_Notebook.ipynb} original (exactitud
         del 100\,\% desde la primera época); se ha descargado y usado un
-        piloto real de 30 pacientes de CBIS-DDSM (O2).
+        piloto real de 70 pacientes de CBIS-DDSM (O2).
   \item Se ha implementado y ejecutado sobre datos reales la extracción de
         descriptores topológicos mediante homología persistente cúbica
         (\texttt{src/topology.py}: diagramas de persistencia, imágenes de
@@ -42,13 +42,14 @@ longitudinal real. En relación con los objetivos específicos:
         Python 3.14) (O3), y se han entrenado y evaluado clasificadores
         clásicos (SVM, \textit{random forest}) sobre estos descriptores
         sobre el piloto real, con AUC por validación cruzada
-        $\approx 0.85$ (Sección~\ref{sec:resultados-reales}) (O4).
+        $\approx 0.66$ (Sección~\ref{sec:resultados-reales}) (O4).
   \item Se ha migrado la CNN de referencia a PyTorch (DenseNet121 con
         \textit{transfer learning}), se ha entrenado de forma determinista
         sobre el piloto real, y se ha implementado y evaluado la fusión de
         características topológicas y \textit{embeddings} de la CNN, con
-        AUC por CV $\approx 0.93$ (CNN) y $\approx 0.88$ (fusión) sobre el
-        piloto actual (O5).
+        AUC por CV $\approx 0.83$ (CNN) y $\approx 0.82$ (fusión) tras
+        ajustar hiperparámetros por vía sobre el piloto actual, sin que se
+        pueda todavía afirmar que la fusión mejore a la CNN sola (O5).
   \item Se han desarrollado utilidades de visualización (matriz de
         confusión, diagrama de persistencia, comparación visual benigno vs.
         maligno espiculado con datos reales) en \texttt{src/evaluate.py} y
@@ -80,19 +81,24 @@ O1 & Cumplido            & Revisión bibliográfica completa, incluida la línea
                             longitudinal/predicción de riesgo (Cap.~\ref{cap:estado-arte}). \\
 O2 & Cumplido            & \textit{Pipeline} de datos y partición por paciente
                             implementados y verificados sobre un piloto real
-                            de 30 pacientes; dataset longitudinal (CSAW-CC/EMBED)
+                            de 70 pacientes; dataset longitudinal (CSAW-CC/EMBED)
                             bajo solicitud de acceso (O8). \\
 O3 & Cumplido             & Extracción de imágenes de persistencia H0+H1
                             implementada y ejecutada sobre el piloto real con
                             dos backends (gudhi, giotto-tda). \\
 O4 & Cumplido             & Clasificadores entrenados y evaluados sobre el
-                            piloto real (AUC por CV $\approx 0.85$); tamaño de
+                            piloto real (AUC por CV $\approx 0.66$, estimación
+                            más fiable al ampliar el piloto); tamaño de
                             muestra todavía pequeño (issue \#82). \\
 O5 & Cumplido             & CNN (PyTorch/DenseNet121) y fusión entrenadas y
-                            comparadas sobre el piloto real. \\
-O6 & Cumplido (parcial)   & Visualizaciones implementadas y aplicadas a casos
-                            reales; comparación con Grad-CAM/SHAP/LIME
-                            relegada a línea secundaria tras el pivote. \\
+                            comparadas sobre el piloto real, con ajuste de
+                            hiperparámetros por vía (issue \#77). \\
+O6 & Cumplido             & Visualizaciones implementadas y aplicadas a casos
+                            reales; comparación sistemática con Grad-CAM,
+                            SHAP y LIME completada como línea secundaria
+                            (Sección~\ref{sec:resultados-xai}): acuerdo bajo
+                            entre los 4 métodos, TDA tan rápida como Grad-CAM
+                            y $>300\times$ más rápida que SHAP. \\
 O7 & Cumplido             & Metodología de comparación longitudinal diseñada
                             y validada con datos sintéticos
                             (Sección~\ref{sec:metodologia-longitudinal}). \\
@@ -120,15 +126,18 @@ Se identifican las siguientes limitaciones del trabajo en su estado actual:
         usa un generador sintético de precursores topológicos; confirma que
         la metodología de comparación funciona cuando la señal existe, pero
         no dice nada sobre si existe en mamografías reales.
-  \item \textbf{Tamaño del piloto real.} 30 pacientes (40 casos de
-        entrenamiento, 8 de test tras la partición por paciente) es
-        suficiente para validar que el \textit{pipeline} funciona de
-        extremo a extremo, pero demasiado pequeño para que las métricas de
-        la Tabla~\ref{tab:resultados} sean concluyentes: el AUC de un único
-        \textit{split} de test con $n=8$ resultó, en una ejecución, ser
-        \textbf{peor que el azar por pura casualidad} (Sección~\ref{sec:test-ruidoso}),
-        lo que ilustra por qué se reporta el AUC por validación cruzada como
-        métrica principal y no el de un solo \textit{split}.
+  \item \textbf{Tamaño del piloto real.} 70 pacientes (101 casos de
+        entrenamiento, 21 de test tras la partición por paciente) ya
+        permite estimaciones más estables que el piloto inicial de 30
+        pacientes --- el CV-AUC de TDA bajó de $0.850 \pm 0.143$ a
+        $0.658 \pm 0.134$ al ampliar el piloto, una corrección a la baja
+        que es en sí misma evidencia de que el número anterior era
+        optimista por el tamaño de muestra (Sección~\ref{sec:test-ruidoso})
+        --- pero sigue siendo pequeño para un estudio concluyente: con 30
+        pacientes, el AUC de un único \textit{split} de test con $n=8$
+        llegó a ser, en una ejecución, peor que el azar por pura
+        casualidad, lo que ilustra por qué se reporta el AUC por validación
+        cruzada como métrica principal y no el de un solo \textit{split}.
   \item \textbf{Sesgos del conjunto de datos.} CBIS-DDSM, aunque curado,
         procede de un número limitado de centros y equipos de adquisición,
         lo que puede limitar la generalización a otras poblaciones o
@@ -149,9 +158,10 @@ A corto plazo, para completar el objetivo O8 (el único pendiente):
         (Sección~\ref{sec:metodologia-longitudinal}), priorizando la señal
         de \textbf{anticipación} sobre la de \textbf{deriva} según el
         hallazgo de sensibilidad de esa misma sección.
-  \item Ampliar el piloto real de CBIS-DDSM más allá de 30 pacientes (issue
-        \#82) para reducir la varianza de las métricas de la
-        Tabla~\ref{tab:resultados} e incorporar los casos de calcificación.
+  \item Seguir ampliando el piloto real de CBIS-DDSM más allá de 70
+        pacientes (issue \#82) para reducir aún más la varianza de las
+        métricas de la Tabla~\ref{tab:resultados} e incorporar los casos de
+        calcificación.
 \end{itemize}
 
 Como líneas de trabajo futuro de más largo alcance se proponen:
@@ -160,11 +170,12 @@ Como líneas de trabajo futuro de más largo alcance se proponen:
         predicción de riesgo basados en \textit{deep learning} ya
         publicados sobre datos longitudinales reales (p.\,ej.
         LongiMam~\cite{rakez2025longimam}, STA-Risk~\cite{zhou2025starisk}).
-  \item Retomar, como línea secundaria, la métrica de acuerdo
-        topológico-clínico (TDA vs.\ Grad-CAM/SHAP/LIME) sobre una
-        mamografía aislada, descartada como eje central tras el pivote a la
-        hipótesis longitudinal pero no descartada como posible aportación
-        adicional si el tiempo del TFG lo permite.
+  \item Completar las dos tareas que quedaron abiertas de la línea
+        secundaria de interpretabilidad (Sección~\ref{sec:resultados-xai}):
+        una cota de estabilidad teórica de la métrica de acuerdo frente a
+        perturbaciones del ROI (issue \#78) y una validación cualitativa
+        con un segundo anotador humano sobre los casos más discordantes
+        (issue \#80), ya que no hay acceso garantizado a un radiólogo.
   \item Extender el estudio a otras filtraciones y descriptores topológicos
         (\textit{multiparameter persistence}) para la señal de deriva entre
         exploraciones.

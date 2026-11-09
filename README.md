@@ -154,23 +154,26 @@ latexmk -pdf main.tex     # requiere una distribución LaTeX + biber
 
 - [x] Pivote de hipótesis: de interpretabilidad aislada a detección anticipada longitudinal
 - [x] Pipeline (`src/`) documentado a nivel profesional, migrado a PyTorch
-- [x] Datos reales de CBIS-DDSM descargados (piloto: 30 pacientes, benigno/maligno balanceado)
+- [x] Datos reales de CBIS-DDSM descargados (piloto: 70 pacientes, benigno/maligno balanceado)
 - [x] Bug de `topology.py` corregido (dimensiones H0/H1 fijas) + test de regresión
+- [x] Bug de `breast_density` corregido (columnas duplicadas mass/calc) + test de regresión
 - [x] Overfitting diagnosticado y corregido (n_bins, Random Forest, `--tune`, CV-AUC)
 - [x] CNN de referencia (PyTorch/DenseNet121) entrenada de forma reproducible
 - [x] Comparación y fusión TDA + CNN, con ajuste de hiperparámetros por vía
-      (CV-AUC: TDA 0.85, CNN 0.93, fusión 0.97 con SVM ajustada — mejor y
-      más estable de las seis configuraciones probadas)
+      (CV-AUC sobre 70 pacientes: TDA 0.66, CNN 0.83, fusión 0.82 — con el
+      piloto ampliado, CNN y fusión quedan prácticamente empatadas; con 30
+      pacientes el número de fusión parecía mejor pero era ruido de muestra)
 - [x] Interpretabilidad: Grad-CAM, región topológica dominante, SHAP y LIME
-      comparados sobre el piloto real (48 casos); acuerdo bajo entre los
-      4 métodos (IoU 0.06-0.13), TDA tan rápida como Grad-CAM y ~300x más
-      rápida que SHAP (`docs/` y `tfg/capitulos/05-metodologia.tex`)
+      comparados sobre el piloto real, con protocolo estadístico (bootstrap
+      CI, test pareado) y desglose por `mass_margins`/`breast_density`;
+      acuerdo bajo entre los 4 métodos, TDA tan rápida como Grad-CAM y
+      ~300x más rápida que SHAP (`docs/` y `tfg/capitulos/05-metodologia.tex`)
 - [x] Metodología longitudinal diseñada y **validada con datos sintéticos**
       (AUC anticipación 0.871, deriva 0.937 — ver `tfg/capitulos/05-metodologia.tex`)
 - [x] Notebook interactivo + guía de uso en PDF (`docs/guia_uso.pdf`)
 - [ ] Acceso a un dataset longitudinal real (CSAW-CC o EMBED) — solicitud formal pendiente, issue [#92](../../issues/92)
 - [ ] Evaluación de la hipótesis de detección anticipada sobre datos longitudinales reales
-- [ ] Ampliación del piloto de CBIS-DDSM más allá de 30 pacientes
+- [ ] Ampliación del piloto de CBIS-DDSM más allá de 70 pacientes
 - [ ] Visualizaciones finales para la memoria
 
 ## Tests
