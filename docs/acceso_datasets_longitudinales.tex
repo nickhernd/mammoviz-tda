@@ -1,0 +1,224 @@
+%==============================================================================
+%  mammoviz-tda — Acceso a datasets longitudinales de mamografia
+%  Documento independiente de la memoria del TFG (tfg/main.tex)
+%==============================================================================
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish,es-tabla]{babel}
+\usepackage{lmodern}
+
+\usepackage[a4paper,top=2.5cm,bottom=2.5cm,left=2.8cm,right=2.8cm]{geometry}
+\usepackage{setspace}
+\onehalfspacing
+\usepackage{emptypage}
+
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{caption}
+\usepackage{xcolor}
+\definecolor{bg}{rgb}{0.96,0.96,0.96}
+\definecolor{accent}{rgb}{0.11,0.35,0.60}
+
+\usepackage{listings}
+\lstset{
+  basicstyle=\ttfamily\small,
+  backgroundcolor=\color{bg},
+  keywordstyle=\color{blue!70!black}\bfseries,
+  commentstyle=\color{green!40!black},
+  stringstyle=\color{red!60!black},
+  frame=single, breaklines=true, showstringspaces=false,
+  captionpos=b, language=bash, columns=flexible,
+}
+
+\usepackage[hidelinks,colorlinks=true,linkcolor=accent,urlcolor=accent]{hyperref}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{mammoviz-tda — acceso a datasets longitudinales}
+\fancyhead[R]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\title{\textbf{mammoviz-tda}\\[4pt]\large Acceso a datasets longitudinales de mamografía\\[2pt]\normalsize (CSAW-CC, EMBED y alternativas investigadas)}
+\author{}
+\date{Noviembre 2026}
+
+\begin{document}
+\maketitle
+\thispagestyle{empty}
+
+\begin{abstract}
+\noindent Este documento recoge, para no tener que volver a investigarlo,
+los pasos concretos para solicitar acceso a los dos datasets longitudinales
+de mamografía identificados como candidatos para evaluar la hipótesis
+principal del TFG (issue \#92 del repositorio), y las demás alternativas
+que se han investigado y por qué no resuelven el problema mejor que estas
+dos. Verificado el 9 de noviembre de 2026 contra las páginas oficiales de
+cada organización (no son suposiciones ni resúmenes de terceros sin
+contrastar).
+\end{abstract}
+
+\section{Resumen rápido}
+\begin{itemize}
+  \item No existe ningún dataset longitudinal de mamografía de descarga
+        directa sin solicitud. Los dos mejores candidatos siguen siendo
+        \textbf{CSAW-CC} y \textbf{EMBED}; ninguna alternativa investigada
+        es más fácil o más rápida.
+  \item Recomendación: \textbf{solicitar acceso a ambos en paralelo} desde
+        ahora, porque ninguno de los dos portales indica un plazo de
+        respuesta, y no hay coste por solicitar a los dos.
+  \item El dataset de Kaggle/RSNA (2023) es de descarga libre e inmediata,
+        pero \textbf{no es longitudinal} (una sola exploración por caso):
+        solo sirve como dataset adicional para la clasificación aislada
+        (O3--O6 del TFG), no para la hipótesis principal (O7--O8).
+\end{itemize}
+
+\section{CSAW-CC (Karolinska Institutet)}
+\label{sec:csawcc}
+Gestionado a través del sistema \textbf{DORIS} de SND (Swedish National
+Data Service), no por la propia Karolinska.
+
+\begin{enumerate}[leftmargin=1.2cm]
+  \item Ficha del dataset:
+        \url{https://researchdata.se/catalogue/dataset/2021-204-1/1}
+        (DOI \texttt{10.5878/45vm-t798}). La licencia aparece como
+        \texttt{NON\_PUBLIC}/\texttt{restrictedAccess}: \emph{``available
+        upon request due to the size of the material''}.
+  \item Formulario de solicitud (no requiere login):
+        \url{https://snd.se/en/research-data-support/data-access-requests}
+  \item Datos a rellenar: tus datos de contacto y una descripción del uso
+        que le vas a dar. \textbf{Importante siendo estudiante}: el
+        formulario también pide el nombre y email de tu tutor/director de
+        TFG, a quien SND notifica para verificar la solicitud.
+  \item SND reenvía la solicitud a la organización responsable
+        (Karolinska Institutet), que decide si te da acceso. No se indica
+        plazo de respuesta en ninguna página oficial.
+  \item Contactos directos si el formulario falla o no hay respuesta:
+        \begin{itemize}
+          \item Fredrik Strand (creador del dataset, Karolinska Institutet)
+                --- \texttt{fredrik.strand@ki.se}
+          \item Kevin Smith (KTH / SciLifeLab) --- \texttt{ksmith@kth.se}
+        \end{itemize}
+\end{enumerate}
+
+\subsection*{Nota sobre el CSAW original (no CC)}
+Existe un dataset "hermano" más grande, el CSAW original (499\,807 mujeres,
+2008--2015), del mismo grupo. Una página de un vendedor de datos de
+terceros afirma que un 20\,\% de CSAW está disponible en Kaggle sin
+solicitud, \textbf{pero esta afirmación no se ha podido confirmar contra
+ninguna fuente primaria} (ni la ficha de SND, ni Karolinska, ni una página
+oficial de Kaggle). No usar esta cifra sin verificarla de nuevo antes de
+dar por hecho que hay un atajo.
+
+\section{EMBED (Emory University)}
+\label{sec:embed}
+Gestionado por el propio equipo de Emory (HITI Lab) a través de un portal
+dedicado, \texttt{data.hitilab.com}.
+
+\begin{enumerate}[leftmargin=1.2cm]
+  \item Portal de solicitud: \url{https://data.hitilab.com/} $\to$ botón
+        ``Request access'' (\texttt{/sign-up}).
+  \item Proceso (confirmado en la propia web):
+        \begin{enumerate}
+          \item Enviar tu \textbf{propósito de investigación} y tu
+                \textbf{afiliación institucional} para revisión.
+          \item Si se aprueba, recibes credenciales de AWS \textbf{temporales},
+                con alcance limitado a ese dataset concreto.
+          \item Descargas directamente del bucket S3 privado con esas
+                credenciales.
+        \end{enumerate}
+  \item Acceso limitado a investigadores académicos; usa tu correo
+        institucional, no uno personal, al solicitar.
+  \item Licencia / acuerdo de uso de datos (revisar antes de solicitar):
+        \url{https://github.com/Emory-HITI/EMBED_Open_Data/blob/main/EMBED_license.md}
+  \item Documentación general del dataset:
+        \url{https://github.com/Emory-HITI/EMBED_Open_Data}
+  \item Contacto directo de respaldo: Hari Trivedi ---
+        \texttt{hari.trivedi@emory.edu}
+\end{enumerate}
+
+\subsection*{Aclaración importante sobre el ``20\,\% público''}
+El bucket de AWS Open Data de EMBED (\texttt{s3://embed-dataset-open/})
+está marcado en el registro oficial de AWS como \textbf{``Controlled
+Access''}, no de acceso público. El ``20\,\%'' que aparece en varias
+páginas (incluida la propia ficha de AWS) se refiere al \textbf{tamaño
+relativo} de ese subconjunto frente al dataset completo (3.4M imágenes),
+\textbf{no} a que sea descargable sin pedir acceso. Se comprobó
+empíricamente (petición HTTP directa y \texttt{boto3} sin firmar) que el
+listado anónimo del bucket devuelve \texttt{AccessDenied}. Hay que pasar
+por el mismo portal \texttt{data.hitilab.com} tanto para el subconjunto
+``20\,\%'' como para el dataset completo.
+
+\section{Alternativas investigadas (y por qué no resuelven el problema)}
+\label{sec:alternativas}
+
+\begin{description}[leftmargin=0cm,style=nextline]
+  \item[RSNA Screening Mammography Breast Cancer Detection (Kaggle, 2023)]
+        Descarga \textbf{libre e inmediata}, sin solicitud ---
+        \url{https://www.rsna.org/education/ai-resources-and-training/ai-image-challenge/screening-mammography-breast-cancer-detection-ai-challenge}.
+        Pero son \textbf{exploraciones puntuales} (screening de un solo
+        momento por caso, con solo 2.1\,\% de casos positivos); no incluye
+        pares de exploraciones sucesivas de la misma paciente con cambio de
+        diagnóstico. Útil como dataset adicional para la clasificación
+        aislada (base del TFG, O3--O6), no para O7--O8.
+
+  \item[OPTIMAM / OMI-DB (Cancer Research UK + Royal Surrey NHS)]
+        Es genuinamente longitudinal (cribados seriados durante 10 años,
+        172\,282 mujeres a mayo de 2020) y por tanto el candidato más
+        parecido en tamaño/calidad a CSAW-CC/EMBED. Pero el acceso es
+        \textbf{más burocrático, no menos}: se gestiona como oportunidad de
+        licencia comercial a través de \textbf{Cancer Research Horizons}
+        (\url{https://www.cancerresearchhorizons.com/licensing-opportunities/optimam-mammography-image-database-omi-db}),
+        con aprobación de un comité de acceso a datos y un acuerdo de
+        compartición de datos (\textit{data sharing agreement}) por
+        proyecto. No parece razonable para el plazo de un TFG salvo que el
+        tutor tenga ya una relación institucional con Cancer Research UK.
+
+  \item[NYU Breast Cancer Screening Dataset (NYU Langone)]
+        \textbf{Prácticamente cerrado}: es una base de datos privada de NYU
+        Langone que, según sus propios autores, \emph{no se puede hacer
+        pública}. Solo ofrecen evaluar modelos de otros grupos sobre su
+        partición de test, previa solicitud a
+        \texttt{k.j.geras@nyu.edu} (respuesta en una semana, según un
+        paper reciente que usa este dato, no verificado en una página
+        oficial). No es una vía de acceso a las imágenes en bruto. Como
+        alternativa parcial, el modelo ya entrenado por este mismo grupo
+        (Wu et al. 2019) es público en
+        \url{https://github.com/nyukat/breast_cancer_classifier}: no sirve
+        para evaluar la hipótesis topológica, pero podría ser un baseline
+        de comparación de \textit{deep learning} sin necesitar sus datos.
+
+  \item[Otros datasets de mamografía de descarga libre (INbreast, VinDr-Mammo,
+        CMMD, MIAS)]
+        Todos son de \textbf{una sola exploración por caso}; ninguno tiene
+        estructura longitudinal (exploraciones repetidas de la misma
+        paciente en distintas fechas). No son sustitutos para O7--O8.
+\end{description}
+
+\section{Conclusión}
+Tras esta revisión, \textbf{CSAW-CC y EMBED siguen siendo las dos mejores
+(y únicas razonables) opciones} para evaluar la hipótesis de detección
+anticipada sobre datos reales. No hay ningún atajo de descarga directa que
+se haya podido confirmar. La recomendación práctica es solicitar acceso a
+ambos ya (Secciones~\ref{sec:csawcc} y~\ref{sec:embed}), en paralelo, dado
+que:
+\begin{itemize}
+  \item Ninguno de los dos indica un plazo de respuesta, así que cuanto
+        antes se solicite, antes se puede empezar O8 en cuanto llegue la
+        aprobación.
+  \item No hay ningún coste ni exclusividad en solicitar a los dos a la
+        vez; el que responda primero (o dé mejores condiciones) se usa
+        para O8, y el otro queda como respaldo o para una comparación
+        cruzada si ambos llegaran a concederse.
+  \item Mientras se espera, el trabajo puede seguir avanzando con la
+        validación sintética ya hecha (\texttt{tfg/capitulos/05-metodologia.tex},
+        sección ``Metodología longitudinal'') y con la ampliación del
+        piloto real de CBIS-DDSM para la base de clasificación (issue
+        \#82), que no dependen de este trámite.
+\end{itemize}
+
+\end{document}
