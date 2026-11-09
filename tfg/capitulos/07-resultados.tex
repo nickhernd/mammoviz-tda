@@ -300,58 +300,75 @@ pendiente, no ya la descarga en sí (ya resuelta y automatizada), sino
 \label{sec:resultados-xai}
 Como línea secundaria del trabajo (Sección~\ref{sec:metrica-acuerdo}), se ha
 ejecutado \texttt{scripts/explainability\_benchmark.py} sobre los
-\textbf{48 casos usables} del piloto real (entrenamiento y test juntos,
-estudio descriptivo, no predictivo), calculando las 4 regiones binarias
-(Grad-CAM, región topológica dominante, SHAP, LIME) y su acuerdo por pares.
+\textbf{122 casos usables} del piloto real ampliado (entrenamiento y test
+juntos, estudio descriptivo, no predictivo), calculando las 4 regiones
+binarias (Grad-CAM, región topológica dominante, SHAP, LIME) y su acuerdo
+por pares, con el protocolo estadístico de la
+Sección~\ref{subsec:protocolo-estadistico}.
 
 \begin{table}[H]
 \centering
 \caption{Acuerdo por pares entre los 4 métodos de interpretabilidad (IoU
-media $\pm$ desviación típica, $n=48$ casos reales).}
+media, intervalo de confianza 95\% por \textit{bootstrap}, $n=122$ casos
+reales).}
 \label{tab:xai-acuerdo}
-\begin{tabular}{@{}lc@{}}
+\begin{tabular}{@{}lcc@{}}
 \toprule
-\textbf{Par de métodos} & \textbf{IoU} \\
+\textbf{Par de métodos} & \textbf{IoU} & \textbf{IC 95\%} \\
 \midrule
-Grad-CAM vs. TDA   & $0.110 \pm 0.092$ \\
-Grad-CAM vs. SHAP  & $0.126 \pm 0.040$ \\
-Grad-CAM vs. LIME  & $0.110 \pm 0.074$ \\
-TDA vs. SHAP       & $0.063 \pm 0.059$ \\
-TDA vs. LIME       & $0.109 \pm 0.107$ \\
-SHAP vs. LIME      & $0.110 \pm 0.036$ \\
+Grad-CAM vs. TDA   & $0.114$ & $[0.096,\ 0.133]$ \\
+Grad-CAM vs. SHAP  & $0.125$ & $[0.114,\ 0.135]$ \\
+Grad-CAM vs. LIME  & $0.137$ & $[0.121,\ 0.153]$ \\
+TDA vs. SHAP       & $0.070$ & $[0.058,\ 0.083]$ \\
+TDA vs. LIME       & $0.091$ & $[0.077,\ 0.107]$ \\
+SHAP vs. LIME      & $0.117$ & $[0.110,\ 0.124]$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \subsection{El hallazgo principal: los cuatro métodos apenas coinciden entre sí}
-El acuerdo por pares es \textbf{bajo y muy similar entre todas las
-combinaciones} (IoU entre $0.06$ y $0.13$): no hay ningún par de métodos que
-destaque por coincidir claramente más que los demás, ni siquiera
-Grad-CAM/SHAP/LIME entre sí (que comparten la misma CNN de referencia como
-base). Este resultado es consistente con una observación ya reportada en la
+El acuerdo por pares es \textbf{bajo en las seis combinaciones} (IoU entre
+$0.07$ y $0.14$), y con un piloto de $122$ casos los intervalos de
+confianza son ya lo bastante estrechos para afirmar con razonable confianza
+que ningún par destaca claramente sobre los demás --- ni siquiera entre
+Grad-CAM, SHAP y LIME, que comparten la misma CNN de referencia como base.
+El par TDA/SHAP es el de menor acuerdo ($0.070$); el de mayor, Grad-CAM/LIME
+($0.137$), pero sus intervalos de confianza no se solapan del todo con los
+demás por muy poco margen, no por una diferencia sustantiva.
+
+Para confirmarlo formalmente (issue \#79), se aplicó un \textbf{test
+pareado de Wilcoxon} comparando, caso a caso, el acuerdo TDA/Grad-CAM
+contra el acuerdo SHAP/LIME (dos métodos que comparten la CNN, usado como
+referencia de "acuerdo típico entre métodos basados en píxeles"):
+estadístico $=3510$, $p=0.537$, diferencia mediana $=-0.025$ --- \textbf{no
+significativo}. Es decir, no hay evidencia de que el hecho de que uno de
+los métodos sea topológico en vez de basado en píxeles cambie el nivel de
+acuerdo típico: la región topológica dominante se integra en la misma
+distribución de (des)acuerdo que los tres métodos de \textit{deep
+learning} entre sí.
+
+Este resultado es consistente con una observación ya reportada en la
 literatura de \textit{interpretable ML} fuera del dominio médico: distintos
 métodos de explicabilidad, aplicados al mismo modelo y la misma entrada, con
 frecuencia señalan regiones distintas, porque cada uno optimiza una noción
 distinta de "importancia" (gradiente local para Grad-CAM, valores de
 Shapley para SHAP, un modelo local interpretable sobre superpíxeles para
-LIME). La región topológica dominante no es una excepción a este patrón:
-acuerda con Grad-CAM tan poco ($0.110$) como Grad-CAM acuerda con SHAP
-($0.126$) o LIME ($0.110$).
+LIME).
 
 La Figura~\ref{fig:xai-casos} ilustra esto con el caso de mayor acuerdo
-TDA/Grad-CAM del piloto (\texttt{P\_01090}, arriba: ambos métodos señalan el
-mismo borde de la lesión) frente al de menor acuerdo
-(\texttt{P\_00433}, abajo: Grad-CAM señala una esquina de la imagen y la
-región topológica dominante un punto completamente distinto). SHAP produce
-en ambos casos un patrón disperso tipo "sal y pimienta" sobre buena parte de
+TDA/Grad-CAM del piloto (\texttt{P\_00592}, arriba: ambos métodos señalan
+el mismo borde de la lesión) frente al de menor acuerdo
+(\texttt{P\_00409}, abajo: Grad-CAM señala dos esquinas de la imagen y la
+región topológica dominante no marca ninguna región). SHAP produce en
+ambos casos un patrón disperso tipo "sal y pimienta" sobre buena parte de
 la imagen, poco localizado; LIME selecciona unos pocos superpíxeles,
 frecuentemente cerca de los bordes del recorte.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{figuras/explainability_cases.png}
-\caption{Caso de mayor acuerdo TDA/Grad-CAM del piloto (\texttt{P\_01090},
-arriba) frente al de menor acuerdo (\texttt{P\_00433}, abajo), con las 4
+\caption{Caso de mayor acuerdo TDA/Grad-CAM del piloto (\texttt{P\_00592},
+arriba) frente al de menor acuerdo (\texttt{P\_00409}, abajo), con las 4
 regiones superpuestas en rojo sobre la imagen preprocesada.}
 \label{fig:xai-casos}
 \end{figure}
@@ -364,66 +381,79 @@ completitud (issue \#61):
 
 \begin{table}[H]
 \centering
-\caption{IoU de cada método contra la máscara de ROI real ($n=48$).}
+\caption{IoU de cada método contra la máscara de ROI real (IC 95\%
+\textit{bootstrap}, $n=119$ casos con máscara disponible).}
 \label{tab:xai-vs-roi}
-\begin{tabular}{@{}lc@{}}
+\begin{tabular}{@{}lcc@{}}
 \toprule
-\textbf{Método} & \textbf{IoU vs. ROI} \\
+\textbf{Método} & \textbf{IoU vs. ROI} & \textbf{IC 95\%} \\
 \midrule
-Grad-CAM & $0.179 \pm 0.079$ \\
-TDA      & $0.127 \pm 0.140$ \\
-SHAP     & $0.226 \pm 0.054$ \\
-LIME     & $0.150 \pm 0.070$ \\
+Grad-CAM & $0.167$ & $[0.148,\ 0.187]$ \\
+TDA      & $0.130$ & $[0.103,\ 0.158]$ \\
+SHAP     & $0.222$ & $[0.211,\ 0.232]$ \\
+LIME     & $0.163$ & $[0.148,\ 0.178]$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-SHAP obtiene el IoU más alto contra la ROI, pero su patrón disperso
+SHAP sigue obteniendo el IoU más alto contra la ROI (con el intervalo más
+estrecho de los cuatro: $[0.211, 0.232]$), pero su patrón disperso
 (Figura~\ref{fig:xai-casos}) sugiere que esto puede deberse simplemente a
 que marca muchos píxeles repartidos por una fracción grande de la imagen (y
 la ROI, tras el recorte, también cubre una fracción grande de la imagen),
-no a una localización precisa de la lesión. La desviación típica de TDA
-($\pm 0.140$) es la más alta de las cuatro, reflejando que a veces la región
+no a una localización precisa de la lesión. TDA sigue siendo el método con
+el intervalo más ancho ($[0.103, 0.158]$), reflejando que a veces la región
 dominante cae dentro de la ROI y a veces fuera, consistente con el bajo
 acuerdo inter-método ya comentado.
 
-\subsection{Desglose por tipo de margen de la masa}
-El acuerdo TDA/Grad-CAM desglosado por \texttt{mass\_margins} no muestra una
-categoría claramente distinta de las demás (todas entre $0.10$ y $0.13$,
-salvo \texttt{MICROLOBULATED} con solo $n=2$, insuficiente para concluir
-nada): ni los márgenes espiculados (\texttt{SPICULATED}, $n=9$,
-$0.113\pm0.069$) ni los circunscritos (\texttt{CIRCUMSCRIBED}, $n=19$,
-$0.117\pm0.111$) muestran mayor o menor acuerdo entre TDA y Grad-CAM. Con el
-tamaño de piloto actual no se puede afirmar que el tipo de margen module el
-acuerdo entre métodos.
+\subsection{Desglose por tipo de margen de la masa y por densidad mamaria}
+El acuerdo TDA/Grad-CAM desglosado por \texttt{mass\_margins} (con más
+categorías representadas que en el piloto de 30 pacientes) oscila entre
+$0.028$ (\texttt{OBSCURED-ILL\_DEFINED}, $n=3$) y $0.193$
+(\texttt{CIRCUMSCRIBED-OBSCURED}, $n=3$), pero las categorías con tamaño de
+muestra razonable --- \texttt{CIRCUMSCRIBED} ($n=38$, $0.109\pm0.093$),
+\texttt{ILL\_DEFINED} ($n=26$, $0.098\pm0.096$) y \texttt{SPICULATED}
+($n=21$, $0.085\pm0.091$) --- están todas dentro del mismo rango bajo, sin
+una categoría que destaque claramente.
+
+El desglose por \texttt{breast\_density} (issue \#90; BI-RADS A--D,
+codificado 1--4) tampoco muestra una tendencia clara: $0.121\pm0.103$
+(densidad 1, $n=40$), $0.111\pm0.097$ (densidad 2, $n=50$),
+$0.123\pm0.122$ (densidad 3, $n=22$) y $0.084\pm0.096$ (densidad 4,
+$n=10$). La densidad más alta (tejido más denso, donde la lectura
+radiológica es clínicamente más difícil) tiene el acuerdo más bajo, pero
+con solo $10$ casos en esa categoría no se puede afirmar que sea una
+tendencia real y no ruido de muestra.
 
 \subsection{Coste computacional}
 \begin{table}[H]
 \centering
-\caption{Coste computacional por método (segundos/caso, $n=48$).}
+\caption{Coste computacional por método (segundos/caso, $n=122$).}
 \label{tab:xai-coste}
 \begin{tabular}{@{}lc@{}}
 \toprule
 \textbf{Método} & \textbf{Tiempo (s/caso)} \\
 \midrule
-Grad-CAM & $0.072 \pm 0.026$ \\
-TDA (región dominante) & $0.067 \pm 0.017$ \\
-LIME     & $1.841 \pm 0.171$ \\
-SHAP     & $22.788 \pm 2.799$ \\
+Grad-CAM & $0.078 \pm 0.022$ \\
+TDA (región dominante) & $0.065 \pm 0.016$ \\
+LIME     & $1.866 \pm 0.162$ \\
+SHAP     & $20.005 \pm 1.400$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Este es el resultado más favorable para el TDA de todo el estudio: la
-región topológica dominante es tan rápida de calcular como Grad-CAM
-($0.067$ s/caso vs. $0.072$ s/caso) \textbf{sin necesitar entrenar ni
-ejecutar ninguna CNN}, y más de dos órdenes de magnitud más rápida que SHAP
-($22.8$ s/caso). Es, con diferencia, el argumento más sólido a favor de la
-homología persistente como "capa de interpretabilidad nativa" --- no porque
-coincida más con los otros métodos (no lo hace, Tabla~\ref{tab:xai-acuerdo}),
-sino porque ofrece una localización topológicamente fundamentada
-prácticamente gratis en comparación con SHAP, y sin la dependencia de una
-CNN ya entrenada que tienen los otros tres métodos.
+Este es el resultado más favorable para el TDA de todo el estudio, ahora
+confirmado con un piloto más grande: la región topológica dominante es tan
+rápida de calcular como Grad-CAM ($0.065$ s/caso vs. $0.078$ s/caso)
+\textbf{sin necesitar entrenar ni ejecutar ninguna CNN}, y más de dos
+órdenes de magnitud más rápida que SHAP ($20.0$ s/caso, $>300\times$). Es,
+con diferencia, el argumento más sólido a favor de la homología persistente
+como "capa de interpretabilidad nativa" --- no porque coincida más con los
+otros métodos (no lo hace, Tabla~\ref{tab:xai-acuerdo}, confirmado
+estadísticamente con el test pareado), sino porque ofrece una localización
+topológicamente fundamentada prácticamente gratis en comparación con SHAP,
+y sin la dependencia de una CNN ya entrenada que tienen los otros tres
+métodos.
 
 \section{Discusión}
 \label{sec:discusion}

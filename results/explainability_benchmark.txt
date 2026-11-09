@@ -1,40 +1,50 @@
-Casos evaluados: 6
+Casos evaluados: 122
 
 === Acuerdo por pares entre metodos (IoU media, IC 95% bootstrap) ===
 (issue #79: bootstrap de 2000 remuestreos en vez de asumir normalidad,
  poco fiable con el tamano de piloto actual)
-  gradcam  vs tda     : 0.132  IC95%=[0.035, 0.256]  (n=6)
-  gradcam  vs shap    : 0.127  IC95%=[0.090, 0.173]  (n=6)
-  gradcam  vs lime    : 0.142  IC95%=[0.068, 0.227]  (n=6)
-  tda      vs shap    : 0.105  IC95%=[0.036, 0.173]  (n=6)
-  tda      vs lime    : 0.113  IC95%=[0.037, 0.186]  (n=6)
-  shap     vs lime    : 0.105  IC95%=[0.078, 0.127]  (n=6)
+  gradcam  vs tda     : 0.114  IC95%=[0.096, 0.133]  (n=122)
+  gradcam  vs shap    : 0.125  IC95%=[0.114, 0.135]  (n=122)
+  gradcam  vs lime    : 0.137  IC95%=[0.121, 0.153]  (n=122)
+  tda      vs shap    : 0.070  IC95%=[0.058, 0.083]  (n=122)
+  tda      vs lime    : 0.091  IC95%=[0.077, 0.107]  (n=122)
+  shap     vs lime    : 0.117  IC95%=[0.110, 0.124]  (n=122)
 
 === Test pareado: TDA/Grad-CAM vs. SHAP/LIME (issue #79) ===
 (Wilcoxon signed-rank pareado por caso: ¿el acuerdo que involucra a TDA es
  significativamente distinto del acuerdo entre dos metodos basados en la
  misma CNN (SHAP vs LIME)? H0: misma distribucion de IoU por caso.)
-  estadistico=9.00  p-valor=0.8438  diferencia mediana=-0.014  significativo: NO (p>=0.05)
+  estadistico=3510.00  p-valor=0.5372  diferencia mediana=-0.025  significativo: NO (p>=0.05)
 
 === IoU de cada metodo contra la mascara de ROI real (IC 95% bootstrap) ===
 (nota metodologica: la imagen ya esta recortada a +-16px de la ROI, asi
  que este IoU esta sesgado al alza por construccion; es menos informativo
  que el acuerdo entre metodos de arriba, se reporta por completitud)
-  gradcam : 0.191  IC95%=[0.163, 0.214]  (n=6)
-  tda     : 0.108  IC95%=[0.035, 0.186]  (n=6)
-  shap    : 0.164  IC95%=[0.123, 0.206]  (n=6)
-  lime    : 0.187  IC95%=[0.164, 0.209]  (n=6)
+  gradcam : 0.167  IC95%=[0.148, 0.187]  (n=119)
+  tda     : 0.130  IC95%=[0.103, 0.158]  (n=119)
+  shap    : 0.222  IC95%=[0.211, 0.232]  (n=119)
+  lime    : 0.163  IC95%=[0.148, 0.178]  (n=119)
 
 === Desglose de acuerdo TDA vs Grad-CAM por mass_margins ===
-  ILL_DEFINED              : 0.157 +/- 0.142  (n=5)
-  CIRCUMSCRIBED            : 0.005 +/- 0.000  (n=1)
+  CIRCUMSCRIBED            : 0.109 +/- 0.093  (n=38)
+  ILL_DEFINED              : 0.098 +/- 0.096  (n=26)
+  SPICULATED               : 0.085 +/- 0.091  (n=21)
+  OBSCURED                 : 0.174 +/- 0.120  (n=14)
+  nan                      : 0.150 +/- 0.138  (n=7)
+  MICROLOBULATED           : 0.112 +/- 0.089  (n=6)
+  CIRCUMSCRIBED-OBSCURED   : 0.193 +/- 0.136  (n=3)
+  OBSCURED-ILL_DEFINED     : 0.028 +/- 0.039  (n=3)
+  ILL_DEFINED-SPICULATED   : 0.152 +/- 0.022  (n=2)
+  CIRCUMSCRIBED-MICROLOBULATED-ILL_DEFINED: 0.168 +/- 0.039  (n=2)
 
 === Desglose de acuerdo TDA vs Grad-CAM por breast_density (BI-RADS, issue #90) ===
-  2                        : 0.052 +/- 0.087  (n=4)
-  1                        : 0.292 +/- 0.082  (n=2)
+  2                        : 0.111 +/- 0.097  (n=50)
+  1                        : 0.121 +/- 0.103  (n=40)
+  3                        : 0.123 +/- 0.122  (n=22)
+  4                        : 0.084 +/- 0.096  (n=10)
 
 === Coste computacional por metodo (segundos/caso, media +/- desv.) ===
-  gradcam : 0.114 +/- 0.052 s
-  tda     : 0.059 +/- 0.002 s
-  shap    : 22.854 +/- 0.584 s
-  lime    : 0.622 +/- 0.073 s
+  gradcam : 0.078 +/- 0.022 s
+  tda     : 0.065 +/- 0.016 s
+  shap    : 20.005 +/- 1.400 s
+  lime    : 1.866 +/- 0.162 s
