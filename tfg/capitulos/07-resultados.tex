@@ -195,6 +195,54 @@ actual. Ampliar el piloto (issue \#82, O7 del Capítulo~\ref{cap:objetivos})
 es el paso natural para reducir esa incertidumbre antes de poder afirmar
 cuál de los tres enfoques es preferible.
 
+\subsection{Refinamiento: ajuste de hiperparámetros por vía (issue \#77)}
+\label{sec:refinamiento-clasificacion}
+La Tabla~\ref{tab:resultados} usa los valores por defecto de
+\texttt{src/models.py} (\textit{random forest} sin ajustar) para las tres
+vías por igual. \texttt{scripts/run\_pipeline.py --tune} y
+\texttt{scripts/fuse\_and\_evaluate.py --tune} permiten, en cambio, ajustar
+por \texttt{GridSearchCV} el clasificador (SVM o \textit{random forest}, y
+sus hiperparámetros) \textbf{por separado para cada vía}, ya que no hay
+razón para esperar que la misma configuración sea óptima para un vector
+topológico de 32 características, un \textit{embedding} de CNN de 1024, o
+su fusión de 1056.
+
+\begin{table}[H]
+\centering
+\caption{AUC por validación cruzada (5-fold, train) antes y después de
+ajustar hiperparámetros por vía. ``Mejor encontrado'' es el máximo entre
+\textit{random forest} por defecto (Tabla~\ref{tab:resultados}) y SVM
+ajustada por \texttt{GridSearchCV} ($n\_bins=4$, $C \in \{0.01,\ldots,100\}$,
+kernel lineal/RBF).}
+\label{tab:refinamiento}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{Vía} & \textbf{RF por defecto} & \textbf{SVM ajustada (\texttt{--tune})} & \textbf{Mejor encontrado} \\
+\midrule
+TDA sola           & $0.850 \pm 0.143$ & $0.850 \pm 0.143$ & $0.850 \pm 0.143$ \\
+CNN sola           & $0.933 \pm 0.097$ & $0.850 \pm 0.186$ & $\mathbf{0.933 \pm 0.097}$ (RF) \\
+Fusión TDA + CNN   & $0.883 \pm 0.194$ & $\mathbf{0.967 \pm 0.067}$ & $\mathbf{0.967 \pm 0.067}$ (SVM) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+El hallazgo más relevante no es que "ajustar siempre mejora" --- de hecho,
+para la CNN sola el ajuste \textbf{empeora} el resultado frente al
+\textit{random forest} por defecto (de $0.933$ a $0.850$) --- sino que
+\textbf{la mejor configuración depende de qué características se usan}: el
+\textit{random forest} por defecto generaliza mejor sobre el
+\textit{embedding} de 1024 dimensiones de la CNN, mientras que una SVM con
+regularización fuerte ($C=0.01$) generaliza mejor sobre el vector fusionado
+de 1056 dimensiones, donde sube de $0.883$ a $\mathbf{0.967 \pm 0.067}$ ---
+el mejor resultado de todo el piloto, y también el de \textbf{menor
+varianza} de las seis configuraciones probadas. Es un resultado alentador
+para la hipótesis de fusión (O5): cuando se ajustan bien los
+hiperparámetros, combinar TDA y CNN sí aporta sobre cualquiera de los dos
+enfoques por separado, aunque con el tamaño de piloto actual conviene leer
+esta mejora con cautela (issue \#77: \textit{look-elsewhere effect} al
+probar varias configuraciones y quedarse con la mejor) y confirmarla cuando
+el piloto crezca (issue \#82).
+
 \subsection{Sanity check visual: masa espiculada benigna vs. maligna}
 \label{sec:sanity-check-espiculada}
 Como comprobación cualitativa independiente de las métricas anteriores
@@ -239,6 +287,135 @@ pendiente, no ya la descarga en sí (ya resuelta y automatizada), sino
         datos sintéticos --- sobre pacientes reales con exploraciones
         sucesivas, que es la hipótesis principal del trabajo (O8).
 \end{itemize}
+
+\section{Interpretabilidad: TDA vs Grad-CAM vs SHAP vs LIME}
+\label{sec:resultados-xai}
+Como línea secundaria del trabajo (Sección~\ref{sec:metrica-acuerdo}), se ha
+ejecutado \texttt{scripts/explainability\_benchmark.py} sobre los
+\textbf{48 casos usables} del piloto real (entrenamiento y test juntos,
+estudio descriptivo, no predictivo), calculando las 4 regiones binarias
+(Grad-CAM, región topológica dominante, SHAP, LIME) y su acuerdo por pares.
+
+\begin{table}[H]
+\centering
+\caption{Acuerdo por pares entre los 4 métodos de interpretabilidad (IoU
+media $\pm$ desviación típica, $n=48$ casos reales).}
+\label{tab:xai-acuerdo}
+\begin{tabular}{@{}lc@{}}
+\toprule
+\textbf{Par de métodos} & \textbf{IoU} \\
+\midrule
+Grad-CAM vs. TDA   & $0.110 \pm 0.092$ \\
+Grad-CAM vs. SHAP  & $0.126 \pm 0.040$ \\
+Grad-CAM vs. LIME  & $0.110 \pm 0.074$ \\
+TDA vs. SHAP       & $0.063 \pm 0.059$ \\
+TDA vs. LIME       & $0.109 \pm 0.107$ \\
+SHAP vs. LIME      & $0.110 \pm 0.036$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{El hallazgo principal: los cuatro métodos apenas coinciden entre sí}
+El acuerdo por pares es \textbf{bajo y muy similar entre todas las
+combinaciones} (IoU entre $0.06$ y $0.13$): no hay ningún par de métodos que
+destaque por coincidir claramente más que los demás, ni siquiera
+Grad-CAM/SHAP/LIME entre sí (que comparten la misma CNN de referencia como
+base). Este resultado es consistente con una observación ya reportada en la
+literatura de \textit{interpretable ML} fuera del dominio médico: distintos
+métodos de explicabilidad, aplicados al mismo modelo y la misma entrada, con
+frecuencia señalan regiones distintas, porque cada uno optimiza una noción
+distinta de "importancia" (gradiente local para Grad-CAM, valores de
+Shapley para SHAP, un modelo local interpretable sobre superpíxeles para
+LIME). La región topológica dominante no es una excepción a este patrón:
+acuerda con Grad-CAM tan poco ($0.110$) como Grad-CAM acuerda con SHAP
+($0.126$) o LIME ($0.110$).
+
+La Figura~\ref{fig:xai-casos} ilustra esto con el caso de mayor acuerdo
+TDA/Grad-CAM del piloto (\texttt{P\_01090}, arriba: ambos métodos señalan el
+mismo borde de la lesión) frente al de menor acuerdo
+(\texttt{P\_00433}, abajo: Grad-CAM señala una esquina de la imagen y la
+región topológica dominante un punto completamente distinto). SHAP produce
+en ambos casos un patrón disperso tipo "sal y pimienta" sobre buena parte de
+la imagen, poco localizado; LIME selecciona unos pocos superpíxeles,
+frecuentemente cerca de los bordes del recorte.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figuras/explainability_cases.png}
+\caption{Caso de mayor acuerdo TDA/Grad-CAM del piloto (\texttt{P\_01090},
+arriba) frente al de menor acuerdo (\texttt{P\_00433}, abajo), con las 4
+regiones superpuestas en rojo sobre la imagen preprocesada.}
+\label{fig:xai-casos}
+\end{figure}
+
+\subsection{IoU contra la máscara de ROI real}
+Como se advirtió metodológicamente en la Sección~\ref{subsec:iou-roi-limitacion},
+este número está sesgado al alza por el recorte del \textit{pipeline} y es
+menos informativo que la Tabla~\ref{tab:xai-acuerdo}; se incluye por
+completitud (issue \#61):
+
+\begin{table}[H]
+\centering
+\caption{IoU de cada método contra la máscara de ROI real ($n=48$).}
+\label{tab:xai-vs-roi}
+\begin{tabular}{@{}lc@{}}
+\toprule
+\textbf{Método} & \textbf{IoU vs. ROI} \\
+\midrule
+Grad-CAM & $0.179 \pm 0.079$ \\
+TDA      & $0.127 \pm 0.140$ \\
+SHAP     & $0.226 \pm 0.054$ \\
+LIME     & $0.150 \pm 0.070$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+SHAP obtiene el IoU más alto contra la ROI, pero su patrón disperso
+(Figura~\ref{fig:xai-casos}) sugiere que esto puede deberse simplemente a
+que marca muchos píxeles repartidos por una fracción grande de la imagen (y
+la ROI, tras el recorte, también cubre una fracción grande de la imagen),
+no a una localización precisa de la lesión. La desviación típica de TDA
+($\pm 0.140$) es la más alta de las cuatro, reflejando que a veces la región
+dominante cae dentro de la ROI y a veces fuera, consistente con el bajo
+acuerdo inter-método ya comentado.
+
+\subsection{Desglose por tipo de margen de la masa}
+El acuerdo TDA/Grad-CAM desglosado por \texttt{mass\_margins} no muestra una
+categoría claramente distinta de las demás (todas entre $0.10$ y $0.13$,
+salvo \texttt{MICROLOBULATED} con solo $n=2$, insuficiente para concluir
+nada): ni los márgenes espiculados (\texttt{SPICULATED}, $n=9$,
+$0.113\pm0.069$) ni los circunscritos (\texttt{CIRCUMSCRIBED}, $n=19$,
+$0.117\pm0.111$) muestran mayor o menor acuerdo entre TDA y Grad-CAM. Con el
+tamaño de piloto actual no se puede afirmar que el tipo de margen module el
+acuerdo entre métodos.
+
+\subsection{Coste computacional}
+\begin{table}[H]
+\centering
+\caption{Coste computacional por método (segundos/caso, $n=48$).}
+\label{tab:xai-coste}
+\begin{tabular}{@{}lc@{}}
+\toprule
+\textbf{Método} & \textbf{Tiempo (s/caso)} \\
+\midrule
+Grad-CAM & $0.072 \pm 0.026$ \\
+TDA (región dominante) & $0.067 \pm 0.017$ \\
+LIME     & $1.841 \pm 0.171$ \\
+SHAP     & $22.788 \pm 2.799$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Este es el resultado más favorable para el TDA de todo el estudio: la
+región topológica dominante es tan rápida de calcular como Grad-CAM
+($0.067$ s/caso vs. $0.072$ s/caso) \textbf{sin necesitar entrenar ni
+ejecutar ninguna CNN}, y más de dos órdenes de magnitud más rápida que SHAP
+($22.8$ s/caso). Es, con diferencia, el argumento más sólido a favor de la
+homología persistente como "capa de interpretabilidad nativa" --- no porque
+coincida más con los otros métodos (no lo hace, Tabla~\ref{tab:xai-acuerdo}),
+sino porque ofrece una localización topológicamente fundamentada
+prácticamente gratis en comparación con SHAP, y sin la dependencia de una
+CNN ya entrenada que tienen los otros tres métodos.
 
 \section{Discusión}
 \label{sec:discusion}

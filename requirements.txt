@@ -35,5 +35,13 @@ jupyterlab==4.6.5
 ipykernel==7.3.0
 nbconvert==7.17.1
 
+# Interpretabilidad (linea secundaria "Propuesta A", issues #59-#66): Grad-CAM
+# se implementa a mano en src/explainability.py (solo necesita torch, ya
+# listado arriba); SHAP y LIME si son dependencias nuevas. LIME usa
+# internamente scikit-image (quickshift) para segmentar en superpixeles.
+shap==0.54.1
+lime==0.2.0.1
+scikit-image==0.26.0
+
 # Tests
 pytest==9.1.1

@@ -59,7 +59,8 @@ mammoviz-tda/
 │   ├── download_cbis_ddsm.py    #   Descarga incremental de imágenes reales (API TCIA)
 │   ├── run_pipeline.py          #   Pipeline completo de un tirón sobre datos reales
 │   ├── train_cnn.py             #   Entrenamiento de la CNN de referencia (PyTorch)
-│   ├── fuse_and_evaluate.py     #   Comparación TDA vs. CNN vs. fusión
+│   ├── fuse_and_evaluate.py     #   Comparación TDA vs. CNN vs. fusión (+ --tune por vía)
+│   ├── explainability_benchmark.py  # Grad-CAM vs. región TDA vs. SHAP vs. LIME
 │   └── synthetic_longitudinal_validation.py  # Validación de la hipótesis con datos sintéticos
 ├── notebooks/                   # Entorno de trabajo interactivo (ver docs/guia_uso.pdf)
 ├── bib/                         # Bibliografía en PDF
@@ -119,6 +120,8 @@ python scripts/run_pipeline.py            # Random Forest, n_bins=4 (ver issue #
 python scripts/run_pipeline.py --tune     # + GridSearchCV sobre el train actual
 python scripts/train_cnn.py               # CNN de referencia (PyTorch, DenseNet121)
 python scripts/fuse_and_evaluate.py       # TDA vs. CNN vs. fusión, con CV-AUC
+python scripts/fuse_and_evaluate.py --tune --classifier svm   # + ajuste de hiperparametros por via
+python scripts/explainability_benchmark.py   # Grad-CAM vs. TDA vs. SHAP vs. LIME (linea secundaria)
 python scripts/synthetic_longitudinal_validation.py --sweep   # hipótesis principal, datos sintéticos
 ```
 
@@ -155,7 +158,13 @@ latexmk -pdf main.tex     # requiere una distribución LaTeX + biber
 - [x] Bug de `topology.py` corregido (dimensiones H0/H1 fijas) + test de regresión
 - [x] Overfitting diagnosticado y corregido (n_bins, Random Forest, `--tune`, CV-AUC)
 - [x] CNN de referencia (PyTorch/DenseNet121) entrenada de forma reproducible
-- [x] Comparación y fusión TDA + CNN (CV-AUC: TDA 0.58, CNN 0.55, fusión 0.63)
+- [x] Comparación y fusión TDA + CNN, con ajuste de hiperparámetros por vía
+      (CV-AUC: TDA 0.85, CNN 0.93, fusión 0.97 con SVM ajustada — mejor y
+      más estable de las seis configuraciones probadas)
+- [x] Interpretabilidad: Grad-CAM, región topológica dominante, SHAP y LIME
+      comparados sobre el piloto real (48 casos); acuerdo bajo entre los
+      4 métodos (IoU 0.06-0.13), TDA tan rápida como Grad-CAM y ~300x más
+      rápida que SHAP (`docs/` y `tfg/capitulos/05-metodologia.tex`)
 - [x] Metodología longitudinal diseñada y **validada con datos sintéticos**
       (AUC anticipación 0.871, deriva 0.937 — ver `tfg/capitulos/05-metodologia.tex`)
 - [x] Notebook interactivo + guía de uso en PDF (`docs/guia_uso.pdf`)

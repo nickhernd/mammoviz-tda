@@ -31,8 +31,8 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from src.data import load_case_descriptions, split_by_patient  # noqa: E402
 from src.evaluate import clinical_metrics  # noqa: E402
-from src.models import build_random_forest, fuse_features  # noqa: E402
-from run_pipeline import build_dataset as build_topo_dataset  # noqa: E402
+from src.models import build_random_forest, build_svm, fuse_features  # noqa: E402
+from run_pipeline import build_dataset as build_topo_dataset, tune_classifier  # noqa: E402
 from train_cnn import build_image_dataset, train_cnn  # noqa: E402
 
 
@@ -58,6 +58,14 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--n-bins", type=int, default=4)
     parser.add_argument("--epochs", type=int, default=10)
+    parser.add_argument("--classifier", choices=["svm", "rf"], default="rf",
+                         help="Clasificador para las 3 vias (TDA/CNN/fusion). Sin --tune, "
+                              "se usan los valores por defecto de src/models.py.")
+    parser.add_argument("--tune", action="store_true",
+                         help="Ajustar hiperparametros por GridSearchCV PARA CADA una de las "
+                              "3 vias por separado (issue #77): el numero optimo de "
+                              "caracteristicas/regularizacion no es el mismo para TDA (32-d), "
+                              "CNN (1024-d) y fusion (1056-d).")
     args = parser.parse_args()
 
     print("Cargando metadatos reales y particionando por paciente (seed=42, igual que los otros scripts)...")
@@ -100,21 +108,26 @@ def main() -> None:
     X_fused_test = fuse_features(X_topo_test, emb_test)
     print(f"Dimension fusionada: {X_fused_train.shape[1]} (topo={X_topo_train.shape[1]} + cnn={emb_train.shape[1]})")
 
+    from sklearn.base import clone
     from sklearn.model_selection import cross_val_score
 
-    print("\n=== Comparacion TDA vs CNN-embeddings vs fusion (Random Forest) ===")
-    print("(incluye AUC por CV de 5-fold sobre train: el test de 37 casos es ruidoso, ver issue #77)")
+    label = f"{args.classifier}{' + GridSearchCV' if args.tune else ''}"
+    print(f"\n=== Comparacion TDA vs CNN-embeddings vs fusion ({label}) ===")
+    print("(incluye AUC por CV de 5-fold sobre train: el test es pequeno y ruidoso, ver issue #77)")
     for name, Xtr, Xte in [
         ("TDA sola", X_topo_train, X_topo_test),
         ("CNN embeddings solos", emb_train, emb_test),
         ("Fusion TDA+CNN", X_fused_train, X_fused_test),
     ]:
-        clf = build_random_forest()
-        clf.fit(Xtr, y_train)
+        if args.tune:
+            clf = tune_classifier(args.classifier, Xtr, y_train)
+        else:
+            clf = build_svm() if args.classifier == "svm" else build_random_forest()
+            clf.fit(Xtr, y_train)
         y_pred = clf.predict(Xte)
         y_score = clf.predict_proba(Xte)[:, 1]
         metrics = clinical_metrics(y_test, y_pred, y_score=y_score)
-        cv_auc = cross_val_score(build_random_forest(), Xtr, y_train, cv=5, scoring="roc_auc")
+        cv_auc = cross_val_score(clone(clf), Xtr, y_train, cv=5, scoring="roc_auc")
         print(f"\n[{name}] (n_features={Xtr.shape[1]})")
         for k, v in metrics.items():
             print(f"  {k}: {v:.3f}")

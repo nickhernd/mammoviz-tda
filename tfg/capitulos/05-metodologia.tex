@@ -122,6 +122,97 @@ complementarias:
 La sensibilidad recibe especial atención, ya que un falso negativo (no detectar
 un cáncer) tiene un coste clínico mucho mayor que un falso positivo.
 
+\section{Métrica de acuerdo topológico-clínico (línea secundaria)}
+\label{sec:metrica-acuerdo}
+Antes del pivote hacia la hipótesis longitudinal (Sección~\ref{sec:metodologia-longitudinal}),
+el eje central del TFG comparaba la \textbf{interpretabilidad} del enfoque
+topológico frente a los métodos de explicabilidad habituales en \textit{deep
+learning}: Grad-CAM~\cite{selvaraju2017gradcam}, SHAP~\cite{lundberg2017shap}
+y LIME~\cite{ribeiro2016lime}. Tras el pivote deja de ser la contribución
+central, pero se mantiene como línea secundaria (issue \#91) y se ha
+implementado sobre el piloto real de \mbox{CBIS-DDSM}
+(\texttt{src/explainability.py}, \texttt{scripts/explainability\_benchmark.py}).
+
+\subsection{Cuatro métodos, una región binaria comparable}
+Para que los cuatro métodos puedan compararse entre sí con la misma métrica,
+cada uno produce, sobre la \textbf{misma imagen preprocesada}, una región
+binaria de la imagen:
+
+\begin{description}
+  \item[Grad-CAM] Mapa de saliencia estándar (Selvaraju et al. 2017) sobre la
+        salida de la última capa convolucional de la CNN de referencia
+        (\texttt{model.features} de DenseNet121): se pondera cada canal de
+        activación por el promedio espacial de su gradiente respecto a la
+        clase predicha, se aplica ReLU y se reescala a la resolución de la
+        imagen. Se binariza quedándose con el 20\,\% de píxeles más
+        salientes (percentil 80).
+  \item[Región topológica dominante] El par de persistencia (H0 o H1) con
+        mayor persistencia se localiza en píxeles concretos mediante
+        \texttt{gudhi.cofaces\_of\_persistence\_pairs()}, que asocia cada
+        par de persistencia a dos celdas top-dimensionales (dos píxeles).
+        Se umbraliza la imagen en el punto medio de los valores de
+        nacimiento y muerte de ese par, y se toma la componente conexa del
+        conjunto de sublevel resultante que contiene el píxel de
+        nacimiento. Para H1 esto es una aproximación razonable --- la
+        región "real" de un ciclo no es, en general, un conjunto de
+        sublevel simple --- no una reconstrucción exacta del ciclo
+        representativo (gudhi no calcula ciclos representativos para
+        complejos cúbicos).
+  \item[SHAP] \texttt{GradientExplainer}~\cite{lundberg2017shap} sobre la
+        misma CNN, con una imagen en negro como referencia
+        (\textit{background}). Se suman los valores de Shapley en valor
+        absoluto sobre los 3 canales y se binariza igual que Grad-CAM
+        (percentil 80).
+  \item[LIME] \texttt{lime\_image}~\cite{ribeiro2016lime}, con segmentación
+        en superpíxeles (\texttt{quickshift} de scikit-image) y la misma
+        CNN como función de predicción. Se toman los superpíxeles con
+        contribución positiva a la clase predicha como región binaria.
+\end{description}
+
+\subsection{Métrica de acuerdo}
+Dadas dos regiones binarias $A$ y $B$ (de cualquiera de los cuatro métodos,
+o de la máscara de ROI real), el acuerdo se mide con la intersección sobre
+unión (\textit{Jaccard}) y, de forma complementaria, con el coeficiente de
+Dice:
+\[
+  \mathrm{IoU}(A, B) = \frac{|A \cap B|}{|A \cup B|}, \qquad
+  \mathrm{Dice}(A, B) = \frac{2\,|A \cap B|}{|A| + |B|}.
+\]
+Se calcula el acuerdo \textbf{por pares entre los cuatro métodos} (6
+combinaciones) sobre todos los casos usables del piloto real --- entrenamiento
+y test juntos, ya que este es un estudio descriptivo de interpretabilidad,
+no una evaluación predictiva, así que no hace falta reservar partición de
+test (issue \#62) --- y se desglosa por \texttt{mass\_margins} (el campo de
+CBIS-DDSM que distingue, p.\,ej., márgenes circunscritos de espiculados) para
+ver si el acuerdo entre métodos varía según el tipo de lesión.
+
+\subsection{Nota metodológica: IoU contra la máscara de ROI real}
+\label{subsec:iou-roi-limitacion}
+Además del acuerdo entre métodos, se calcula también el IoU de cada método
+contra la máscara de ROI real (referencia clínica, disponible para cada caso
+de CBIS-DDSM). Es importante señalar una limitación honesta de esta
+comparación concreta: como la imagen ya está recortada muy cerca de la ROI
+(margen de 16\,px, \texttt{src/preprocessing.py:crop\_roi}, igual que el
+resto del \textit{pipeline}), ese recorte sesga al alza el IoU de
+\textbf{cualquier} región central razonable contra la máscara por pura
+construcción geométrica, y por tanto es menos informativo que el acuerdo
+entre métodos de arriba. Se reporta por completitud (issue \#61 lo pide
+explícitamente como referencia clínica), pero la conclusión principal de
+este estudio debe apoyarse en el acuerdo \textit{inter}-método, no en este
+número.
+
+\subsection{Coste computacional}
+Se mide el tiempo de cómputo de cada método por caso (issue \#66): Grad-CAM
+y la región topológica dominante son prácticamente instantáneos (menos de
+$0.2$\,s/caso); LIME tarda del orden de medio segundo a unos pocos segundos
+por caso según el número de muestras de perturbación; SHAP
+(\texttt{GradientExplainer}) es, con diferencia, el método más costoso
+(del orden de 20\,s/caso en el entorno de desarrollo), lo que es relevante
+para valorar la viabilidad práctica del TDA como "capa de interpretabilidad
+nativa" --- su coste es orden de magnitud menor que el de SHAP, y comparable
+o menor que el de Grad-CAM/LIME, sin necesitar entrenar ni ejecutar
+inferencia de una CNN.
+
 \section{Metodología longitudinal (hipótesis principal)}
 \label{sec:metodologia-longitudinal}
 

@@ -1,9 +1,9 @@
 backend TDA: gudhi
-clasificador: rf
+clasificador: svm
 n_train=40 n_test=8
-accuracy: 0.0000
+accuracy: 0.2500
 sensibilidad_recall: 0.0000
-especificidad: 0.0000
+especificidad: 1.0000
 precision: 0.0000
 f1: 0.0000
 auc: 0.0000
