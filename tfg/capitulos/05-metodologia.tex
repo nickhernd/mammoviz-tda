@@ -213,6 +213,43 @@ nativa" --- su coste es orden de magnitud menor que el de SHAP, y comparable
 o menor que el de Grad-CAM/LIME, sin necesitar entrenar ni ejecutar
 inferencia de una CNN.
 
+\subsection{Protocolo estadístico (issue \#79)}
+\label{subsec:protocolo-estadistico}
+Con un piloto de pocas decenas de casos, reportar solo la media de una
+métrica invita a sobreinterpretar diferencias que podrían deberse al azar.
+Se adopta el siguiente protocolo, implementado en
+\texttt{src/evaluate.py:bootstrap\_ci}/\texttt{paired\_test} y aplicado
+tanto a los resultados de clasificación (Sección~\ref{sec:resultados-reales})
+como a los de interpretabilidad (Sección~\ref{sec:resultados-xai}):
+
+\begin{itemize}
+  \item \textbf{Intervalo de confianza por \textit{bootstrap}} (percentil,
+        2000 remuestreos) para la media de cualquier métrica agregada (IoU
+        medio, AUC por CV), en vez de un intervalo paramétrico que asuma
+        normalidad --- poco justificable con $n$ pequeño.
+  \item \textbf{Test pareado de Wilcoxon} (\textit{signed-rank}) cuando se
+        comparan dos métricas sobre \textbf{los mismos casos} (p.\,ej.\ el
+        IoU de TDA/Grad-CAM frente al de SHAP/LIME, caso a caso): es la
+        alternativa no paramétrica al $t$-test pareado, apropiada cuando no
+        se puede asumir que las diferencias se distribuyen normalmente.
+  \item \textbf{Desglose por subgrupo clínico} (\texttt{mass\_margins},
+        \texttt{breast\_density}): reportar la métrica también por
+        categoría, no solo agregada, para detectar si el resultado global
+        esconde heterogeneidad (p.\,ej.\ un método que funciona bien solo
+        en mamas de densidad baja).
+\end{itemize}
+
+Un hallazgo metodológico colateral de implementar este desglose: el CSV de
+masas de CBIS-DDSM usa la columna \texttt{breast\_density} (con guion bajo)
+y el de calcificaciones \texttt{breast density} (con espacio); si la
+normalización de nombres de columna se aplica \textbf{después} de
+concatenar ambos CSV, \texttt{pandas} no las fusiona y el resultado son
+\textbf{dos} columnas llamadas \texttt{breast\_density} en vez de una
+--- un error silencioso que no lanza ninguna excepción, solo produce
+columnas mal pobladas. Se corrigió normalizando los nombres de columna por
+CSV individual, antes de concatenar (\texttt{src/data.py:load\_case\_descriptions}),
+con un test de regresión que fija este comportamiento.
+
 \section{Metodología longitudinal (hipótesis principal)}
 \label{sec:metodologia-longitudinal}
 

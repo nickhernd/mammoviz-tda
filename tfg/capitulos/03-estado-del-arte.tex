@@ -61,6 +61,51 @@ microcalcificaciones) que resultan difíciles de modelar con características
 convencionales. Su robustez frente al ruido y su interpretabilidad geométrica
 los convierten en un complemento natural de las CNN.
 
+\subsection{Comparación de novedad con los trabajos más cercanos}
+\label{subsec:novedad-jetomo-epj}
+Dos trabajos muy recientes aplican homología persistente a la clasificación
+de mamografías de forma cercana a la base de este TFG (issue \#51), y
+conviene distinguir explícitamente en qué se diferencia este trabajo de
+ambos:
+
+\begin{table}[H]
+\centering
+\caption{Comparación con los dos trabajos de TDA en mamografía más cercanos
+identificados (issue \#51).}
+\label{tab:novedad-jetomo-epj}
+\small
+\begin{tabular}{@{}p{2.6cm}p{3.6cm}p{3.6cm}p{4.3cm}@{}}
+\toprule
+ & \textbf{Jetomo et al.\ 2025}~\cite{jetomo2025phca} & \textbf{Hitit Univ.\ 2026}~\cite{hitit2026epjplus} & \textbf{Este TFG} \\
+\midrule
+Dataset & INbreast & No verificado (artículo de pago) & CBIS-DDSM (piloto real descargado) \\
+Features & HOG + PCA + PHCA (algoritmo propio de clasificación por homología persistente) & Homología persistente (sublevel set) + momentos de Zernike + Haralick/GLCM & Imágenes de persistencia H0+H1 (\texttt{gudhi}/\texttt{giotto-tda}) \\
+Comparación con \textit{deep learning} & No reportada en el resumen disponible & No reportada en el resumen disponible & Sí: CNN (DenseNet121) y fusión TDA+CNN (Capítulo~\ref{cap:resultados}) \\
+Interpretabilidad & No es el foco & No es el foco (se presenta la TDA como alternativa interpretable, pero sin comparar contra XAI) & Sí: comparación sistemática con Grad-CAM, SHAP y LIME (Sección~\ref{sec:resultados-xai}) \\
+Longitudinal/temporal & No & No & Sí: hipótesis principal (Capítulo~\ref{cap:objetivos}, O7--O8) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Los dos comparten con este TFG el uso de homología persistente para
+clasificación benigno/maligno sobre una mamografía aislada, pero ninguno
+compara explícitamente su enfoque topológico contra una CNN de referencia
+entrenada en el mismo conjunto, ni contra métodos de explicabilidad
+estándar (Grad-CAM, SHAP, LIME), y ninguno aborda el análisis longitudinal.
+Esto confirma, desde el ángulo de los trabajos más afines (no solo desde la
+ausencia general de literatura ya discutida en la
+Sección~\ref{sec:estado-arte-longitudinal}), que el hueco de novedad que
+ocupa este TFG --- combinación con \textit{deep learning},
+\textbf{comparación sistemática de interpretabilidad} e
+\textbf{hipótesis longitudinal} --- sigue sin estar cubierto.
+
+\emph{Nota de verificación}: el artículo de Hitit University (EPJ Plus,
+2026) está detrás de muro de pago; su descripción metodológica proviene de
+su resumen público, no de una lectura completa, y sus métricas de
+rendimiento no se han podido verificar directamente (ver nota en
+\texttt{tfg/bibliografia.bib}). Queda pendiente completar la verificación
+si se consigue acceso a texto completo.
+
 \section{Predicción de riesgo y análisis longitudinal de mamografía}
 \label{sec:estado-arte-longitudinal}
 Una línea de trabajo más reciente y directamente relevante para la hipótesis

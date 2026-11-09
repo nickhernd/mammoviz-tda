@@ -102,3 +102,60 @@ def plot_persistence_diagram(diagram: np.ndarray, ax=None):
     ax.set_ylabel("Muerte")
     ax.legend()
     return ax
+
+
+# ---------------------------------------------------------------------------
+# Protocolo estadistico (issue #79): bootstrap CI y test pareado
+# ---------------------------------------------------------------------------
+
+def bootstrap_ci(
+    values: np.ndarray, n_resamples: int = 2000, confidence: float = 0.95, seed: int = 42
+) -> tuple[float, float, float]:
+    """Intervalo de confianza de la media por bootstrap (percentil).
+
+    Util para reportar la incertidumbre de una metrica (p.ej. IoU medio
+    entre dos metodos de interpretabilidad, o un AUC por CV) cuando no se
+    quiere asumir normalidad -- con tamanos de muestra pequenos (piloto de
+    30-70 casos) esa asuncion es poco fiable.
+
+    Devuelve (media, limite_inferior, limite_superior) del intervalo al
+    nivel de `confidence` (95% por defecto).
+    """
+    values = np.asarray(values, dtype=float)
+    if len(values) == 0:
+        return (float("nan"), float("nan"), float("nan"))
+    rng = np.random.default_rng(seed)
+    means = np.empty(n_resamples)
+    n = len(values)
+    for i in range(n_resamples):
+        sample = values[rng.integers(0, n, size=n)]
+        means[i] = sample.mean()
+    alpha = (1.0 - confidence) / 2.0
+    lower, upper = np.quantile(means, [alpha, 1.0 - alpha])
+    return (float(values.mean()), float(lower), float(upper))
+
+
+def paired_test(values_a: np.ndarray, values_b: np.ndarray) -> dict[str, float]:
+    """Test de Wilcoxon de rangos con signo para dos muestras PAREADAS (los
+    mismos casos, dos metodos/metricas distintas) -- la alternativa no
+    parametrica al t-test pareado, apropiada para muestras pequenas y sin
+    asumir normalidad de las diferencias.
+
+    Devuelve un diccionario con el estadistico, el p-valor, y la mediana de
+    las diferencias (para saber la direccion del efecto, no solo si es
+    significativo). Si todas las diferencias son cero (los dos metodos dan
+    exactamente el mismo valor en todos los casos), scipy no puede calcular
+    el test; se devuelve p-valor 1.0 explicitamente en vez de fallar.
+    """
+    from scipy import stats
+
+    a, b = np.asarray(values_a, dtype=float), np.asarray(values_b, dtype=float)
+    diff = a - b
+    if np.allclose(diff, 0.0):
+        return {"statistic": 0.0, "p_value": 1.0, "median_diff": 0.0}
+    result = stats.wilcoxon(a, b)
+    return {
+        "statistic": float(result.statistic),
+        "p_value": float(result.pvalue),
+        "median_diff": float(np.median(diff)),
+    }

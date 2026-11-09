@@ -2,7 +2,7 @@
 import numpy as np
 import pytest
 
-from src.evaluate import clinical_metrics, plot_confusion, plot_persistence_diagram
+from src.evaluate import bootstrap_ci, clinical_metrics, paired_test, plot_confusion, plot_persistence_diagram
 
 
 # ---------------------------------------------------------------------------
@@ -86,3 +86,45 @@ def test_plot_persistence_diagram_handles_3d_giotto_shape():
 
     assert ax is not None
     assert len(ax.collections) == 2  # un scatter por dimension de homologia (H0, H1)
+
+
+# ---------------------------------------------------------------------------
+# bootstrap_ci / paired_test (issue #79)
+# ---------------------------------------------------------------------------
+
+def test_bootstrap_ci_contains_the_true_mean_on_repeated_sampling():
+    rng = np.random.default_rng(0)
+    values = rng.normal(loc=0.5, scale=0.1, size=200)
+    mean, lower, upper = bootstrap_ci(values, n_resamples=500, seed=1)
+    assert lower <= mean <= upper
+    assert mean == pytest.approx(values.mean())
+
+
+def test_bootstrap_ci_empty_array_returns_nan():
+    mean, lower, upper = bootstrap_ci(np.array([]))
+    assert np.isnan(mean) and np.isnan(lower) and np.isnan(upper)
+
+
+def test_bootstrap_ci_is_narrower_with_more_samples():
+    rng = np.random.default_rng(0)
+    small = rng.normal(loc=0.5, scale=0.1, size=8)
+    large = rng.normal(loc=0.5, scale=0.1, size=800)
+    _, lo_small, hi_small = bootstrap_ci(small, n_resamples=1000, seed=1)
+    _, lo_large, hi_large = bootstrap_ci(large, n_resamples=1000, seed=1)
+    assert (hi_large - lo_large) < (hi_small - lo_small)
+
+
+def test_paired_test_identical_arrays_gives_pvalue_one():
+    values = np.array([0.1, 0.2, 0.3, 0.4])
+    result = paired_test(values, values)
+    assert result["p_value"] == 1.0
+    assert result["median_diff"] == 0.0
+
+
+def test_paired_test_detects_a_clear_systematic_difference():
+    rng = np.random.default_rng(0)
+    a = rng.normal(loc=0.8, scale=0.02, size=30)
+    b = rng.normal(loc=0.2, scale=0.02, size=30)
+    result = paired_test(a, b)
+    assert result["p_value"] < 0.01
+    assert result["median_diff"] > 0

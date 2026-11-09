@@ -112,6 +112,15 @@ def load_case_descriptions(csv_dir: str | Path) -> pd.DataFrame:
     frames = []
     for path in paths:
         df = pd.read_csv(path)
+        # Normalizamos nombres de columna ANTES de concatenar: sin espacios y
+        # con guion bajo. Importante hacerlo aqui y no despues del concat:
+        # el CSV de masas ya trae "breast_density" pero el de calcificaciones
+        # trae "breast density" (con espacio); si se normaliza despues de
+        # concatenar, pandas no las fusiona (columnas con nombre distinto en
+        # el momento del concat) y el resultado son DOS columnas llamadas
+        # "breast_density" (cada una NaN en las filas del otro CSV) en vez de
+        # una sola columna bien rellenada.
+        df.columns = [c.strip().replace(" ", "_") for c in df.columns]
         # Prefijo real de carpeta en TCIA ("Mass-Training", "Calc-Test", ...),
         # derivado del propio nombre de fichero. Necesario para localizar los
         # DICOM ya descargados con case_folder_key() (ver scripts/run_pipeline.py).
@@ -121,9 +130,6 @@ def load_case_descriptions(csv_dir: str | Path) -> pd.DataFrame:
         frames.append(df)
     # Unimos los CSV de masas y calcificaciones (train y test) en un unico DataFrame.
     df = pd.concat(frames, ignore_index=True)
-    # Normalizamos nombres de columna: sin espacios y con guion bajo
-    # (CBIS-DDSM usa "patient id" con espacio en algunos ficheros).
-    df.columns = [c.strip().replace(" ", "_") for c in df.columns]
     # Anadimos la etiqueta binaria derivada de la patologia.
     df["label"] = to_binary_label(df["pathology"])
     return df

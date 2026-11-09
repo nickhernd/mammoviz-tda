@@ -85,6 +85,31 @@ def test_load_case_descriptions_concatenates_and_labels(tmp_path):
     assert df["label"].tolist() == [0, 1]
 
 
+def test_load_case_descriptions_merges_differently_spaced_column_names(tmp_path):
+    # Regresion: el CSV real de masas trae "breast_density" (con guion bajo)
+    # y el de calcificaciones "breast density" (con espacio). Si la
+    # normalizacion de nombres de columna se hace DESPUES de concatenar los
+    # CSV, pandas no las fusiona (nombres distintos en el momento del
+    # concat) y el resultado son DOS columnas "breast_density" en vez de
+    # una, cada una con NaN en las filas del otro CSV.
+    mass_csv = tmp_path / "mass_case_description_train_set.csv"
+    calc_csv = tmp_path / "calc_case_description_train_set.csv"
+    pd.DataFrame(
+        {"patient id": ["P_00001"], "pathology": ["MALIGNANT"], "breast_density": [3]}
+    ).to_csv(mass_csv, index=False)
+    pd.DataFrame(
+        {"patient id": ["P_00002"], "pathology": ["BENIGN"], "breast density": [2]}
+    ).to_csv(calc_csv, index=False)
+
+    df = load_case_descriptions(tmp_path)
+
+    assert df.columns.tolist().count("breast_density") == 1
+    assert df.set_index("patient_id")["breast_density"].to_dict() == {
+        "P_00001": 3,
+        "P_00002": 2,
+    }
+
+
 # ---------------------------------------------------------------------------
 # split_by_patient
 # ---------------------------------------------------------------------------
