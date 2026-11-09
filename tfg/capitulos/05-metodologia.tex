@@ -358,25 +358,62 @@ diagnóstico?''); para eso, la señal relevante es la de \textbf{anticipación}
 sobre $D_{t-1}$ en solitario. Este resultado condiciona qué señal se
 prioriza al evaluar la hipótesis sobre datos reales (Capítulo~\ref{cap:resultados}).
 
-\subsection{Limitación de acceso a datos longitudinales reales}
-La validación anterior usa datos sintéticos porque, a fecha de redacción de
-esta memoria, no existe un dataset longitudinal público de mamografía con
-descarga directa. Se han identificado dos candidatos:
+\subsection{Acceso a datos longitudinales reales}
+\label{subsec:acceso-longitudinal}
+La validación de la Sección~\ref{subsec:validacion-sintetica} usa datos
+sintéticos porque, durante la mayor parte del desarrollo de este TFG, no
+hubo acceso a ningún dataset longitudinal público de mamografía con
+descarga directa. Se identificaron dos candidatos:
 
 \begin{quote}
 \textit{CSAW-CC}~\cite{dataset_csawcc}, cohorte real del Karolinska
 Institutet con 8723 pacientes y 24694 exploraciones (75.5\,\% con dos o más
 exploraciones), cuyas imágenes DICOM/PNG ($\sim$2.5\,TB) requieren solicitud
-formal de acceso, no descarga directa; y \textit{EMBED}~\cite{jeong2021embed},
-de Emory, con acceso controlado (\textit{Controlled Access}) a través de un
-portal dedicado, verificado empíricamente que no ofrece ningún subconjunto
-público sin autenticación.
+formal de acceso; y \textit{EMBED}~\cite{jeong2021embed}, de Emory, con
+acceso controlado (\textit{Controlled Access}) a través de un portal
+dedicado.
 \end{quote}
 
-Mientras se tramita el acceso a alguno de estos dos conjuntos (ver también
-Capítulo~\ref{cap:conclusiones}), la Sección~\ref{subsec:validacion-sintetica}
-constituye la validación disponible de la metodología, y el trabajo
-reconocidamente comparable más cercano en la literatura es
-LongiMam~\cite{rakez2025longimam}, que también explota pares longitudinales
-de mamografía pero con un modelo de \textit{deep learning} end-to-end, no
-con descriptores topológicos.
+\textbf{Durante la redacción de esta memoria se concedió acceso a EMBED.}
+Sus tablas de metadatos clínicos (\texttt{empi\_anon} como identificador de
+paciente, \texttt{acc\_anon} como identificador de exploración,
+\texttt{study\_date\_anon} y la valoración BI-RADS \texttt{asses} de cada
+exploración) confirman que EMBED tiene, de hecho, una estructura
+longitudinal real y de tamaño considerable: sobre $23253$ pacientes únicos
+y $72770$ exploraciones, $14789$ pacientes ($63.6\,\%$) tienen dos o más
+exploraciones. Filtrando por la definición de O7/O8 (exploración más
+antigua con \texttt{asses} Normal o Benigno, exploración posterior con
+\texttt{asses} Sospechoso/Altamente sugestivo/Malignidad confirmada), se
+identificaron \textbf{644 pacientes ``incidentes''} candidatos y
+\textbf{7256 pacientes ``control''} (todas sus exploraciones Normal o
+Benigno) --- una cohorte de tamaño comparable o mayor que la de CSAW-CC,
+ya accesible. El resultado sobre un primer piloto de esta cohorte se
+reporta en la Sección~\ref{sec:resultados-embed} del
+Capítulo~\ref{cap:resultados}, la primera evaluación de la hipótesis
+principal del TFG sobre datos reales en vez de sintéticos.
+
+El trabajo reconocidamente comparable más cercano en la literatura sigue
+siendo LongiMam~\cite{rakez2025longimam}, que también explota pares
+longitudinales de mamografía pero con un modelo de \textit{deep learning}
+end-to-end, no con descriptores topológicos.
+
+\subsubsection*{Nota de ingeniería: coste de la distancia bottleneck sobre diagramas reales}
+Un hallazgo práctico no trivial al pasar de datos sintéticos a reales: los
+diagramas de persistencia de una mamografía real preprocesada
+($224\times224$) tienen del orden de $1000$-$2000$ puntos en $H_0$ y
+$H_1$ (frente a decenas en las imágenes sintéticas de la
+Sección~\ref{subsec:validacion-sintetica}), y \texttt{persim.bottleneck}
+escala muy mal con el número de puntos: se midió $\sim$121\,s para un solo
+par de diagramas reales sin recortar, lo que habría hecho inviable
+(horas) evaluar un piloto de 40 pacientes. La solución --- estándar en
+TDA --- es quedarse con los \texttt{max\_points} puntos de mayor
+persistencia de cada diagrama antes de calcular la distancia bottleneck
+(\texttt{synthetic\_longitudinal\_validation.py:\_diagram\_by\_dim}),
+descartando el ``ruido topológico'' de baja persistencia: con
+$\texttt{max\_points}=100$ el cálculo baja a $\sim$0.18\,s por par (más de
+$600\times$ más rápido). Es una aproximación, no una igualdad garantizada
+--- la distancia bottleneck no es en general invariante a quitar puntos,
+aunque el cambio es pequeño cuando hay una señal dominante de alta
+persistencia, verificado con un test de regresión
+(\texttt{tests/test\_synthetic\_longitudinal\_validation.py}) ---, pero
+imprescindible para que la evaluación sobre datos reales sea tratable.

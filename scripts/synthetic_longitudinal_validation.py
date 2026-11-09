@@ -103,18 +103,52 @@ def make_patient(
     return img_t_minus_1, img_t
 
 
-def _diagram_by_dim(diagram: np.ndarray, dim: int) -> np.ndarray:
+def _diagram_by_dim(diagram: np.ndarray, dim: int, max_points: int | None = None) -> np.ndarray:
     """Extrae del diagrama (1, n, 3) los puntos (birth, death) de una
     dimension, en el formato (n, 2) que espera persim.bottleneck/wasserstein.
+
+    ``max_points``: si se da, se queda solo con los `max_points` puntos de
+    MAYOR persistencia (death - birth). Necesario en la practica: las
+    imagenes sinteticas de este modulo producen decenas de puntos (barato
+    para persim.bottleneck), pero una mamografia real preprocesada puede
+    producir miles (observado: ~1000-2000 en H0, ~1800-2200 en H1), y
+    persim.bottleneck escala muy mal con el numero de puntos (medido:
+    ~121s para un solo par de diagramas reales sin recortar, issue #94).
+    Quedarse con los puntos mas persistentes es la practica habitual en TDA
+    para descartar "ruido topologico" de baja persistencia, y hace que el
+    calculo sea tratable. Es una APROXIMACION, no una garantia: la
+    distancia bottleneck no es en general invariante a quitar puntos de
+    baja persistencia (puede cambiar el emparejamiento optimo con la
+    diagonal), aunque para diagramas con una señal dominante de alta
+    persistencia el cambio es pequeño (test de regresion en
+    tests/test_synthetic_longitudinal_validation.py). Por defecto
+    (``None``) no se recorta nada, para no alterar los resultados ya
+    reportados sobre datos sinteticos.
     """
     points = diagram[0]
-    return points[points[:, 2] == dim][:, :2]
+    points = points[points[:, 2] == dim][:, :2]
+    if max_points is not None and len(points) > max_points:
+        persistence = points[:, 1] - points[:, 0]
+        top_idx = np.argsort(-persistence)[:max_points]
+        points = points[top_idx]
+    return points
 
 
-def topological_drift(diagram_a: np.ndarray, diagram_b: np.ndarray) -> tuple[float, float]:
-    """Distancia bottleneck entre los diagramas H0 y H1 de dos imagenes."""
-    h0_dist = persim.bottleneck(_diagram_by_dim(diagram_a, 0), _diagram_by_dim(diagram_b, 0))
-    h1_dist = persim.bottleneck(_diagram_by_dim(diagram_a, 1), _diagram_by_dim(diagram_b, 1))
+def topological_drift(
+    diagram_a: np.ndarray, diagram_b: np.ndarray, max_points: int | None = None
+) -> tuple[float, float]:
+    """Distancia bottleneck entre los diagramas H0 y H1 de dos imagenes.
+
+    Ver ``_diagram_by_dim`` sobre ``max_points``: imprescindible pasarlo en
+    datos reales (p.ej. ``max_points=100``) o el calculo puede tardar
+    minutos por par en vez de milisegundos.
+    """
+    h0_dist = persim.bottleneck(
+        _diagram_by_dim(diagram_a, 0, max_points), _diagram_by_dim(diagram_b, 0, max_points)
+    )
+    h1_dist = persim.bottleneck(
+        _diagram_by_dim(diagram_a, 1, max_points), _diagram_by_dim(diagram_b, 1, max_points)
+    )
     return h0_dist, h1_dist
 
 

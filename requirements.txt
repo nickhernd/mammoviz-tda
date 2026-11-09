@@ -28,6 +28,11 @@ torchvision==0.29.0
 # Descarga de datos reales (CBIS-DDSM: CSV via TCIA, imagenes DICOM via API NBIA)
 pydicom==3.0.2
 requests==2.34.2
+# EMBED (acceso controlado via AWS, issue #92/#94): sus DICOM vienen con
+# compresion JPEG Lossless, que pydicom no sabe decodificar sin un plugin.
+pylibjpeg==2.1.0
+pylibjpeg-libjpeg==2.5.0
+boto3==1.43.108
 
 # Visualizacion y entorno interactivo
 matplotlib==3.11.0
