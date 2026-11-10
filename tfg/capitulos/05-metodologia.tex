@@ -250,6 +250,54 @@ columnas mal pobladas. Se corrigió normalizando los nombres de columna por
 CSV individual, antes de concatenar (\texttt{src/data.py:load\_case\_descriptions}),
 con un test de regresión que fija este comportamiento.
 
+\subsection{Protocolo de hold-out congelado (issue \#89)}
+\label{subsec:holdout-congelado}
+Un riesgo metodológico clásico --- y el mismo tipo de error que este
+trabajo ya identificó y corrigió una vez (la fuga de datos del
+\texttt{Demo\_Notebook.ipynb} original, Sección~\ref{cap:metodologia}) ---
+es tomar decisiones de diseño (umbral de binarización, resolución del
+descriptor, hiperparámetros del clasificador) mirando el mismo conjunto de
+datos sobre el que después se reportan los resultados finales. Para
+evitarlo, se declaran aquí por escrito las decisiones tomadas y en qué
+fase del proyecto:
+
+\begin{itemize}
+  \item \textbf{Resolución del \textit{Persistence Image}} ($n\_bins=4$):
+        elegida mediante el barrido empírico de la Sección~\ref{sec:refinamiento-clasificacion}
+        sobre el piloto \textbf{inicial de 30 pacientes} (issue \#77).
+  \item \textbf{Umbral de binarización de Grad-CAM/SHAP} (percentil 80,
+        el 20\,\% de píxeles más salientes): fijado en el diseño de
+        \texttt{src/explainability.py} (issue \#59/\#64), sin ajustarlo
+        por búsqueda sobre ningún tamaño de piloto concreto.
+  \item \textbf{Clasificador y sus hiperparámetros} (Random Forest por
+        defecto; SVM con \texttt{GridSearchCV} como alternativa,
+        Sección~\ref{sec:refinamiento-clasificacion}): la búsqueda de
+        \texttt{GridSearchCV} se repite en cada ejecución sobre el
+        \textit{split} de entrenamiento vigente en ese momento (no se fija
+        un valor concreto a fuego), precisamente para no congelar una
+        configuración óptima para un tamaño de piloto que luego deja de
+        serlo al ampliar el piloto (ver la caída del CV-AUC de TDA de
+        $0.850$ a $0.658$ al pasar de 30 a 70 pacientes,
+        Sección~\ref{sec:test-ruidoso}, como ejemplo de por qué fijar
+        hiperparámetros de una vez por todas sería mala idea aquí).
+\end{itemize}
+
+Estas tres decisiones se tomaron \textbf{antes} de ampliar el piloto de
+CBIS-DDSM de 30 a 70 pacientes (issue \#82) y de EMBED de 20+20 a 50+50
+pacientes (issue \#95), y no se han vuelto a ajustar mirando los datos
+ampliados: todos los resultados de los Capítulos~\ref{cap:metodologia}
+y~\ref{cap:resultados} sobre los pilotos ampliados usan exactamente la
+misma resolución, el mismo umbral y el mismo procedimiento de ajuste de
+hiperparámetros que sobre el piloto inicial.
+
+\texttt{scripts/download\_cbis\_ddsm.py:select\_new\_cases} excluye
+explícitamente, por construcción, a los pacientes ya descargados
+(\texttt{already\_downloaded\_patients()}) antes de elegir el siguiente
+lote; se ha verificado que los 70 pacientes en disco son efectivamente 70
+identificadores de paciente distintos, no casos adicionales de los mismos
+30 pacientes del piloto inicial, cumpliendo el criterio de aceptación de
+la issue \#89 sobre no mezclar pacientes de ajuste con pacientes nuevos.
+
 \section{Metodología longitudinal (hipótesis principal)}
 \label{sec:metodologia-longitudinal}
 
