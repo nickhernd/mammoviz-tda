@@ -97,7 +97,7 @@ def main(n_bins: int = 6, seed: int = 42) -> None:
         print(f"  {name:12s}: AUC (5-fold CV) = {scores.mean():.3f} +/- {scores.std():.3f}")
         return scores.mean(), scores.std()
 
-    print("\n=== Resultados sobre el piloto REAL de EMBED (n=40, exploratorio) ===")
+    print(f"\n=== Resultados sobre el piloto REAL de EMBED (n={len(manifest)}, exploratorio) ===")
     auc_a, std_a = _cv_auc(X_anticipacion, "Anticipacion")
     auc_b, std_b = _cv_auc(X_deriva, "Deriva")
     auc_c, std_c = _cv_auc(X_combinada, "Combinada")
@@ -108,7 +108,7 @@ def main(n_bins: int = 6, seed: int = 42) -> None:
         f.write(f"Piloto longitudinal REAL (EMBED): {len(manifest)} pacientes "
                 f"({(manifest['kind'] == 'incidente').sum()} incidentes, "
                 f"{(manifest['kind'] == 'control').sum()} control)\n")
-        f.write("AVISO: piloto exploratorio de 40 pacientes, no concluyente.\n\n")
+        f.write(f"AVISO: piloto exploratorio de {len(manifest)} pacientes, no concluyente.\n\n")
         f.write(f"auc_anticipacion: {auc_a:.4f} +/- {std_a:.4f}\n")
         f.write(f"auc_deriva: {auc_b:.4f} +/- {std_b:.4f}\n")
         f.write(f"auc_combinada: {auc_c:.4f} +/- {std_c:.4f}\n")
