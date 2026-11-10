@@ -74,7 +74,45 @@ def backend() -> str:
     return "none"
 
 
-def persistence_diagram(image: np.ndarray, homology_dims=(0, 1)) -> np.ndarray:
+def _distance_transform_filtration(image: np.ndarray) -> np.ndarray:
+    """Funcion de filtracion alternativa (issue #77): distancia al fondo, en
+    vez de intensidad directa.
+
+    Umbraliza la imagen (en su propia media, adaptativo por imagen) para
+    separar tejido/fondo, y calcula la transformada de distancia euclidea
+    DESDE el fondo: los pixeles en el centro de una region gruesa (p.ej. el
+    nucleo de una masa) tienen valor alto, los del borde valor bajo. Se
+    niega para mantener la misma convencion de filtracion por sublevel sets
+    que ``_persistence_diagram_gudhi`` (las zonas "gruesas" nacen primero).
+
+    A diferencia de la filtracion por intensidad directa, esta es sensible
+    a la FORMA/grosor de las regiones mas que a su brillo exacto: dos masas
+    con el mismo contorno pero distinto contraste dan filtraciones casi
+    identicas, lo que no ocurre con la intensidad directa.
+    """
+    from scipy import ndimage
+
+    img = np.asarray(image, dtype=np.float64)
+    foreground = img > img.mean()
+    dist = ndimage.distance_transform_edt(foreground)
+    if dist.max() > 0:
+        dist = dist / dist.max()
+    return -dist
+
+
+def _apply_filtration(image: np.ndarray, filtration: str) -> np.ndarray:
+    if filtration == "intensity":
+        return np.asarray(image, dtype=np.float64)
+    if filtration == "distance_transform":
+        return _distance_transform_filtration(image)
+    raise ValueError(
+        f"filtration desconocida: {filtration!r} (usa 'intensity' o 'distance_transform')"
+    )
+
+
+def persistence_diagram(
+    image: np.ndarray, homology_dims=(0, 1), filtration: str = "intensity"
+) -> np.ndarray:
     """Calcula el diagrama de persistencia cubico de una imagen 2D.
 
     homology_dims=(0, 1) pide dos tipos de caracteristicas:
@@ -82,19 +120,24 @@ def persistence_diagram(image: np.ndarray, homology_dims=(0, 1)) -> np.ndarray:
       - dimension 1 (H1): agujeros / ciclos (util para masas espiculadas,
         distribucion de microcalcificaciones...).
 
+    ``filtration`` (issue #77, analisis de sensibilidad): ``"intensity"``
+    (por defecto, la funcion de altura es la intensidad del pixel tal
+    cual) o ``"distance_transform"`` (ver ``_distance_transform_filtration``).
+
     Devuelve un array con forma (1, n_puntos, 3), donde cada punto es
     (birth, death, dimension). El calculo delega en giotto-tda si esta
     disponible y, si no, en gudhi (vease el modulo).
     """
+    filtered = _apply_filtration(image, filtration)
     if _HAS_GIOTTO:
         # giotto-tda espera un lote de imagenes; anadimos un eje de lote -> (1, H, W).
-        x = np.asarray(image, dtype=np.float32)[None, :, :]
+        x = filtered.astype(np.float32)[None, :, :]
         # CubicalPersistence es el estimador que calcula la homologia sobre la
         # rejilla de pixeles (complejo cubico). n_jobs=-1 usa todos los nucleos.
         cubical = CubicalPersistence(homology_dimensions=homology_dims, n_jobs=-1)
         return cubical.fit_transform(x)
     if _HAS_GUDHI:
-        return _persistence_diagram_gudhi(image, homology_dims)
+        return _persistence_diagram_gudhi(filtered, homology_dims)
     raise RuntimeError(
         "Se necesita un backend de homologia persistente. Instala uno de los "
         "dos: 'pip install giotto-tda' (hasta Python 3.12) o "
