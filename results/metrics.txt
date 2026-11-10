@@ -2,10 +2,10 @@ backend TDA: gudhi
 clasificador: rf
 n_train=101 n_test=21
 accuracy: 0.5238
-sensibilidad_recall: 0.5714
-especificidad: 0.4286
-precision: 0.6667
-f1: 0.6154
-auc: 0.5918
-auc_cv_train_mean: 0.6575
-auc_cv_train_std: 0.1115
+sensibilidad_recall: 0.4286
+especificidad: 0.7143
+precision: 0.7500
+f1: 0.5455
+auc: 0.4898
+auc_cv_train_mean: 0.6580
+auc_cv_train_std: 0.1339

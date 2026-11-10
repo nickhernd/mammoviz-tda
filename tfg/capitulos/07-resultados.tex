@@ -2,17 +2,19 @@
 \label{cap:resultados}
 
 Este capítulo presenta el diseño experimental del trabajo y los resultados
-obtenidos hasta el momento. Primero se describe una
-\textbf{validación preliminar del \textit{pipeline} completo con datos
-sintéticos} (Sección~\ref{sec:resultados-sinteticos}), que sirvió para
-comprobar que las cinco etapas encajaban correctamente antes de tener datos
-reales; a continuación se presentan los \textbf{resultados ya obtenidos sobre
-el piloto real} de CBIS-DDSM, 70 pacientes descargados con
-\texttt{scripts/download\_cbis\_ddsm.py} (Sección~\ref{sec:resultados-reales}
-y Sección~\ref{sec:estado-datos}). La hipótesis longitudinal principal del
-trabajo (O7--O8) se valida por separado, de momento solo con datos
-sintéticos, en la Sección~\ref{sec:metodologia-longitudinal} del
-Capítulo~\ref{cap:metodologia}.
+obtenidos, \textbf{todos sobre datos reales}: la clasificación
+benigno/maligno sobre el piloto de CBIS-DDSM (70 pacientes descargados con
+\texttt{scripts/download\_cbis\_ddsm.py},
+Sección~\ref{sec:resultados-reales}), el estudio de interpretabilidad
+(Sección~\ref{sec:resultados-xai}) y la evaluación de la hipótesis
+longitudinal principal (O7--O8) sobre el piloto real de EMBED
+(Sección~\ref{sec:resultados-embed}). Durante el desarrollo se usaron
+datos sintéticos únicamente como comprobación de ingeniería de que las
+etapas del \textit{pipeline} encajaban entre sí
+(\texttt{notebooks/01\_pipeline\_demo.ipynb},
+\texttt{scripts/synthetic\_longitudinal\_validation.py}, que se conservan
+en el repositorio); ningún resultado de este capítulo procede de datos
+sintéticos.
 
 \section{Diseño experimental}
 Se definen los siguientes experimentos, alineados con los objetivos O4 y O5
@@ -62,81 +64,6 @@ por ser el que está instalado en el entorno de desarrollo (Python 3.14, donde
 misma homología persistente cúbica sobre H0 y H1; la diferencia está en la
 vectorización final (imagen de persistencia), por lo que los resultados no
 deberían diferir sustancialmente de los que produciría \texttt{giotto-tda}.
-
-\section{Validación preliminar del \textit{pipeline} con datos sintéticos}
-\label{sec:resultados-sinteticos}
-
-Antes de disponer del conjunto de datos real, se ha validado el
-\textit{pipeline} de extremo a extremo (\texttt{notebooks/01\_pipeline\_demo.ipynb})
-sobre un conjunto de \textbf{imágenes sintéticas} generadas para imitar de forma
-simplificada la textura y el contraste de una mamografía con lesión: $120$
-imágenes en escala de grises de $64\times64$ píxeles, con $60$ ejemplos de cada
-clase (benigno/maligno simulados mediante patrones con distinta rugosidad
-topológica). El objetivo de este experimento \textbf{no} es obtener conclusiones
-clínicas --- los datos son artificiales --- sino comprobar que las cinco etapas
-del \textit{pipeline} (datos $\rightarrow$ preprocesado $\rightarrow$ homología
-persistente $\rightarrow$ clasificación $\rightarrow$ evaluación) encajan
-correctamente y producen métricas coherentes, usando ya el descriptor
-topológico \textbf{completo} (imágenes de persistencia H0+H1, no la curva de
-Betti-0) gracias al backend \texttt{gudhi} (Sección~\ref{sec:backend-tda}).
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.8\textwidth]{figuras/ejemplos_sinteticos.png}
-\caption{Ejemplo de imagen sintética de cada clase: un \textit{blob} redondeado
-y suave (benigno) frente a una masa con espículas y micro-motas (maligno),
-ambas con ruido gaussiano fuerte para evitar un problema trivial.}
-\label{fig:ejemplos-sinteticos}
-\end{figure}
-
-Con partición $90/30$ (train/test) y un vector de $288$ características por
-imagen ($12\times12$ píxeles por imagen de persistencia, dos dimensiones de
-homología H0 y H1), se obtienen los siguientes resultados:
-
-\begin{table}[H]
-\centering
-\caption{Resultados sobre datos sintéticos (validación del \textit{pipeline},
-imagen de persistencia H0+H1, backend gudhi).}
-\label{tab:resultados-sinteticos}
-\begin{tabular}{@{}lccccc@{}}
-\toprule
-\textbf{Modelo} & \textbf{Exactitud} & \textbf{Sensib.} & \textbf{Especif.} &
-\textbf{F1} & \textbf{AUC} \\
-\midrule
-TDA + SVM (RBF)              & 0.667 & 0.600 & 0.733 & 0.643 & 0.844 \\
-TDA + Random Forest          & 0.733 & 0.800 & 0.667 & 0.750 & 0.833 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-Con estos datos sintéticos, el \textit{random forest} obtiene la mejor
-sensibilidad y F1, y es el modelo seleccionado por F1 en el notebook; la SVM
-obtiene ligeramente mejor AUC. Ambos modelos superan claramente al azar
-(AUC $\approx 0.83$--$0.84$), y la sensibilidad del \textit{random forest}
-($0.80$) es notablemente mejor que la obtenida en una validación previa con el
-descriptor de respaldo Betti-0 ($0.60$, un vector de solo $24$ características
-frente a las $288$ de la imagen de persistencia), lo que es consistente con la
-hipótesis de que \textbf{la dimensión H1 (agujeros/ciclos), ausente en la
-curva de Betti-0, aporta información discriminativa} relevante para las
-morfologías espiculadas simuladas en la clase maligna.
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.45\textwidth]{figuras/matriz_confusion_sintetico.png}
-\caption{Matriz de confusión del \textit{random forest} (mejor modelo por F1)
-sobre el conjunto sintético de test. Generada en
-\texttt{notebooks/01\_pipeline\_demo.ipynb}.}
-\label{fig:matriz-confusion-sintetico}
-\end{figure}
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=\textwidth]{figuras/diagramas_persistencia_sintetico.png}
-\caption{Diagramas de persistencia (backend \texttt{gudhi}) de un ejemplo
-benigno y uno maligno del conjunto sintético. H0 (componentes conexas) en azul,
-H1 (agujeros/ciclos) en naranja; la diagonal discontinua marca birth = death.}
-\label{fig:diagramas-persistencia-sintetico}
-\end{figure}
 
 \section{Resultados sobre el piloto real de CBIS-DDSM}
 \label{sec:resultados-reales}
@@ -280,20 +207,19 @@ persistencia H0/H1 (backend \texttt{gudhi}).}
 
 \subsection{Estado de los datos}
 \label{sec:estado-datos}
-El piloto real cubre, de momento, $30$ pacientes de tipo masa. Queda
-pendiente, no ya la descarga en sí (ya resuelta y automatizada), sino
-\textbf{ampliarla}:
+El piloto real de CBIS-DDSM cubre 70 pacientes de tipo masa, y el piloto
+longitudinal real de EMBED cubre 99 pacientes
+(Sección~\ref{sec:resultados-embed}). Ambas descargas están resueltas y
+automatizadas; lo que queda es \textbf{ampliarlas}:
 \begin{itemize}
   \item Relanzar \texttt{scripts/download\_cbis\_ddsm.py --add N N} para
-        crecer el piloto y reducir la varianza de la Tabla~\ref{tab:resultados}
-        (issue \#82).
-  \item Incorporar los casos de tipo calcificación (\texttt{Calc-*}), de
-        momento excluidos del piloto (Sección~\ref{cap:metodologia}).
-  \item Una vez conseguido acceso a un dataset longitudinal real (issue
-        \#92), repetir la validación de la Sección~\ref{sec:metodologia-longitudinal}
-        del Capítulo~\ref{cap:metodologia} --- ahora mismo solo validada con
-        datos sintéticos --- sobre pacientes reales con exploraciones
-        sucesivas, que es la hipótesis principal del trabajo (O8).
+        crecer el piloto de clasificación y reducir la varianza de la
+        Tabla~\ref{tab:resultados} (issue \#82), e incorporar los casos de
+        tipo calcificación (\texttt{Calc-*}), de momento excluidos.
+  \item Relanzar \texttt{scripts/download\_embed\_longitudinal.py} con más
+        pacientes para el piloto longitudinal (issue \#95): la cohorte
+        completa de EMBED tiene 644 incidentes y 7256 control candidatos,
+        de los que solo se han usado 99.
 \end{itemize}
 
 \section{Interpretabilidad: TDA vs Grad-CAM vs SHAP vs LIME}
@@ -464,105 +390,111 @@ para cada paciente seleccionado se descargan las dos exploraciones (t-1,
 t) de la misma vista (lateralidad + proyección, para que la comparación
 sea sobre la misma región anatómica), filtrando a imágenes de tipo
 \texttt{2D} (mamografía digital real, no el \textit{C-view} sintetizado de
-tomosíntesis). El piloto tiene \textbf{40 pacientes}: 20 incidentes
+tomosíntesis). El piloto tiene \textbf{99 pacientes}: 49 incidentes
 (primera exploración Normal/Benigna, exploración posterior
-Sospechosa/Maligna) y 20 control (todas sus exploraciones Normal/Benigna),
-seleccionados aleatoriamente (semilla fija) de los 644 y 7256 candidatos
-respectivamente identificados en la cohorte completa.
+Sospechosa/Maligna; un candidato más se descartó automáticamente por no
+tener ninguna vista común entre sus dos exploraciones) y 50 control (todas
+sus exploraciones Normal/Benigna), seleccionados aleatoriamente (semilla
+fija) de los 644 y 7256 candidatos respectivamente identificados en la
+cohorte completa. Una primera iteración con 40 pacientes dio el mismo
+patrón cualitativo con el doble de varianza; se reportan los números del
+piloto de 99.
 
 \begin{table}[H]
 \centering
 \caption{AUC por validación cruzada (5-fold) de cada señal longitudinal
 sobre el piloto REAL de EMBED (\texttt{scripts/embed\_longitudinal\_evaluation.py},
-$n=40$ pacientes).}
+$n=99$ pacientes).}
 \label{tab:embed-resultados}
 \begin{tabular}{@{}lc@{}}
 \toprule
 \textbf{Señal} & \textbf{AUC (CV, media $\pm$ desv.)} \\
 \midrule
-Anticipación (solo $D_{t-1}$)        & $0.525 \pm 0.219$ \\
-Deriva ($d(D_{t-1}, D_t)$)           & $0.688 \pm 0.158$ \\
-Combinada                             & $0.656 \pm 0.196$ \\
+Anticipación (solo $D_{t-1}$)        & $0.550 \pm 0.105$ \\
+Deriva ($d(D_{t-1}, D_t)$)           & $0.805 \pm 0.060$ \\
+Combinada                             & $0.762 \pm 0.094$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \paragraph{Aviso metodológico, antes de interpretar estos números.} Con
-$40$ pacientes este es un \textbf{piloto exploratorio}, no un resultado
-concluyente --- el mismo aviso repetido en todo este capítulo sobre
-pilotos pequeños aplica aquí con más fuerza todavía, al ser la primera vez
-que se evalúa la hipótesis principal del TFG sobre datos reales. Las
-desviaciones típicas (hasta $\pm 0.22$) son grandes en relación a las
-propias medias.
+$99$ pacientes este sigue siendo un \textbf{piloto}, no un estudio
+definitivo --- el mismo aviso repetido en todo este capítulo sobre
+pilotos pequeños aplica también aquí, aunque con menos fuerza que en la
+primera iteración de 40.
 
-Dicho esto, el patrón de resultados es \textbf{consistente con el hallazgo
-ya reportado sobre datos sintéticos} (Sección~\ref{subsec:validacion-sintetica}):
-la señal de \textbf{deriva} ($0.688$) supera claramente al azar, mientras
-que la señal de \textbf{anticipación pura} ($0.525$) está muy cerca del
-azar. Esto es exactamente lo que predecía el análisis de sensibilidad
-sintético: la deriva mide sobre todo "cuánto cambió la topología entre
-t-1 y t" (que casi por definición es grande en los casos incidentes, donde
-en t ya hay una lesión diagnosticada), mientras que la anticipación mide
-si ya había señal \textbf{antes} del diagnóstico --- la pregunta
-clínicamente valiosa, y la más difícil. Dos lecturas posibles, no
-excluyentes entre sí, y que este piloto no permite distinguir:
+El patrón de resultados es claro: la señal de \textbf{deriva} ($0.805 \pm
+0.060$) supera al azar de forma robusta --- el cambio topológico entre la
+exploración previa y la del diagnóstico es real y medible con homología
+persistente ---, mientras que la señal de \textbf{anticipación pura}
+($0.550 \pm 0.105$) sigue estadísticamente cerca del azar incluso tras
+multiplicar por 2.5 el tamaño del piloto. Tiene sentido mecánico: la
+deriva mide sobre todo "cuánto cambió la topología entre t-1 y t" (que
+casi por definición es grande en los casos incidentes, donde en t ya hay
+una lesión diagnosticada), mientras que la anticipación mide si ya había
+señal \textbf{antes} del diagnóstico --- la pregunta clínicamente valiosa,
+y la más difícil. Dos lecturas posibles, no excluyentes entre sí:
 
 \begin{itemize}
-  \item Los precursores topológicos reales son, en efecto, sutiles (como
-        el extremo de baja amplitud del barrido de sensibilidad sintético,
-        donde el AUC de anticipación caía hasta $0.51$), y haría falta un
-        descriptor más sensible o un piloto más grande para detectarlos.
-  \item Con solo $40$ pacientes, el AUC de anticipación de $0.525$ es
-        simplemente indistinguible del azar por tamaño de muestra, no
-        necesariamente porque la señal no exista.
+  \item Los precursores topológicos reales son, en efecto, demasiado
+        sutiles para el descriptor actual (imagen de persistencia de la
+        vista completa a $224\times224$): haría falta un descriptor más
+        sensible, mayor resolución o localización de la región sospechosa.
+  \item El AUC de anticipación de $0.550 \pm 0.105$ aún deja margen a que
+        exista una señal débil ($\sim$0.55) real: distinguir "señal débil"
+        de "sin señal" requiere todavía más pacientes.
 \end{itemize}
 
-Distinguir entre ambas lecturas --- la pregunta de fondo del TFG --- requiere
-ampliar este piloto más allá de 40 pacientes (hay candidatos de sobra: 644
-incidentes y 7256 control en la cohorte completa de EMBED), lo que queda
-como trabajo inmediato (Capítulo~\ref{cap:conclusiones}).
+Eso sí, la tendencia entre las dos iteraciones del piloto (de $0.525 \pm
+0.219$ con 40 pacientes a $0.550 \pm 0.105$ con 99) es la de un AUC que se
+estabiliza en un valor bajo con varianza decreciente, no la de una señal
+fuerte emergiendo al crecer la muestra. Ampliar el piloto (hay candidatos
+de sobra: 644 incidentes y 7256 control en la cohorte completa de EMBED)
+sigue siendo el siguiente paso natural (Capítulo~\ref{cap:conclusiones}).
 
 \section{Discusión}
 \label{sec:discusion}
-Aunque los resultados sobre datos sintéticos no permiten extraer conclusiones
-clínicas, sí permiten adelantar algunas observaciones metodológicas relevantes
-para la fase de experimentación real:
+Las observaciones principales de este capítulo, todas sobre datos reales:
 
 \begin{itemize}
-  \item \textbf{El \textit{pipeline} es funcionalmente correcto de extremo a
-        extremo y con el descriptor topológico completo}: la partición por
-        paciente, el preprocesado, la extracción de imágenes de persistencia
-        H0+H1 y la evaluación con métricas clínicas se ejecutan sin errores y
-        producen resultados coherentes (AUC $\approx 0.83$--$0.84$).
-  \item \textbf{La dimensión H1 aporta información que la curva de Betti-0 no
-        captura}: al pasar del descriptor de respaldo (Betti-0, solo H0,
-        $24$ características) a la imagen de persistencia completa (H0+H1,
-        $288$ características), la sensibilidad del \textit{random forest}
-        mejora de $0.60$ a $0.80$ sobre el mismo conjunto sintético. Es una
-        observación preliminar (mismo generador, tamaño de muestra pequeño),
-        pero apunta en la dirección esperada: los ciclos/agujeros (H1) deberían
-        ser relevantes para masas espiculadas y distribuciones de
-        microcalcificaciones.
-  \item \textbf{La sensibilidad sigue siendo sensible al tamaño de muestra}:
-        con solo $120$ imágenes sintéticas, la sensibilidad de la SVM
-        ($0.60$) queda por debajo de su especificidad ($0.73$), lo que
-        anticipa la necesidad de vigilar el desbalance de clases y el tamaño
-        muestral al pasar a datos reales (CBIS-DDSM tiene más casos benignos
-        que malignos).
-  \item \textbf{Comparación con \textit{deep learning} y fusión}: ya
-        ejecutada sobre el piloto real, ampliado a 70 pacientes
-        (Sección~\ref{sec:resultados-reales}): la CNN sola y la fusión
+  \item \textbf{El \textit{pipeline} completo funciona de extremo a extremo
+        sobre datos reales}: partición por paciente, preprocesado,
+        extracción de imágenes de persistencia H0+H1 y evaluación con
+        métricas clínicas, tanto sobre CBIS-DDSM (clasificación) como sobre
+        EMBED (longitudinal).
+  \item \textbf{El tamaño de muestra manda}: la lección metodológica más
+        repetida del capítulo. El CV-AUC de TDA pasó de $0.850 \pm 0.143$
+        (30 pacientes) a $0.658 \pm 0.134$ (70); un test de $n=8$ llegó a
+        dar AUC $0.000$ por puro azar; y el "mejor resultado" de la fusión
+        con el piloto pequeño ($0.967$) se desinfló a $0.819$ al ampliar.
+        Ningún número de un piloto pequeño debe tomarse al pie de la letra
+        sin su intervalo de confianza.
+  \item \textbf{Clasificación aislada (E1--E3)}: la CNN sola y la fusión
         quedan prácticamente empatadas (AUC por CV $0.827$ y $0.819$ tras
-        ajustar hiperparámetros), ambas claramente por delante de TDA en
-        solitario ($0.658$), al contrario de lo anticipado aquí con datos
-        sintéticos (donde TDA solo ya superaba el azar con holgura). El
-        tamaño de piloto sigue siendo insuficiente para afirmar si la
-        fusión aporta una mejora real sobre la CNN sola (issue \#82).
+        ajustar hiperparámetros por vía), ambas claramente por delante de
+        TDA en solitario ($0.658$). Con el piloto actual no se puede
+        afirmar que la fusión aporte una mejora real sobre la CNN sola
+        (issue \#82). El resultado de TDA es además robusto a la elección
+        de la función de filtración (intensidad vs.\ transformada de
+        distancia: mismo CV-AUC medio, $0.658$, issue \#77).
+  \item \textbf{Interpretabilidad}: los cuatro métodos (Grad-CAM, región
+        topológica dominante, SHAP, LIME) apenas coinciden entre sí (IoU
+        $0.07$--$0.14$, $n=122$), y un test pareado confirma que TDA no se
+        comporta distinto de los métodos basados en píxeles en ese aspecto;
+        la ventaja real de TDA es el coste ($300\times$ más rápida que
+        SHAP, sin necesitar CNN).
+  \item \textbf{Hipótesis longitudinal (O8), el resultado central}: sobre
+        99 pacientes reales de EMBED, la deriva topológica entre
+        exploraciones es una señal robusta ($0.805 \pm 0.060$), pero la
+        anticipación pura --- la pregunta clínicamente valiosa --- se
+        mantiene cerca del azar ($0.550 \pm 0.105$), con una tendencia
+        entre iteraciones del piloto que apunta a señal débil o ausente
+        con el descriptor actual, más que a una señal fuerte oculta por el
+        ruido de muestra.
 \end{itemize}
 
-Las observaciones anteriores, obtenidas con datos sintéticos antes de tener
-el conjunto real, se contrastan con los resultados reales en la
-Sección~\ref{sec:resultados-reales}; las limitaciones específicas de ambas
-fases (tamaño de muestra del piloto real, naturaleza sintética de la
-validación longitudinal) se retoman en el Capítulo~\ref{cap:conclusiones}
-junto con las limitaciones generales del trabajo.
+Las limitaciones de estos resultados (tamaño de los pilotos frente a las
+cohortes completas disponibles, una sola vista por paciente en el piloto
+longitudinal, ausencia de validación clínica) se retoman en el
+Capítulo~\ref{cap:conclusiones} junto con las limitaciones generales del
+trabajo.

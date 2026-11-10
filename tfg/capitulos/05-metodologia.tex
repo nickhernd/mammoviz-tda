@@ -337,81 +337,29 @@ de test, dado el tamaño reducido de las cohortes disponibles (mismo criterio
 de robustez estadística aplicado en la clasificación aislada, ver
 Capítulo~\ref{cap:resultados}).
 
-\subsection{Validación de la metodología con datos sintéticos}
+\subsection{Comprobación de ingeniería previa (datos sintéticos, sin resultados)}
 \label{subsec:validacion-sintetica}
-Antes de poder evaluar la hipótesis sobre un dataset longitudinal real (ver
-limitación de acceso más abajo), es necesario comprobar que el
-\textit{pipeline} de comparación es capaz de detectar la señal cuando esta
-existe. Para ello se implementó un generador sintético
-(\texttt{scripts/\allowbreak synthetic\_longitudinal\_validation.py}) que
-produce, para cada paciente:
-
-\begin{itemize}
-  \item \textbf{Casos control}: dos imágenes de fondo con textura y ruido
-        similares a una mamografía, sin ninguna lesión, en $t-1$ y en $t$.
-  \item \textbf{Casos incidentes}: en $t-1$, la misma textura de fondo con un
-        \textbf{precursor sutil} (una lesión de bordes espiculados, radio y
-        amplitud de contraste pequeños); en $t$, la misma lesión pero
-        crecida y más prominente (mayor radio y amplitud), simulando la
-        progresión hasta el momento del diagnóstico.
-\end{itemize}
-
-Con 60 pacientes por clase (parámetros por defecto del script, semilla fija
-para reproducibilidad) se obtuvo:
-
-\begin{table}[H]
-\centering
-\caption{AUC por validación cruzada (5-fold) de cada señal longitudinal
-sobre datos sintéticos.}
-\label{tab:longitudinal-sintetico}
-\begin{tabular}{@{}lc@{}}
-\toprule
-\textbf{Señal} & \textbf{AUC (CV, media $\pm$ desv.)} \\
-\midrule
-Anticipación (solo $D_{t-1}$)        & $0.871 \pm 0.089$ \\
-Deriva ($d(D_{t-1}, D_t)$)           & $0.937 \pm 0.063$ \\
-Combinada                             & $0.924 \pm 0.055$ \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-Estos resultados confirman que, cuando existe un precursor topológico real
-en $t-1$, el \textit{pipeline} es capaz de recuperar esa señal muy por
-encima del azar, validando la metodología antes de aplicarla a datos reales.
-
-\subsection{Análisis de sensibilidad: anticipación frente a deriva}
-Un hallazgo metodológico relevante surge de un barrido de sensibilidad
-(\texttt{--sweep}) que reduce progresivamente la amplitud del precursor en
-$t-1$ (de $0.25$ a $0.03$, manteniendo fija la lesión madura en $t$), es
-decir, simulando precursores cada vez más sutiles y clínicamente más
-difíciles de anticipar:
-
-\begin{itemize}
-  \item El AUC de \textbf{anticipación} degrada de forma clara y monótona,
-        de $0.871$ (precursor claro) a $0.510$ (precursor casi
-        indistinguible del fondo) --- el comportamiento esperado de una
-        señal que de verdad depende de la sutileza del precursor.
-  \item El AUC de \textbf{deriva}, en cambio, se mantiene prácticamente
-        constante ($\approx 0.95$--$0.96$) en todo el barrido,
-        \textbf{independientemente} de cuán sutil sea el precursor en
-        $t-1$.
-\end{itemize}
-
-La razón es que la deriva mide sobre todo el \textbf{crecimiento} de la
-lesión entre $t-1$ y $t$ (que en el generador sintético es siempre grande,
-por construcción), no la \textbf{presencia de un precursor anticipable}. Es
-decir, la deriva es un buen detector de ``algo cambió'', pero no sirve para
-responder a la pregunta central del TFG (``¿ya se podía anticipar antes del
-diagnóstico?''); para eso, la señal relevante es la de \textbf{anticipación}
-sobre $D_{t-1}$ en solitario. Este resultado condiciona qué señal se
-prioriza al evaluar la hipótesis sobre datos reales (Capítulo~\ref{cap:resultados}).
+Antes de disponer de datos longitudinales reales, la mecánica del
+\textit{pipeline} de comparación (generación de pares $(t-1, t)$, cálculo
+de ambas señales, clasificación incidente/control) se comprobó sobre datos
+sintéticos controlados
+(\texttt{scripts/synthetic\_longitudinal\_validation.py}, que se conserva
+en el repositorio con un barrido de sensibilidad ejecutable con
+\texttt{--sweep}). De esa fase de diseño se retiene una única observación
+cualitativa, relevante para interpretar los resultados reales: \textbf{la
+deriva y la anticipación no miden lo mismo}. La deriva responde sobre todo
+al crecimiento de la lesión entre $t-1$ y $t$ (grande casi por definición
+en los casos incidentes), mientras que la anticipación depende de que
+exista un precursor detectable en $t-1$; un \textit{pipeline} puede tener
+deriva alta con anticipación nula. Los resultados cuantitativos de este
+trabajo son exclusivamente los obtenidos sobre datos reales
+(Capítulo~\ref{cap:resultados}).
 
 \subsection{Acceso a datos longitudinales reales}
 \label{subsec:acceso-longitudinal}
-La validación de la Sección~\ref{subsec:validacion-sintetica} usa datos
-sintéticos porque, durante la mayor parte del desarrollo de este TFG, no
-hubo acceso a ningún dataset longitudinal público de mamografía con
-descarga directa. Se identificaron dos candidatos:
+Durante la mayor parte del desarrollo de este TFG no hubo acceso a ningún
+dataset longitudinal público de mamografía con descarga directa. Se
+identificaron dos candidatos:
 
 \begin{quote}
 \textit{CSAW-CC}~\cite{dataset_csawcc}, cohorte real del Karolinska
@@ -453,7 +401,7 @@ $H_1$ (frente a decenas en las imágenes sintéticas de la
 Sección~\ref{subsec:validacion-sintetica}), y \texttt{persim.bottleneck}
 escala muy mal con el número de puntos: se midió $\sim$121\,s para un solo
 par de diagramas reales sin recortar, lo que habría hecho inviable
-(horas) evaluar un piloto de 40 pacientes. La solución --- estándar en
+(horas) evaluar incluso un piloto pequeño. La solución --- estándar en
 TDA --- es quedarse con los \texttt{max\_points} puntos de mayor
 persistencia de cada diagrama antes de calcular la distancia bottleneck
 (\texttt{synthetic\_longitudinal\_validation.py:\_diagram\_by\_dim}),
