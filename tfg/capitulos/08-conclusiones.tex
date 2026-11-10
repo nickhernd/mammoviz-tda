@@ -61,10 +61,15 @@ longitudinal real. En relación con los objetivos específicos:
         deriva no es sensible a la sutileza del precursor mientras que la
         anticipación sí lo es --- un hallazgo metodológico que condiciona
         qué señal priorizar sobre datos reales (O7).
-  \item Queda \textbf{pendiente} la evaluación de la hipótesis de detección
-        anticipada sobre datos longitudinales reales, bloqueada por el
-        acceso a CSAW-CC o EMBED, ambos bajo solicitud formal de acceso, no
-        descarga directa (O8).
+  \item Se concedió acceso a EMBED durante la redacción de esta memoria, y
+        se ha evaluado la hipótesis de detección anticipada sobre un
+        \textbf{primer piloto real de 40 pacientes} (20 incidentes, 20
+        control): AUC por CV de $0.688$ (deriva) y $0.525$ (anticipación
+        pura), consistente con el hallazgo ya anticipado sobre datos
+        sintéticos (Sección~\ref{sec:resultados-embed}). Es un resultado
+        preliminar y exploratorio, no concluyente: queda pendiente ampliar
+        el piloto más allá de 40 pacientes, para lo que ya hay acceso y
+        candidatos de sobra (644 incidentes, 7256 control) (O8).
 \end{itemize}
 
 \section{Grado de cumplimiento de los objetivos}
@@ -102,30 +107,38 @@ O6 & Cumplido             & Visualizaciones implementadas y aplicadas a casos
 O7 & Cumplido             & Metodología de comparación longitudinal diseñada
                             y validada con datos sintéticos
                             (Sección~\ref{sec:metodologia-longitudinal}). \\
-O8 & Pendiente            & Bloqueado por el acceso a un dataset longitudinal
-                            real (CSAW-CC/EMBED, issue \#92); es el objetivo
-                            más importante y el único que depende de un
-                            trámite externo, no de trabajo de implementación. \\
+O8 & Cumplido (preliminar) & Acceso a EMBED concedido; evaluación sobre un
+                            primer piloto real de 40 pacientes completada
+                            (AUC deriva $0.688$, anticipación $0.525$,
+                            Sección~\ref{sec:resultados-embed}). Es el
+                            objetivo más importante del TFG y el resultado
+                            es ya real, pero preliminar: falta ampliar el
+                            piloto para que sea concluyente. \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 La principal desviación respecto a la planificación inicial ya no es
-logística (la descarga de CBIS-DDSM, que motivó el retraso inicial, está
-resuelta y automatizada), sino de \textbf{alcance}: la hipótesis central del
-trabajo (O8) depende de un recurso --- un dataset longitudinal real --- cuyo
-acceso no está bajo el control directo del proyecto, y cuyo trámite de
-solicitud formal sigue abierto (issue \#92).
+logística ni de acceso (la descarga de CBIS-DDSM está resuelta y
+automatizada, y el acceso a EMBED se concedió durante la redacción de esta
+memoria), sino de \textbf{tamaño de piloto}: el primer resultado real sobre
+la hipótesis central del trabajo (O8) ya existe, pero sobre solo 40
+pacientes de los más de 900 candidatos disponibles en EMBED, así que no es
+todavía una validación concluyente.
 
 \section{Limitaciones}
 Se identifican las siguientes limitaciones del trabajo en su estado actual:
 
 \begin{itemize}
-  \item \textbf{La hipótesis principal no se ha evaluado todavía sobre datos
-        reales.} La validación de la Sección~\ref{sec:metodologia-longitudinal}
-        usa un generador sintético de precursores topológicos; confirma que
-        la metodología de comparación funciona cuando la señal existe, pero
-        no dice nada sobre si existe en mamografías reales.
+  \item \textbf{El piloto real sobre la hipótesis principal es todavía muy
+        pequeño.} 40 pacientes (Sección~\ref{sec:resultados-embed}) es
+        suficiente para un primer resultado exploratorio (y, de hecho, ese
+        resultado es consistente con lo anticipado sobre datos sintéticos),
+        pero demasiado pequeño para ser concluyente: las desviaciones
+        típicas del AUC llegan a $\pm 0.22$. No se puede todavía distinguir
+        si el AUC de anticipación cercano al azar ($0.525$) refleja que el
+        precursor real es muy sutil o que el tamaño de muestra es
+        insuficiente para detectarlo.
   \item \textbf{Tamaño del piloto real.} 70 pacientes (101 casos de
         entrenamiento, 21 de test tras la partición por paciente) ya
         permite estimaciones más estables que el piloto inicial de 30
@@ -150,14 +163,17 @@ Se identifican las siguientes limitaciones del trabajo en su estado actual:
 \end{itemize}
 
 \section{Trabajo futuro}
-A corto plazo, para completar el objetivo O8 (el único pendiente):
+A corto plazo, para consolidar el objetivo O8 (ya con un primer resultado
+real, pero preliminar):
 \begin{itemize}
-  \item Completar la solicitud formal de acceso a CSAW-CC o EMBED (issue
-        \#92) y, en cuanto se conceda, repetir sobre datos reales la
-        validación longitudinal ya hecha con datos sintéticos
-        (Sección~\ref{sec:metodologia-longitudinal}), priorizando la señal
-        de \textbf{anticipación} sobre la de \textbf{deriva} según el
-        hallazgo de sensibilidad de esa misma sección.
+  \item Ampliar el piloto real de EMBED más allá de 40 pacientes (hay 644
+        incidentes y 7256 control disponibles en la cohorte completa, issue
+        \#92) para reducir la varianza del AUC de la
+        Tabla~\ref{tab:embed-resultados} y poder distinguir si la señal de
+        anticipación mejora con más datos o se mantiene cerca del azar.
+  \item Solicitar también acceso a CSAW-CC como fuente adicional/cruzada,
+        ya que no hay coste en tenerlo como respaldo (ver
+        \texttt{docs/acceso\_datasets\_longitudinales.pdf}).
   \item Seguir ampliando el piloto real de CBIS-DDSM más allá de 70
         pacientes (issue \#82) para reducir aún más la varianza de las
         métricas de la Tabla~\ref{tab:resultados} e incorporar los casos de

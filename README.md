@@ -61,7 +61,9 @@ mammoviz-tda/
 │   ├── train_cnn.py             #   Entrenamiento de la CNN de referencia (PyTorch)
 │   ├── fuse_and_evaluate.py     #   Comparación TDA vs. CNN vs. fusión (+ --tune por vía)
 │   ├── explainability_benchmark.py  # Grad-CAM vs. región TDA vs. SHAP vs. LIME
-│   └── synthetic_longitudinal_validation.py  # Validación de la hipótesis con datos sintéticos
+│   ├── synthetic_longitudinal_validation.py  # Validación de la hipótesis con datos sintéticos
+│   ├── download_embed_longitudinal.py  # Descarga del piloto longitudinal REAL (EMBED)
+│   └── embed_longitudinal_evaluation.py  # Evalúa O7/O8 sobre el piloto real de EMBED
 ├── notebooks/                   # Entorno de trabajo interactivo (ver docs/guia_uso.pdf)
 ├── bib/                         # Bibliografía en PDF
 ├── docs/
@@ -109,6 +111,26 @@ pip install -r requirements.txt
 > proyecto lo corrige con una **partición estricta por paciente**
 > (`src/data.py:split_by_patient`), de modo que ninguna imagen de un paciente
 > aparece en dos particiones distintas.
+
+## Datos longitudinales (EMBED)
+
+Para la hipótesis principal (O7/O8) se usa [EMBED](https://github.com/Emory-HITI/EMBED_Open_Data),
+de acceso controlado (ver `docs/acceso_datasets_longitudinales.pdf` para
+cómo solicitarlo). Con el acceso concedido:
+
+1. Configura `~/.aws/credentials` con el perfil que te den (formato
+   `[emory-embed]` + `aws_access_key_id`/`aws_secret_access_key`). **Nunca
+   subas este fichero ni lo pegues en ningún sitio versionado.**
+2. Descarga las tablas de metadatos (una vez, ~210 MB) y el piloto
+   longitudinal:
+   ```bash
+   mkdir -p data/embed
+   python -c "import boto3; s = boto3.Session(profile_name='emory-embed', region_name='us-west-2'); c = s.client('s3'); [c.download_file('embed-dataset-open', f'tables/{f}', f'data/embed/{f.replace(\"EMBED_OpenData_\", \"\")}') for f in ['EMBED_OpenData_clinical.csv', 'EMBED_OpenData_metadata_reduced.csv']]"
+   python scripts/download_embed_longitudinal.py --n-incident 20 --n-control 20
+   python scripts/embed_longitudinal_evaluation.py
+   ```
+`data/embed/` está en `.gitignore` (igual que `data/csv/`/`data/images/`):
+las imágenes y los metadatos de EMBED no se versionan.
 
 ## Uso rápido
 
@@ -171,8 +193,14 @@ latexmk -pdf main.tex     # requiere una distribución LaTeX + biber
 - [x] Metodología longitudinal diseñada y **validada con datos sintéticos**
       (AUC anticipación 0.871, deriva 0.937 — ver `tfg/capitulos/05-metodologia.tex`)
 - [x] Notebook interactivo + guía de uso en PDF (`docs/guia_uso.pdf`)
-- [ ] Acceso a un dataset longitudinal real (CSAW-CC o EMBED) — solicitud formal pendiente, issue [#92](../../issues/92)
-- [ ] Evaluación de la hipótesis de detección anticipada sobre datos longitudinales reales
+- [x] Acceso a EMBED concedido (cohorte real: 23253 pacientes, 14789 con
+      2+ exploraciones; 644 incidentes + 7256 control identificados)
+- [x] Primera evaluación REAL (no sintética) de la hipótesis de detección
+      anticipada: piloto de 40 pacientes, AUC deriva 0.688, anticipación
+      0.525 — consistente con el hallazgo sintético, todavía preliminar
+      (`scripts/download_embed_longitudinal.py`, `scripts/embed_longitudinal_evaluation.py`)
+- [ ] Ampliar el piloto de EMBED más allá de 40 pacientes (hay 900+ candidatos)
+- [ ] Solicitar también acceso a CSAW-CC como fuente cruzada, issue [#92](../../issues/92)
 - [ ] Ampliación del piloto de CBIS-DDSM más allá de 70 pacientes
 - [ ] Visualizaciones finales para la memoria
 

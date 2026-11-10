@@ -455,6 +455,73 @@ topológicamente fundamentada prácticamente gratis en comparación con SHAP,
 y sin la dependencia de una CNN ya entrenada que tienen los otros tres
 métodos.
 
+\section{Evaluación real de la hipótesis longitudinal (EMBED, O8)}
+\label{sec:resultados-embed}
+Como se explica en la Sección~\ref{subsec:acceso-longitudinal}, durante la
+redacción de esta memoria se concedió acceso a EMBED. Se construyó un
+primer piloto longitudinal real con \texttt{scripts/download\_embed\_longitudinal.py}:
+para cada paciente seleccionado se descargan las dos exploraciones (t-1,
+t) de la misma vista (lateralidad + proyección, para que la comparación
+sea sobre la misma región anatómica), filtrando a imágenes de tipo
+\texttt{2D} (mamografía digital real, no el \textit{C-view} sintetizado de
+tomosíntesis). El piloto tiene \textbf{40 pacientes}: 20 incidentes
+(primera exploración Normal/Benigna, exploración posterior
+Sospechosa/Maligna) y 20 control (todas sus exploraciones Normal/Benigna),
+seleccionados aleatoriamente (semilla fija) de los 644 y 7256 candidatos
+respectivamente identificados en la cohorte completa.
+
+\begin{table}[H]
+\centering
+\caption{AUC por validación cruzada (5-fold) de cada señal longitudinal
+sobre el piloto REAL de EMBED (\texttt{scripts/embed\_longitudinal\_evaluation.py},
+$n=40$ pacientes).}
+\label{tab:embed-resultados}
+\begin{tabular}{@{}lc@{}}
+\toprule
+\textbf{Señal} & \textbf{AUC (CV, media $\pm$ desv.)} \\
+\midrule
+Anticipación (solo $D_{t-1}$)        & $0.525 \pm 0.219$ \\
+Deriva ($d(D_{t-1}, D_t)$)           & $0.688 \pm 0.158$ \\
+Combinada                             & $0.656 \pm 0.196$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Aviso metodológico, antes de interpretar estos números.} Con
+$40$ pacientes este es un \textbf{piloto exploratorio}, no un resultado
+concluyente --- el mismo aviso repetido en todo este capítulo sobre
+pilotos pequeños aplica aquí con más fuerza todavía, al ser la primera vez
+que se evalúa la hipótesis principal del TFG sobre datos reales. Las
+desviaciones típicas (hasta $\pm 0.22$) son grandes en relación a las
+propias medias.
+
+Dicho esto, el patrón de resultados es \textbf{consistente con el hallazgo
+ya reportado sobre datos sintéticos} (Sección~\ref{subsec:validacion-sintetica}):
+la señal de \textbf{deriva} ($0.688$) supera claramente al azar, mientras
+que la señal de \textbf{anticipación pura} ($0.525$) está muy cerca del
+azar. Esto es exactamente lo que predecía el análisis de sensibilidad
+sintético: la deriva mide sobre todo "cuánto cambió la topología entre
+t-1 y t" (que casi por definición es grande en los casos incidentes, donde
+en t ya hay una lesión diagnosticada), mientras que la anticipación mide
+si ya había señal \textbf{antes} del diagnóstico --- la pregunta
+clínicamente valiosa, y la más difícil. Dos lecturas posibles, no
+excluyentes entre sí, y que este piloto no permite distinguir:
+
+\begin{itemize}
+  \item Los precursores topológicos reales son, en efecto, sutiles (como
+        el extremo de baja amplitud del barrido de sensibilidad sintético,
+        donde el AUC de anticipación caía hasta $0.51$), y haría falta un
+        descriptor más sensible o un piloto más grande para detectarlos.
+  \item Con solo $40$ pacientes, el AUC de anticipación de $0.525$ es
+        simplemente indistinguible del azar por tamaño de muestra, no
+        necesariamente porque la señal no exista.
+\end{itemize}
+
+Distinguir entre ambas lecturas --- la pregunta de fondo del TFG --- requiere
+ampliar este piloto más allá de 40 pacientes (hay candidatos de sobra: 644
+incidentes y 7256 control en la cohorte completa de EMBED), lo que queda
+como trabajo inmediato (Capítulo~\ref{cap:conclusiones}).
+
 \section{Discusión}
 \label{sec:discusion}
 Aunque los resultados sobre datos sintéticos no permiten extraer conclusiones
