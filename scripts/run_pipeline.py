@@ -99,7 +99,7 @@ def _load_case_images(row) -> tuple[np.ndarray, np.ndarray | None] | None:
     return full_image, mask
 
 
-def build_dataset(df, n_bins: int = 20):
+def build_dataset(df, n_bins: int = 20, filtration: str = "intensity"):
     """Preprocesa + extrae features topologicas de todos los casos disponibles."""
     features, labels, kept_rows = [], [], []
     skipped = 0
@@ -110,7 +110,7 @@ def build_dataset(df, n_bins: int = 20):
             continue
         full_image, mask = loaded
         img = preprocess(full_image, mask=mask)
-        diagram = persistence_diagram(img)
+        diagram = persistence_diagram(img, filtration=filtration)
         vector = persistence_image_vector(diagram, n_bins=n_bins)[0]
         features.append(vector)
         labels.append(row["label"])
@@ -168,6 +168,12 @@ def main() -> None:
                          help="Ajustar hiperparametros del clasificador por GridSearchCV sobre "
                               "el train actual, en vez de usar los valores por defecto de "
                               "src/models.py (ver issue #77).")
+    parser.add_argument("--filtration", choices=["intensity", "distance_transform"],
+                         default="intensity",
+                         help="Funcion de filtracion para la homologia persistente (issue #77): "
+                              "'intensity' (altura = intensidad del pixel, por defecto) o "
+                              "'distance_transform' (altura = distancia al fondo, sensible a la "
+                              "forma/grosor de las regiones mas que a su brillo).")
     args = parser.parse_args()
 
     print(f"Backend TDA activo: {backend()}")
@@ -180,10 +186,11 @@ def main() -> None:
     partitions = split_by_patient(df)
 
     print("Cargando imagenes DICOM reales + extrayendo descriptores topologicos...")
+    print(f"  (filtracion: {args.filtration})")
     print("  [train]")
-    X_train, y_train, _ = build_dataset(partitions["train"], n_bins=args.n_bins)
+    X_train, y_train, _ = build_dataset(partitions["train"], n_bins=args.n_bins, filtration=args.filtration)
     print("  [test]")
-    X_test, y_test, test_rows = build_dataset(partitions["test"], n_bins=args.n_bins)
+    X_test, y_test, test_rows = build_dataset(partitions["test"], n_bins=args.n_bins, filtration=args.filtration)
 
     print(f"\nCasos usables: {len(X_train)} train, {len(X_test)} test.")
     if len(X_train) == 0 or len(X_test) == 0:

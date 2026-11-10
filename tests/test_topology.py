@@ -88,3 +88,41 @@ def test_extract_features_unknown_method_raises_value_error(monkeypatch):
 
     with pytest.raises(ValueError):
         topology.extract_features(np.zeros((8, 8)), method="no-existe")
+
+
+# ---------------------------------------------------------------------------
+# Filtracion alternativa por transformada de distancia (issue #77)
+# ---------------------------------------------------------------------------
+
+def test_apply_filtration_rejects_unknown_name():
+    with pytest.raises(ValueError):
+        topology._apply_filtration(np.zeros((8, 8)), "no-existe")
+
+
+def test_distance_transform_filtration_is_negative_and_normalized():
+    rng = np.random.default_rng(0)
+    image = rng.random((32, 32))
+    filtered = topology._distance_transform_filtration(image)
+    assert filtered.shape == image.shape
+    assert filtered.min() >= -1.0 - 1e-9
+    assert filtered.max() <= 0.0 + 1e-9
+
+
+def test_distance_transform_filtration_peaks_at_thick_region_centers():
+    # Un cuadrado "brillante" sobre fondo oscuro: el centro del cuadrado debe
+    # ser el valor MAS NEGATIVO (nace primero en la filtracion por sublevel).
+    image = np.zeros((32, 32))
+    image[8:24, 8:24] = 1.0
+    filtered = topology._distance_transform_filtration(image)
+    center = filtered[16, 16]
+    assert center == filtered.min()
+    assert filtered[0, 0] == 0.0  # fondo: distancia cero
+
+
+@requires_backend
+def test_persistence_diagram_distance_transform_filtration_runs():
+    rng = np.random.default_rng(1)
+    image = rng.random((16, 16))
+    diagram = topology.persistence_diagram(image, filtration="distance_transform")
+    assert diagram.ndim == 3
+    assert diagram.shape[2] == 3
