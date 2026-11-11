@@ -127,15 +127,14 @@ todavía una validación concluyente.
 Se identifican las siguientes limitaciones del trabajo en su estado actual:
 
 \begin{itemize}
-  \item \textbf{El piloto real sobre la hipótesis principal es todavía muy
-        pequeño.} 40 pacientes (Sección~\ref{sec:resultados-embed}) es
-        suficiente para un primer resultado exploratorio (y, de hecho, ese
-        resultado es consistente con lo anticipado sobre datos sintéticos),
-        pero demasiado pequeño para ser concluyente: las desviaciones
-        típicas del AUC llegan a $\pm 0.22$. No se puede todavía distinguir
-        si el AUC de anticipación cercano al azar ($0.525$) refleja que el
-        precursor real es muy sutil o que el tamaño de muestra es
-        insuficiente para detectarlo.
+  \item \textbf{El piloto real sobre la hipótesis principal es todavía
+        pequeño.} 99 pacientes (Sección~\ref{sec:resultados-embed}) dan ya
+        una señal de deriva robusta ($0.805 \pm 0.060$), pero no bastan
+        para cerrar la pregunta central: el AUC de anticipación
+        ($0.550 \pm 0.105$) aún no permite distinguir con confianza entre
+        ``señal débil real'' y ``sin señal''. Además, el piloto usa una
+        sola vista (lateralidad + proyección) por paciente, sin registro
+        espacial entre exploraciones de distinta fecha.
   \item \textbf{Tamaño del piloto real.} 70 pacientes (101 casos de
         entrenamiento, 21 de test tras la partición por paciente) ya
         permite estimaciones más estables que el piloto inicial de 30
