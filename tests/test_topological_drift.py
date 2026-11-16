@@ -1,23 +1,20 @@
-"""Tests de scripts/synthetic_longitudinal_validation.py: sobre todo, el
-recorte por ``max_points`` de _diagram_by_dim/topological_drift (issue #94),
-necesario para que la distancia bottleneck sea tratable sobre diagramas
-reales (miles de puntos) en vez de solo sobre los sinteticos de este modulo
-(decenas de puntos).
+"""Tests de src/topology.py:diagram_points/topological_drift (señal de
+deriva longitudinal), en especial el recorte por ``max_points`` que hace
+tratable la distancia bottleneck sobre diagramas de mamografias reales
+(miles de puntos).
+
+Los diagramas de estos tests son arrays pequeños construidos a mano para
+comprobar el CODIGO; no son datos del estudio (todos los resultados del TFG
+son sobre mamografias reales de CBIS-DDSM y EMBED).
 """
 from __future__ import annotations
-
-import sys
-from pathlib import Path
 
 import numpy as np
 import pytest
 
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "scripts"))
+pytest.importorskip("persim", reason="persim no instalado en este entorno")
 
-persim = pytest.importorskip("persim", reason="persim no instalado en este entorno")
-
-from synthetic_longitudinal_validation import _diagram_by_dim, topological_drift  # noqa: E402
+from src.topology import diagram_points as _diagram_by_dim, topological_drift  # noqa: E402
 
 
 def _make_diagram(n_points: int, dim: int, seed: int = 0) -> np.ndarray:

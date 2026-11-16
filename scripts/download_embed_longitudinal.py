@@ -30,6 +30,7 @@ import argparse
 import sys
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -112,13 +113,135 @@ def _matching_view(metadata: pd.DataFrame, acc_t0, acc_t1) -> dict | None:
     return {"view": view, "path_t0": row_t0["anon_dicom_path"], "path_t1": row_t1["anon_dicom_path"]}
 
 
+def select_interval_matched_controls(
+    manifest: pd.DataFrame, per_study: pd.DataFrame, metadata: pd.DataFrame,
+    caliper_days: int = 90, seed: int = 42,
+) -> pd.DataFrame:
+    """Diseño caso-control emparejado por intervalo (corrige el sesgo del
+    diseño original).
+
+    En el diseño original, los controles usaban sus dos PRIMERAS
+    exploraciones (consecutivas, mediana ~420 dias) y los incidentes la
+    primera normal y la primera maligna (mediana ~1100 dias). Como la deriva
+    topologica crece con el tiempo en ambos grupos, el intervalo por si solo
+    distinguia las clases (AUC ~0.75 sin mirar ninguna imagen).
+
+    Aqui, para CADA incidente del manifiesto se busca en el pool completo de
+    controles (pacientes con 2+ exploraciones, todas Normal/Benigno) un par
+    (primera exploracion, exploracion posterior) cuyo intervalo este a
+    ``caliper_days`` del intervalo del incidente, con una vista 2D comun a
+    ambas exploraciones (preferentemente la misma vista que el incidente).
+    Cada paciente control se usa como mucho una vez.
+
+    Devuelve un DataFrame de controles con las columnas del manifiesto mas
+    ``s3_t0``/``s3_t1`` (claves a descargar) y ``matched_to`` (el incidente
+    al que empareja).
+    """
+    rng = np.random.default_rng(seed)
+    dates = per_study.set_index(["empi_anon", "acc_anon"])["study_date"]
+    incidents = manifest[manifest["kind"] == "incidente"].copy()
+    incidents["interval"] = [
+        (dates[(r.empi_anon, r.acc_t1)] - dates[(r.empi_anon, r.acc_t0)]).days
+        for r in incidents.itertuples()
+    ]
+
+    pool_rows = []
+    for pid, grp in per_study.sort_values("study_date").groupby("empi_anon"):
+        if len(grp) < 2 or not grp["asses"].isin(NORMAL).all():
+            continue
+        first = grp.iloc[0]
+        for later in grp.iloc[1:].itertuples():
+            pool_rows.append((pid, first["acc_anon"], later.acc_anon,
+                              (later.study_date - first["study_date"]).days))
+    pool = pd.DataFrame(pool_rows, columns=["empi_anon", "acc_t0", "acc_t1", "interval"])
+
+    views: dict = {}
+    meta_2d = metadata[metadata["FinalImageType"] == "2D"]
+    for r in meta_2d.itertuples():
+        views.setdefault(r.acc_anon, {}).setdefault(
+            f"{r.ImageLateralityFinal}_{r.ViewPosition}", r.anon_dicom_path)
+
+    used: set = set()
+    out = []
+    for inc in incidents.sample(frac=1, random_state=seed).itertuples():
+        cand = pool[((pool["interval"] - inc.interval).abs() <= caliper_days)
+                    & ~pool["empi_anon"].isin(used)]
+        cand = cand.iloc[rng.permutation(len(cand))]
+        for c in cand.itertuples():
+            v0, v1 = views.get(c.acc_t0, {}), views.get(c.acc_t1, {})
+            common = set(v0) & set(v1)
+            if not common:
+                continue
+            if inc.view in common:
+                view = inc.view
+            else:
+                view = next((v for v in sorted(common) if v.endswith("_MLO")), sorted(common)[0])
+            used.add(c.empi_anon)
+            folder = f"data/embed/images/control_emparejado_{c.empi_anon}"
+            out.append({
+                "empi_anon": c.empi_anon, "kind": "control", "view": view,
+                "acc_t0": c.acc_t0, "acc_t1": c.acc_t1,
+                "path_t0": f"{folder}/t0_normal.dcm", "path_t1": f"{folder}/t1_posterior.dcm",
+                "s3_t0": v0[view], "s3_t1": v1[view], "matched_to": inc.empi_anon,
+            })
+            break
+    return pd.DataFrame(out)
+
+
+def _run_match_interval(args) -> None:
+    import boto3
+
+    manifest = pd.read_csv(EMBED_DIR / "longitudinal_pilot_manifest.csv")
+    if "acc_t0" not in manifest.columns:
+        raise SystemExit("El manifiesto no tiene acc_t0/acc_t1; vuelve a generarlo con la version actual del script.")
+    per_study = _load_per_study_assessment(EMBED_DIR / "clinical.csv")
+    metadata = pd.read_csv(
+        EMBED_DIR / "metadata_reduced.csv",
+        usecols=["acc_anon", "FinalImageType", "ImageLateralityFinal", "ViewPosition", "anon_dicom_path"],
+    )
+    controls = select_interval_matched_controls(manifest, per_study, metadata,
+                                                caliper_days=args.caliper_days, seed=args.seed)
+    n_inc = (manifest["kind"] == "incidente").sum()
+    print(f"Controles emparejados 1:1 por intervalo: {len(controls)}/{n_inc} incidentes "
+          f"(caliper {args.caliper_days} dias).", flush=True)
+
+    s3 = boto3.Session(profile_name=args.profile, region_name="us-west-2").client("s3")
+    for i, row in controls.reset_index(drop=True).iterrows():
+        for key, rel in [(row["s3_t0"], row["path_t0"]), (row["s3_t1"], row["path_t1"])]:
+            local = ROOT / rel
+            local.parent.mkdir(parents=True, exist_ok=True)
+            if not local.exists():
+                s3.download_file("embed-dataset-open", key, str(local))
+        print(f"  [{i + 1}/{len(controls)}] control {row['empi_anon']} ({row['view']}): OK", flush=True)
+
+    incidents = manifest[manifest["kind"] == "incidente"]
+    matched_ids = set(controls["matched_to"])
+    incidents = incidents[incidents["empi_anon"].isin(matched_ids)]
+    matched = pd.concat([incidents, controls.drop(columns=["s3_t0", "s3_t1"])], ignore_index=True)
+    out = EMBED_DIR / "longitudinal_pilot_manifest_matched.csv"
+    matched.to_csv(out, index=False)
+    print(f"Manifiesto emparejado ({len(incidents)} incidentes + {len(controls)} controles) "
+          f"guardado en {out}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--n-incident", type=int, default=20)
     parser.add_argument("--n-control", type=int, default=20)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--profile", default="emory-embed")
+    parser.add_argument("--match-interval", action="store_true",
+                        help="Diseño caso-control emparejado: para cada incidente del manifiesto "
+                             "existente busca en el pool completo de controles uno con el mismo "
+                             "intervalo t-1 -> t (+/- --caliper-days), y lo descarga. Corrige el "
+                             "sesgo de intervalo (ver select_interval_matched_controls). Escribe "
+                             "data/embed/longitudinal_pilot_manifest_matched.csv.")
+    parser.add_argument("--caliper-days", type=int, default=90)
     args = parser.parse_args()
+
+    if args.match_interval:
+        _run_match_interval(args)
+        return
 
     print("Cargando metadatos clinicos (fechas y BI-RADS por estudio)...")
     per_study = _load_per_study_assessment(EMBED_DIR / "clinical.csv")

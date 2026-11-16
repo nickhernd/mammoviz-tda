@@ -26,13 +26,10 @@ mantiene como base necesaria (clasificación benigno/maligno aislada) pero ya
 no es el objetivo central. Ver `tfg/capitulos/02-objetivos.tex` (objetivos
 O7/O8) y `tfg/capitulos/05-metodologia.tex`.
 
-**Bloqueo real y actual**: no existe todavía un dataset longitudinal público
-de descarga directa. Los dos candidatos identificados, CSAW-CC y EMBED,
-requieren solicitud formal de acceso (ver issue
-[#92](../../issues/92) y `tfg/bibliografia.bib`:
-`dataset_csawcc`, `jeong2021embed`). Mientras se tramita ese acceso, la
-metodología se valida con **datos sintéticos longitudinales**
-(`scripts/synthetic_longitudinal_validation.py`).
+**Datos**: todo el trabajo usa mamografías reales — CBIS-DDSM para la
+clasificación aislada y [EMBED](https://github.com/Emory-HITI/EMBED_Open_Data)
+(acceso controlado, concedido) para la hipótesis longitudinal. Ver issue
+[#92](../../issues/92).
 
 ## Objetivo (base necesaria)
 
@@ -61,7 +58,6 @@ mammoviz-tda/
 │   ├── train_cnn.py             #   Entrenamiento de la CNN de referencia (PyTorch)
 │   ├── fuse_and_evaluate.py     #   Comparación TDA vs. CNN vs. fusión (+ --tune por vía)
 │   ├── explainability_benchmark.py  # Grad-CAM vs. región TDA vs. SHAP vs. LIME
-│   ├── synthetic_longitudinal_validation.py  # Validación de la hipótesis con datos sintéticos
 │   ├── download_embed_longitudinal.py  # Descarga del piloto longitudinal REAL (EMBED)
 │   └── embed_longitudinal_evaluation.py  # Evalúa O7/O8 sobre el piloto real de EMBED
 ├── notebooks/                   # Entorno de trabajo interactivo (ver docs/guia_uso.pdf)
@@ -144,7 +140,7 @@ python scripts/train_cnn.py               # CNN de referencia (PyTorch, DenseNet
 python scripts/fuse_and_evaluate.py       # TDA vs. CNN vs. fusión, con CV-AUC
 python scripts/fuse_and_evaluate.py --tune --classifier svm   # + ajuste de hiperparametros por via
 python scripts/explainability_benchmark.py   # Grad-CAM vs. TDA vs. SHAP vs. LIME (linea secundaria)
-python scripts/synthetic_longitudinal_validation.py --sweep   # hipótesis principal, datos sintéticos
+python scripts/embed_longitudinal_evaluation.py   # hipótesis principal (EMBED, datos reales)
 ```
 
 Guarda en `results/` la matriz de confusión, un diagrama de persistencia de

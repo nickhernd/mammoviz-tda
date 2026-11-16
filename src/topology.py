@@ -303,3 +303,43 @@ def extract_features(
     if method == "stats":
         return persistence_statistics(diagrams)[0]
     raise ValueError(f"Metodo desconocido: {method}")
+
+
+# ---------------------------------------------------------------------------
+# Distancia entre diagramas: señal de "deriva" longitudinal (O7/O8)
+# ---------------------------------------------------------------------------
+
+def diagram_points(diagram: np.ndarray, dim: int, max_points: int | None = None) -> np.ndarray:
+    """Puntos (birth, death) de una dimension de un diagrama (1, n, 3), en el
+    formato (n, 2) que esperan persim.bottleneck/wasserstein.
+
+    ``max_points``: si se da, conserva solo los ``max_points`` puntos de mayor
+    persistencia (death - birth). Imprescindible en mamografias reales: sus
+    diagramas tienen ~1000-2000 puntos por dimension y persim.bottleneck
+    escala muy mal con eso (~121 s por par sin recortar, ~0.2 s con
+    max_points=100). Quedarse con los mas persistentes es la practica
+    habitual para descartar ruido topologico. Es una APROXIMACION: la
+    distancia bottleneck no es en general invariante a quitar puntos de baja
+    persistencia, aunque el cambio es pequeño cuando la señal dominante es de
+    alta persistencia (ver tests/test_topological_drift.py).
+    """
+    points = diagram[0]
+    points = points[points[:, 2] == dim][:, :2]
+    if max_points is not None and len(points) > max_points:
+        persistence = points[:, 1] - points[:, 0]
+        points = points[np.argsort(-persistence)[:max_points]]
+    return points
+
+
+def topological_drift(
+    diagram_a: np.ndarray, diagram_b: np.ndarray, max_points: int | None = None
+) -> tuple[float, float]:
+    """Distancia bottleneck (H0, H1) entre los diagramas de dos imagenes: la
+    señal de "deriva" entre la exploracion previa (t-1) y la posterior (t).
+    Pasar ``max_points`` (p.ej. 100) en datos reales, ver ``diagram_points``.
+    """
+    import persim
+
+    h0 = persim.bottleneck(diagram_points(diagram_a, 0, max_points), diagram_points(diagram_b, 0, max_points))
+    h1 = persim.bottleneck(diagram_points(diagram_a, 1, max_points), diagram_points(diagram_b, 1, max_points))
+    return h0, h1
