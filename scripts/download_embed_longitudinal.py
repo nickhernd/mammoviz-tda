@@ -154,6 +154,7 @@ def main() -> None:
                 s3.download_file(bucket, key, str(local))
         manifest.append({
             "empi_anon": pair["empi_anon"], "kind": pair["kind"], "view": match["view"],
+            "acc_t0": pair["acc_t0"], "acc_t1": pair["acc_t1"],
             "path_t0": str(local_t0.relative_to(ROOT)), "path_t1": str(local_t1.relative_to(ROOT)),
         })
         print(f"  [{len(manifest)}/{len(pairs)}] {pair['kind']} {pair['empi_anon']} ({match['view']}): OK")

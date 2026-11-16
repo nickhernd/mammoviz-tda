@@ -48,5 +48,9 @@ shap==0.54.1
 lime==0.2.0.1
 scikit-image==0.26.0
 
+# Estadistica (regresion logistica con p-valores para el analisis de
+# confusion por edad en notebooks/03_embed_longitudinal.ipynb, issue #95)
+statsmodels==0.15.0
+
 # Tests
 pytest==9.1.1

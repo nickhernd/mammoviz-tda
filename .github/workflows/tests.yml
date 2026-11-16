@@ -25,3 +25,26 @@ jobs:
 
       - name: Run tests
         run: pytest -v
+
+  # Issue #88: giotto-tda solo publica wheels hasta Python 3.12, asi que la
+  # validacion de equivalencia numerica entre backends (gudhi vs giotto-tda)
+  # no puede correr en el entorno de desarrollo (3.14). Este job la ejecuta
+  # en CI con 3.12, donde ambos backends se instalan a la vez.
+  backend-equivalence:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install both TDA backends
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy scipy scikit-learn giotto-tda gudhi persim pytest opencv-python pandas
+
+      - name: Run equivalence tests
+        run: pytest tests/test_backend_equivalence.py -v
