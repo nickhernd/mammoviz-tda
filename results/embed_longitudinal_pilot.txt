@@ -1,6 +1,6 @@
-Piloto longitudinal REAL (EMBED): 40 pacientes (20 incidentes, 20 control)
-AVISO: piloto exploratorio de 40 pacientes, no concluyente.
+Piloto longitudinal REAL (EMBED): 394 pacientes (194 incidentes, 200 control)
+AVISO: piloto exploratorio de 394 pacientes, no concluyente.
 
-auc_anticipacion: 0.5250 +/- 0.2187
-auc_deriva: 0.6875 +/- 0.1581
-auc_combinada: 0.6562 +/- 0.1957
+auc_anticipacion: 0.6268 +/- 0.0378
+auc_deriva: 0.7913 +/- 0.0245
+auc_combinada: 0.8328 +/- 0.0161
