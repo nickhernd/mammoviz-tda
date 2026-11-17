@@ -54,6 +54,7 @@ EMBED_DIR = ROOT / "data" / "embed"
 RESULTS_DIR = ROOT / "results"
 CACHE_PATH = EMBED_DIR / "lesion_site_cache.pkl"
 HALF = 256          # ventana de 512x512 px a resolucion completa
+SHIFT = 0.0         # 0 = sitio de la lesion; 0.5 = sitio alejado (control de localizacion)
 WINDOW_SIZE = 256   # reducida a 256x256 antes de la homologia
 BBOX_DOWNSAMPLE = 4
 N_BINS = 6
@@ -89,16 +90,30 @@ def lesion_rois(manifest: pd.DataFrame) -> dict[int, tuple[float, float]]:
     return rois
 
 
+def shift_point(row: float, col: float, bbox: tuple[int, int, int, int], shift: float) -> tuple[float, float]:
+    """Desplaza un punto ``shift`` veces la altura de la caja de la mama en
+    vertical, dando la vuelta dentro de la caja (misma profundidad, otra zona
+    de la mama). Con shift=0.5 se obtiene un sitio alejado de la lesion."""
+    r0, _, r1, _ = bbox
+    h = max(r1 - r0, 1)
+    return r0 + (((row - r0) / h + shift) % 1.0) * h, col
+
+
 def pair_site_features(path_t0: Path, path_t1: Path, roi_t1_ref: tuple[float, float],
-                       bbox_ref: tuple[int, int, int, int] | None, half: int = HALF) -> dict:
+                       bbox_ref: tuple[int, int, int, int] | None, half: int = HALF,
+                       shift: float = 0.0) -> dict:
     """Ventanas en el sitio de la lesion de t-1 y t de UNA paciente.
 
     ``roi_t1_ref`` es el centro de la lesion en la imagen t del incidente y
     ``bbox_ref`` la caja de la mama de esa imagen (None si la paciente es el
-    propio incidente: entonces la referencia es su propia t)."""
+    propio incidente: entonces la referencia es su propia t). Con ``shift``
+    distinto de 0 la ventana se mueve a un sitio ALEJADO de la lesion
+    (control negativo de localizacion), igual en casos y controles."""
     a0, a1 = read_dicom_gray(path_t0), read_dicom_gray(path_t1)
     b0, b1 = _full_bbox(a0), _full_bbox(a1)
     ref_bbox = b1 if bbox_ref is None else bbox_ref
+    if shift:
+        roi_t1_ref = shift_point(*roi_t1_ref, ref_bbox, shift)
     r1, c1 = map_point(*roi_t1_ref, ref_bbox, b1)
     r0, c0 = map_point(*roi_t1_ref, ref_bbox, b0)
     d0, d1 = _window_diagram(a0, r0, c0, half), _window_diagram(a1, r1, c1, half)
@@ -169,12 +184,13 @@ def compute_lesion_cohort_features(manifest: pd.DataFrame, verbose: bool = True)
     cache = pickle.loads(CACHE_PATH.read_bytes()) if CACHE_PATH.exists() else {}
 
     def _key(r):
-        return (r.path_t0, r.path_t1, r.set_id, HALF, WINDOW_SIZE, N_BINS, VERSION)
+        base = (r.path_t0, r.path_t1, r.set_id, HALF, WINDOW_SIZE, N_BINS, VERSION)
+        return base + (("shift", SHIFT),) if SHIFT else base
 
     case_rows = {r.set_id: r for r in manifest[manifest["kind"] == "incidente"].itertuples()}
     pending = [r for r in case_rows.values() if _key(r) not in cache]
     out = Parallel(n_jobs=-1)(delayed(pair_site_features)(
-        ROOT / r.path_t0, ROOT / r.path_t1, (r.roi_r, r.roi_c), None, HALF) for r in pending)
+        ROOT / r.path_t0, ROOT / r.path_t1, (r.roi_r, r.roi_c), None, HALF, SHIFT) for r in pending)
     cache.update({_key(r): f for r, f in zip(pending, out)})
     CACHE_PATH.write_bytes(pickle.dumps(cache))
     if verbose:
@@ -187,7 +203,7 @@ def compute_lesion_cohort_features(manifest: pd.DataFrame, verbose: bool = True)
         res = Parallel(n_jobs=-1)(delayed(pair_site_features)(
             ROOT / r.path_t0, ROOT / r.path_t1,
             (case_rows[r.set_id].roi_r, case_rows[r.set_id].roi_c),
-            cache[_key(case_rows[r.set_id])]["bbox_t1"], HALF) for r in chunk)
+            cache[_key(case_rows[r.set_id])]["bbox_t1"], HALF, SHIFT) for r in chunk)
         cache.update({_key(r): f for r, f in zip(chunk, res)})
         CACHE_PATH.write_bytes(pickle.dumps(cache))
         if verbose:
@@ -229,8 +245,12 @@ def main() -> None:
     parser.add_argument("--half", type=int, default=HALF,
                         help="Semilado de la ventana en px (analisis de sensibilidad al error de alineacion).")
     parser.add_argument("--permutations", type=int, default=100)
+    parser.add_argument("--shift", type=float, default=0.0,
+                        help="Desplaza la ventana esta fraccion de la altura de la mama (0.5 = sitio alejado "
+                             "de la lesion: control negativo de localizacion; solo cohorte de lesion).")
     args = parser.parse_args()
     globals()["HALF"] = args.half
+    globals()["SHIFT"] = args.shift
 
     manifest = pd.read_csv(EMBED_DIR / args.manifest)
     if "set_id" in manifest.columns:
@@ -245,7 +265,11 @@ def main() -> None:
     lines = [f"Topologia en el sitio de la lesion ({args.manifest}): {desc}",
              f"Ventana {2 * HALF}x{2 * HALF} px a resolucion completa -> {WINDOW_SIZE}x{WINDOW_SIZE}; "
              f"CV agrupada por paciente del caso; p = permutacion dentro de cada conjunto emparejado "
-             f"({args.permutations} permutaciones)", ""]
+             f"({args.permutations} permutaciones)"]
+    if SHIFT:
+        lines.append(f"SITIO ALEJADO: ventana desplazada {SHIFT:.2f} x la altura de la mama "
+                     f"(control negativo de localizacion)")
+    lines.append("")
     señales = {
         "control positivo: t en la lesion": np.stack([f["pi_t1"] for f in feats]),
         "anticipacion: t-1 en el sitio": np.stack([f["pi_t0"] for f in feats]),
@@ -255,11 +279,23 @@ def main() -> None:
         auc, p = permutation_auc(X, y, groups, sets, n=args.permutations)
         lines.append(f"  {name:36s}: AUC (5-fold CV) = {auc:.3f}, p = {p:.3f}")
 
+    # ¿que dimension de homologia lleva la anticipacion? (PI = [H0 | H1])
+    Xa = señales["anticipacion: t-1 en el sitio"]
+    mitad = Xa.shape[1] // 2
+    cv = GroupKFold(n_splits=5)
+    lines.append("")
+    for name, cols in [("anticipacion solo H0", slice(0, mitad)), ("anticipacion solo H1", slice(mitad, None))]:
+        s = cross_val_score(RandomForestClassifier(n_estimators=300, random_state=42, class_weight="balanced",
+                                                   n_jobs=-1), Xa[:, cols], y, groups=groups, cv=cv,
+                            scoring="roc_auc")
+        lines.append(f"  {name:36s}: AUC (5-fold CV) = {s.mean():.3f} +/- {s.std():.3f}")
+
     report = "\n".join(lines)
     print("\n" + report)
     RESULTS_DIR.mkdir(exist_ok=True)
     stem = Path(args.manifest).stem.replace("longitudinal_manifest_", "")
     suffix = "" if args.half == 256 else f"_ventana{2 * args.half}"
+    suffix += f"_alejado{args.shift:g}" if args.shift else ""
     out = RESULTS_DIR / f"embed_lesion_site_{stem}{suffix}.txt"
     out.write_text(report + "\n", encoding="utf-8")
     print(f"\nGuardado en {out}")

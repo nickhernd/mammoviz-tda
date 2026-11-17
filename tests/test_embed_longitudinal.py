@@ -193,3 +193,21 @@ def test_lesion_cohort_one_row_per_view_with_roi_and_several_controls():
     assert controls["roi_r"].isna().all()
     for set_id, g in cohort.groupby("set_id"):
         assert (g["kind"] == "incidente").sum() == 1 and (g["view"].nunique() == 1)
+
+
+def test_lesion_cohort_age_caliper_rejects_controls_of_a_different_age():
+    exams = _exams([
+        (1, 10, "2016-01-01", True, {"N"}, False, None),
+        (1, 11, "2017-01-10", True, {"A"}, False, None),
+        (1, 12, "2017-02-01", False, {"M"}, True, "L"),
+        (2, 20, "2016-03-01", True, {"N"}, False, None),   # misma edad que el caso
+        (2, 21, "2017-03-05", True, {"B"}, False, None),
+        (3, 30, "2016-02-01", True, {"N"}, False, None),   # 15 años mas joven
+        (3, 31, "2017-02-03", True, {"N"}, False, None),
+    ])
+    images = {(a, "L_MLO"): ("k", (1.0, 2.0) if a == 11 else None) for a in (10, 11, 20, 21, 30, 31)}
+    ages = {(1, 10): 60, (2, 20): 61, (3, 30): 45}
+    cohort = dl.build_lesion_cohort(exams, images, n_controls=3, seed=0, ages=ages, age_caliper=3)
+    assert set(cohort.loc[cohort["kind"] == "control", "empi_anon"]) == {2}
+    # las rutas incluyen el acc_anon: dos cohortes no comparten una imagen equivocada
+    assert cohort["path_t0"].str.contains("_10_|_20_").all()

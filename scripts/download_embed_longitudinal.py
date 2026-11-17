@@ -335,6 +335,7 @@ def _ffdm_images(metadata: pd.DataFrame) -> dict:
 def build_lesion_cohort(
     exams: pd.DataFrame, images: dict, n_controls: int = 3,
     min_gap_days: int = 180, interval_caliper: int = 90, date_caliper: int = 365, seed: int = 42,
+    ages: dict | None = None, age_caliper: float | None = None,
 ) -> pd.DataFrame:
     """Cohorte para el analisis en el sitio de la lesion: misma definicion de
     caso que ``build_screening_cohort``, pero una fila por (caso, VISTA) para
@@ -342,9 +343,16 @@ def build_lesion_cohort(
     ``n_controls`` controles emparejados por (caso, vista), con los mismos
     criterios de emparejamiento. Cada control se usa una sola vez.
 
+    Con ``ages`` ({(empi_anon, acc_anon): edad}) y ``age_caliper``, el
+    control tambien debe tener en su t-1 la edad del caso en su t-1
+    (+/- ``age_caliper`` años); casos sin edad conocida se descartan.
+
     Columnas extra: ``set_id`` (caso + vista, el grupo de la validacion
     cruzada) y ``roi_r``/``roi_c`` (centro de la lesion en la imagen t del
-    caso; vacio en los controles)."""
+    caso; vacio en los controles). Las rutas locales incluyen el acc_anon,
+    asi que una misma paciente en dos cohortes con exploraciones distintas
+    nunca reutiliza una imagen equivocada."""
+    use_age = ages is not None and age_caliper is not None
     rng = np.random.default_rng(seed)
     gap = pd.Timedelta(days=min_gap_days)
     views_of: dict = {}
@@ -390,6 +398,9 @@ def build_lesion_cohort(
     out = []
     for case in cases:
         set_id = f"{case['empi_anon']}_{case['view']}"
+        case_age = ages.get((case["empi_anon"], case["acc_t0"])) if use_age else None
+        if use_age and (case_age is None or pd.isna(case_age)):
+            continue
         cand = pool[((pool["interval"] - case["interval"]).abs() <= interval_caliper)
                     & ((pool["date_t0"] - case["date_t0"]).dt.days.abs() <= date_caliper)
                     & ~pool["empi_anon"].isin(used)]
@@ -398,6 +409,10 @@ def build_lesion_cohort(
             if c.empi_anon in used or (c.acc_t0, case["view"]) not in images \
                     or (c.acc_t1, case["view"]) not in images:
                 continue
+            if use_age:
+                c_age = ages.get((c.empi_anon, c.acc_t0))
+                if c_age is None or pd.isna(c_age) or abs(c_age - case_age) > age_caliper:
+                    continue
             used.add(c.empi_anon)
             chosen.append(c)
             if len(chosen) == n_controls:
@@ -407,11 +422,12 @@ def build_lesion_cohort(
         members = [("incidente", case["empi_anon"], case["acc_t0"], case["acc_t1"])] + \
                   [("control", c.empi_anon, c.acc_t0, c.acc_t1) for c in chosen]
         for kind, pid, acc0, acc1 in members:
-            folder = f"data/embed/images/lesion_{kind}_{pid}"
+            folder = "data/embed/images/lesion"
             out.append({
                 "empi_anon": pid, "kind": kind, "view": case["view"], "set_id": set_id,
                 "acc_t0": acc0, "acc_t1": acc1,
-                "path_t0": f"{folder}/t0_{case['view']}.dcm", "path_t1": f"{folder}/t1_{case['view']}.dcm",
+                "path_t0": f"{folder}/{pid}_{acc0}_{case['view']}.dcm",
+                "path_t1": f"{folder}/{pid}_{acc1}_{case['view']}.dcm",
                 "s3_t0": images[(acc0, case["view"])][0], "s3_t1": images[(acc1, case["view"])][0],
                 "roi_r": case["roi"][0] if kind == "incidente" else None,
                 "roi_c": case["roi"][1] if kind == "incidente" else None,
@@ -428,7 +444,12 @@ def _run_lesion_cohort(args) -> None:
         usecols=["acc_anon", "FinalImageType", "ImageLateralityFinal", "ViewPosition",
                  "spot_mag", "anon_dicom_path", "num_ROI", "ROI_coords"],
     )
-    cohort = build_lesion_cohort(exams, _ffdm_images(metadata), n_controls=args.n_controls, seed=args.seed)
+    ages = None
+    if args.age_caliper is not None:
+        clin = pd.read_csv(EMBED_DIR / "clinical.csv", usecols=["empi_anon", "acc_anon", "age_at_study"])
+        ages = clin.dropna().groupby(["empi_anon", "acc_anon"])["age_at_study"].first().to_dict()
+    cohort = build_lesion_cohort(exams, _ffdm_images(metadata), n_controls=args.n_controls, seed=args.seed,
+                                 ages=ages, age_caliper=args.age_caliper)
     inc = cohort[cohort["kind"] == "incidente"]
     print(f"Cohorte de lesion: {inc['empi_anon'].nunique()} canceres, {len(inc)} vistas con ROI, "
           f"{(cohort['kind'] == 'control').sum()} controles.", flush=True)
@@ -442,7 +463,8 @@ def _run_lesion_cohort(args) -> None:
                 s3.download_file("embed-dataset-open", key, str(local))
         print(f"  [{i + 1}/{len(cohort)}] {row['kind']} {row['empi_anon']} ({row['view']}): OK", flush=True)
 
-    out = EMBED_DIR / "longitudinal_manifest_lesion.csv"
+    name = "longitudinal_manifest_lesion" + ("_edad" if args.age_caliper is not None else "")
+    out = EMBED_DIR / f"{name}.csv"
     cohort.drop(columns=["s3_t0", "s3_t1"]).to_csv(out, index=False)
     print(f"Manifiesto guardado en {out}")
 
@@ -537,6 +559,9 @@ def main() -> None:
                              "anotada en t, y --n-controls controles emparejados por vista. Escribe "
                              "data/embed/longitudinal_manifest_lesion.csv.")
     parser.add_argument("--n-controls", type=int, default=3)
+    parser.add_argument("--age-caliper", type=float, default=None,
+                        help="Con --lesion: empareja tambien por edad en t-1 (+/- años). Escribe "
+                             "data/embed/longitudinal_manifest_lesion_edad.csv.")
     args = parser.parse_args()
 
     if args.lesion:

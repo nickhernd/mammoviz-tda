@@ -146,6 +146,13 @@ con `git log --since=<fecha> --until=<fecha>`.
     de 1024 px 0.534; el análisis 1:1 original daba 0.498.
   - La deriva no se replica por vista (0.51 en MLO y en CC frente a 0.575
     conjunta): probable artefacto, no se interpreta.
+  - **Control negativo de localización** (`--shift 0.5`: ventana desplazada
+    media mama en vertical, misma profundidad, igual en casos y controles):
+    control positivo 0.524 (p = 0.26), anticipación 0.472 (p = 0.86),
+    deriva 0.503. Fuera del sitio no hay nada: el indicio es **local**, no
+    una propiedad de toda la mama (tipo marcador de riesgo).
+  - Por dimensión: anticipación solo H1 0.568, solo H0 0.544 (como el
+    control positivo, H1 ve algo más).
   - **Lectura**: indicio débil, no concluyente, tras muchas variantes
     probadas. Hipótesis para validar fuera (CSAW-CC) con el análisis fijado
     de antemano; no un resultado.

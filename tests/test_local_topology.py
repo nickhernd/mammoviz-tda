@@ -55,3 +55,14 @@ def test_window_around_is_centred_and_shifted_inside_at_the_border():
     assert w.shape == (20, 20) and w[0, 0] == img[40, 40]
     corner = window_around(img, 0, 99, half=10)   # se sale por arriba y por la derecha
     assert corner.shape == (20, 20) and corner[0, 0] == img[0, 80]
+
+
+def test_shift_point_moves_half_the_breast_and_wraps_around():
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+    from embed_lesion_site import shift_point
+
+    bbox = (100, 0, 500, 300)                      # mama de 400 px de alto
+    assert shift_point(150, 40, bbox, 0.5) == (350.0, 40)   # mitad superior -> inferior, misma columna
+    assert shift_point(450, 40, bbox, 0.5) == (250.0, 40)   # da la vuelta dentro de la caja
