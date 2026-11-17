@@ -1,0 +1,6 @@
+Topologia en el sitio de la lesion (longitudinal_manifest_lesion.csv): 174 vistas con lesion de 97 canceres, 522 controles
+Ventana 1024x1024 px a resolucion completa -> 256x256; CV agrupada por paciente del caso; p = permutacion dentro de cada conjunto emparejado (100 permutaciones)
+
+  control positivo: t en la lesion    : AUC (5-fold CV) = 0.636, p = 0.010
+  anticipacion: t-1 en el sitio       : AUC (5-fold CV) = 0.534, p = 0.208
+  deriva en el sitio (t-1 vs t)       : AUC (5-fold CV) = 0.486, p = 0.614

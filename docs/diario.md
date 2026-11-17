@@ -123,6 +123,33 @@ con `git log --since=<fecha> --until=<fecha>`.
   scikit-learn 1.3.2 (numpy 1.x) y pip retrocedía a una versión sin wheel.
   Versiones fijadas tras comprobar la resolución en seco solo con wheels.
 
+- **Resultados de la cohorte de lesión** (174 vistas de 97 cánceres, 522
+  controles; CV agrupada por paciente; permutación dentro de cada caso y
+  sus controles):
+
+  | Ventana | Control positivo | Anticipación | Deriva |
+  |---|---|---|---|
+  | 512 px | 0.693 (p = 0.01) | **0.569 (p = 0.04)** | 0.577 (p = 0.03) |
+  | 1024 px | 0.636 (p = 0.01) | 0.534 (p = 0.21) | 0.486 (p = 0.61) |
+
+- **Comprobación de confusores de esa anticipación**:
+  - Edad desequilibrada (casos 64.2 frente a 60.9 años, p = 2·10⁻⁴; las
+    covariables solas dan 0.56). Pero el score no codifica la edad (en
+    controles R² ≈ 0, ρ = −0.01) y en regresión logística condicional
+    ajustada por edad y densidad mantiene OR 1.29 por DE (p = 0.008).
+  - **Hallazgo clínico**: la t-1 de los casos tiene BI-RADS B (benigno
+    anotado) en el 17 % frente al 7 % de los controles (p = 0.001). Un año
+    antes el radiólogo ya veía algo con más frecuencia. Ajustando también
+    por B: OR 1.30 (p = 0.007); solo con t-1 = N: 0.569 (p = 0.06).
+  - Igual en MLO (0.566) y CC (0.571).
+  - **Pero frágil**: con un control por caso 0.522 (p = 0.27); con ventana
+    de 1024 px 0.534; el análisis 1:1 original daba 0.498.
+  - La deriva no se replica por vista (0.51 en MLO y en CC frente a 0.575
+    conjunta): probable artefacto, no se interpreta.
+  - **Lectura**: indicio débil, no concluyente, tras muchas variantes
+    probadas. Hipótesis para validar fuera (CSAW-CC) con el análisis fijado
+    de antemano; no un resultado.
+
 **Conclusión del día**: con un diseño sin confusores y un descriptor que sí
 detecta la lesión cuando está, **no hay señal topológica detectable en el
 mismo sitio un cribado antes** (~1 año). Es un nulo informativo, no un nulo
