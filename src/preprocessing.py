@@ -20,6 +20,25 @@ except ImportError:  # pragma: no cover - cv2 es opcional en tiempo de import
     cv2 = None
 
 
+def read_dicom_gray(path) -> np.ndarray:
+    """Lee los pixeles de un DICOM como float32 con el convenio "tejido
+    claro, fondo oscuro".
+
+    La etiqueta DICOM PhotometricInterpretation puede ser MONOCHROME2
+    (valor alto = claro, lo habitual) o MONOCHROME1 (valor alto = OSCURO:
+    la imagen viene invertida). En EMBED, los equipos Fujifilm guardan
+    MONOCHROME1; sin invertirlas, su fondo es blanco y la homologia
+    persistente se calcula sobre la imagen en negativo.
+    """
+    import pydicom
+
+    ds = pydicom.dcmread(path)
+    arr = ds.pixel_array.astype(np.float32)
+    if ds.get("PhotometricInterpretation") == "MONOCHROME1":
+        arr = arr.max() - arr
+    return arr
+
+
 def to_grayscale_float(image: np.ndarray) -> np.ndarray:
     """Convierte una imagen a escala de grises en formato float [0, 1].
 

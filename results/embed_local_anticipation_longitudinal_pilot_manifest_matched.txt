@@ -1,0 +1,13 @@
+Anticipacion LOCAL (longitudinal_pilot_manifest_matched.csv, 388 pacientes, rejilla 4x4)
+
+  sitio propio (abs)                      : AUC (5-fold CV) = 0.583 +/- 0.050
+  sitio propio (rel)                      : AUC (5-fold CV) = 0.624 +/- 0.059
+  sitio del incidente emparejado (abs)    : AUC (5-fold CV) = 0.674 +/- 0.037
+  sitio del incidente emparejado (rel)    : AUC (5-fold CV) = 0.644 +/- 0.016
+  parche aleatorio (abs)                  : AUC (5-fold CV) = 0.418 +/- 0.093
+  parche aleatorio (rel)                  : AUC (5-fold CV) = 0.458 +/- 0.046
+  deriva local (max y media por parche)   : AUC (5-fold CV) = 0.849 +/- 0.051
+
+Validacion con ROI anotada (incidentes con ROI en la vista usada: n=12):
+  sitio del cambio = celda de la lesion:          0/12 (azar 6%)
+  sitio del cambio en la vecindad 3x3 de la lesion: 1/12 (azar 39%)

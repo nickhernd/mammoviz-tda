@@ -125,3 +125,39 @@ def test_preprocess_without_mask_skips_crop():
     out = preprocess(image, mask=None, size=(32, 32), use_clahe=False)
 
     assert out.shape == (32, 32)
+
+
+# ---------------------------------------------------------------------------
+# read_dicom_gray: convenio "tejido claro" para MONOCHROME1 / MONOCHROME2
+# ---------------------------------------------------------------------------
+
+def _write_dicom(path, pixels, photometric):
+    pydicom = pytest.importorskip("pydicom")
+    from pydicom.dataset import FileDataset, FileMetaDataset
+    from pydicom.uid import ExplicitVRLittleEndian, generate_uid
+
+    meta = FileMetaDataset()
+    meta.MediaStorageSOPClassUID = "1.2.840.10008.5.1.4.1.1.1.2"
+    meta.MediaStorageSOPInstanceUID = generate_uid()
+    meta.TransferSyntaxUID = ExplicitVRLittleEndian
+    ds = FileDataset(str(path), {}, file_meta=meta, preamble=b"\0" * 128)
+    ds.Rows, ds.Columns = pixels.shape
+    ds.SamplesPerPixel = 1
+    ds.PhotometricInterpretation = photometric
+    ds.BitsAllocated, ds.BitsStored, ds.HighBit = 16, 16, 15
+    ds.PixelRepresentation = 0
+    ds.PixelData = pixels.astype(np.uint16).tobytes()
+    ds.save_as(str(path), enforce_file_format=True)
+
+
+def test_read_dicom_gray_keeps_monochrome2_and_inverts_monochrome1(tmp_path):
+    from src.preprocessing import read_dicom_gray
+
+    pixels = np.array([[0, 100], [200, 1000]], dtype=np.uint16)
+    _write_dicom(tmp_path / "m2.dcm", pixels, "MONOCHROME2")
+    _write_dicom(tmp_path / "m1.dcm", pixels, "MONOCHROME1")
+
+    m2 = read_dicom_gray(tmp_path / "m2.dcm")
+    m1 = read_dicom_gray(tmp_path / "m1.dcm")
+    assert np.array_equal(m2, pixels.astype(np.float32))
+    assert np.array_equal(m1, (1000 - pixels).astype(np.float32))  # invertida

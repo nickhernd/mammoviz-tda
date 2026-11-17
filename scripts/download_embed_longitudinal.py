@@ -188,6 +188,159 @@ def select_interval_matched_controls(
     return pd.DataFrame(out)
 
 
+MALIGNANT_PATH = {0, 1}  # path_severity: 0 = cancer invasivo, 1 = no invasivo (CDIS)
+
+
+def _exam_table(clinical_path: Path) -> pd.DataFrame:
+    """Una fila por exploracion: fecha, si es de cribado (``desc``), BI-RADS
+    presentes, si tiene patologia maligna asociada y el lado del hallazgo
+    maligno."""
+    c = pd.read_csv(clinical_path, usecols=["empi_anon", "acc_anon", "study_date_anon", "asses",
+                                            "desc", "path_severity", "side"])
+    c["date"] = pd.to_datetime(c["study_date_anon"], errors="coerce")
+    c = c.dropna(subset=["date"])
+    c["screen"] = c["desc"].str.contains("screen", case=False, na=False)
+    c["malig"] = c["path_severity"].isin(MALIGNANT_PATH)
+    malig_side = c[c["malig"]].groupby(["empi_anon", "acc_anon"])["side"].first()
+    ex = c.groupby(["empi_anon", "acc_anon"]).agg(
+        date=("date", "first"), screen=("screen", "first"),
+        asses=("asses", lambda s: set(s.dropna())), malig=("malig", "any"),
+    ).reset_index()
+    ex["malig_side"] = [malig_side.get((p, a)) for p, a in zip(ex["empi_anon"], ex["acc_anon"])]
+    ex["normal"] = ex["asses"].apply(lambda s: bool(s) and s <= NORMAL)
+    return ex
+
+
+def _ffdm_views(metadata: pd.DataFrame) -> dict:
+    """acc_anon -> {vista: clave S3} con solo mamografias 2D de campo completo
+    (sin compresion focal ni magnificacion: spot_mag != 1)."""
+    m = metadata[(metadata["FinalImageType"] == "2D") & (metadata["spot_mag"].fillna(0) != 1)]
+    views: dict = {}
+    for r in m.itertuples():
+        views.setdefault(r.acc_anon, {}).setdefault(
+            f"{r.ImageLateralityFinal}_{r.ViewPosition}", r.anon_dicom_path)
+    return views
+
+
+def _pick_view(common: set, side) -> str | None:
+    """Vista del lado del cancer si se conoce, preferentemente MLO."""
+    if side in ("L", "R"):
+        common = {v for v in common if v.startswith(side + "_")}
+    if not common:
+        return None
+    return next((v for v in sorted(common) if v.endswith("_MLO")), sorted(common)[0])
+
+
+def build_screening_cohort(
+    exams: pd.DataFrame, views: dict, n_incident: int | None = None,
+    min_gap_days: int = 180, interval_caliper: int = 90, date_caliper: int = 365, seed: int = 42,
+) -> pd.DataFrame:
+    """Cohorte longitudinal de CRIBADO, caso-control emparejado.
+
+    Corrige los problemas del diseño basado en BI-RADS 4/5:
+      - el caso es un cancer CONFIRMADO por anatomia patologica
+        (path_severity 0/1), no una sospecha (la mayoria de biopsias de
+        BI-RADS 4 son benignas);
+      - t y t-1 son SIEMPRE exploraciones de cribado de campo completo
+        (spot_mag != 1) en ambos grupos: antes, la t de los incidentes era un
+        estudio diagnostico (193/194), en 136/194 una vista de compresion
+        focal/magnificacion, y la "deriva" media en parte el tipo de vista;
+      - se usa la mama del lado del cancer.
+
+    Caso: t = ultimo cribado en los ``min_gap_days`` previos (inclusive) al
+    diagnostico; t-1 = ultimo cribado Normal/Benigno al menos
+    ``min_gap_days`` antes de t. Control: paciente sin patologia maligna y
+    con todas sus exploraciones Normal/Benigno; su par (t-1, t) son dos
+    cribados con el intervalo del caso (+/- ``interval_caliper``), t-1 en la
+    misma epoca (+/- ``date_caliper`` dias) y la misma vista.
+    """
+    rng = np.random.default_rng(seed)
+    gap = pd.Timedelta(days=min_gap_days)
+    cases = []
+    for pid, g in exams.groupby("empi_anon"):
+        if not g["malig"].any():
+            continue
+        dx_row = g[g["malig"]].sort_values("date").iloc[0]
+        screens = g[g["screen"]].sort_values("date")
+        t = screens[(screens["date"] <= dx_row["date"]) & (screens["date"] >= dx_row["date"] - gap)]
+        if t.empty:
+            continue
+        t = t.iloc[-1]
+        prior = screens[(screens["date"] <= t["date"] - gap) & screens["normal"]]
+        if prior.empty:
+            continue
+        t0 = prior.iloc[-1]
+        common = set(views.get(t0["acc_anon"], {})) & set(views.get(t["acc_anon"], {}))
+        view = _pick_view(common, dx_row["malig_side"])
+        if view is None:
+            continue
+        cases.append({"empi_anon": pid, "acc_t0": t0["acc_anon"], "acc_t1": t["acc_anon"],
+                      "date_t0": t0["date"], "interval": (t["date"] - t0["date"]).days, "view": view})
+    cases = pd.DataFrame(cases)
+    if n_incident is not None and len(cases) > n_incident:
+        cases = cases.sample(n=n_incident, random_state=seed)
+
+    healthy = exams.groupby("empi_anon").filter(lambda g: not g["malig"].any() and g["normal"].all())
+    pool = []
+    for pid, g in healthy[healthy["screen"]].sort_values("date").groupby("empi_anon"):
+        rows = list(g.itertuples())
+        for i, a in enumerate(rows):
+            for b in rows[i + 1:]:
+                pool.append((pid, a.acc_anon, b.acc_anon, a.date, (b.date - a.date).days))
+    pool = pd.DataFrame(pool, columns=["empi_anon", "acc_t0", "acc_t1", "date_t0", "interval"])
+
+    used: set = set()
+    out = []
+    for case in cases.itertuples():
+        cand = pool[((pool["interval"] - case.interval).abs() <= interval_caliper)
+                    & ((pool["date_t0"] - case.date_t0).dt.days.abs() <= date_caliper)
+                    & ~pool["empi_anon"].isin(used)]
+        for c in cand.iloc[rng.permutation(len(cand))].itertuples():
+            common = set(views.get(c.acc_t0, {})) & set(views.get(c.acc_t1, {}))
+            if case.view not in common:
+                continue
+            used.add(c.empi_anon)
+            for kind, row in [("incidente", case), ("control", c)]:
+                folder = f"data/embed/images/cribado_{kind}_{row.empi_anon}"
+                out.append({
+                    "empi_anon": row.empi_anon, "kind": kind, "view": case.view,
+                    "acc_t0": row.acc_t0, "acc_t1": row.acc_t1,
+                    "path_t0": f"{folder}/t0.dcm", "path_t1": f"{folder}/t1.dcm",
+                    "s3_t0": views[row.acc_t0][case.view], "s3_t1": views[row.acc_t1][case.view],
+                    "matched_to": None if kind == "incidente" else case.empi_anon,
+                })
+            break
+    return pd.DataFrame(out)
+
+
+def _run_screening_cohort(args) -> None:
+    import boto3
+
+    exams = _exam_table(EMBED_DIR / "clinical.csv")
+    metadata = pd.read_csv(
+        EMBED_DIR / "metadata_reduced.csv",
+        usecols=["acc_anon", "FinalImageType", "ImageLateralityFinal", "ViewPosition",
+                 "spot_mag", "anon_dicom_path"],
+    )
+    cohort = build_screening_cohort(exams, _ffdm_views(metadata), n_incident=args.n_incident, seed=args.seed)
+    n_inc = (cohort["kind"] == "incidente").sum()
+    print(f"Cohorte de cribado: {n_inc} canceres confirmados detectados en cribado, "
+          f"cada uno con su control emparejado.", flush=True)
+
+    s3 = boto3.Session(profile_name=args.profile, region_name="us-west-2").client("s3")
+    for i, row in cohort.reset_index(drop=True).iterrows():
+        for key, rel in [(row["s3_t0"], row["path_t0"]), (row["s3_t1"], row["path_t1"])]:
+            local = ROOT / rel
+            local.parent.mkdir(parents=True, exist_ok=True)
+            if not local.exists():
+                s3.download_file("embed-dataset-open", key, str(local))
+        print(f"  [{i + 1}/{len(cohort)}] {row['kind']} {row['empi_anon']} ({row['view']}): OK", flush=True)
+
+    out = EMBED_DIR / "longitudinal_manifest_cribado.csv"
+    cohort.drop(columns=["s3_t0", "s3_t1"]).to_csv(out, index=False)
+    print(f"Manifiesto guardado en {out}")
+
+
 def _run_match_interval(args) -> None:
     import boto3
 
@@ -237,8 +390,18 @@ def main() -> None:
                              "sesgo de intervalo (ver select_interval_matched_controls). Escribe "
                              "data/embed/longitudinal_pilot_manifest_matched.csv.")
     parser.add_argument("--caliper-days", type=int, default=90)
+    parser.add_argument("--cribado", action="store_true",
+                        help="DISEÑO RECOMENDADO. Cohorte de cribado: canceres confirmados por "
+                             "patologia detectados en cribado (t = ese cribado, t-1 = cribado "
+                             "negativo previo) frente a controles con dos cribados negativos "
+                             "emparejados por intervalo, epoca y vista. Solo imagenes de campo "
+                             "completo. --n-incident limita el numero de casos. Escribe "
+                             "data/embed/longitudinal_manifest_cribado.csv.")
     args = parser.parse_args()
 
+    if args.cribado:
+        _run_screening_cohort(args)
+        return
     if args.match_interval:
         _run_match_interval(args)
         return

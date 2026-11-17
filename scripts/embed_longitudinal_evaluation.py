@@ -24,7 +24,6 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import pydicom
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import cross_val_score
 
@@ -32,7 +31,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from src.preprocessing import apply_clahe, resize, to_grayscale_float  # noqa: E402
+from src.preprocessing import apply_clahe, read_dicom_gray, resize, to_grayscale_float  # noqa: E402
 from src.topology import persistence_diagram, persistence_image_vector, topological_drift  # noqa: E402
 
 EMBED_DIR = ROOT / "data" / "embed"
@@ -43,13 +42,16 @@ def _load_and_preprocess(path: Path, size=(224, 224)) -> np.ndarray:
     """Igual que src.preprocessing.preprocess, pero sin recorte de ROI: EMBED
     no trae mascara de segmentacion de la lesion (a diferencia de
     CBIS-DDSM), asi que se usa la mamografia completa."""
-    arr = pydicom.dcmread(path).pixel_array.astype(np.float32)
+    arr = read_dicom_gray(path)  # invierte MONOCHROME1 (Fujifilm)
     gray = to_grayscale_float(arr)
     clahe = apply_clahe(gray)
     return resize(clahe, size)
 
 
 CACHE_PATH = EMBED_DIR / "features_cache.pkl"
+# Se incrementa cuando cambia el preprocesado, para invalidar la cache:
+# v2 = lectura con read_dicom_gray (invierte las imagenes MONOCHROME1).
+FEATURES_VERSION = 2
 
 
 def _pair_features(path_t0: Path, path_t1: Path, n_bins: int):
@@ -77,7 +79,7 @@ def compute_features(manifest: pd.DataFrame, n_bins: int = 6, verbose: bool = Tr
     feats_t0, feats_drift, labels = [], [], []
     n_new = 0
     for _, row in manifest.iterrows():
-        key = (row["path_t0"], row["path_t1"], n_bins)
+        key = (row["path_t0"], row["path_t1"], n_bins, FEATURES_VERSION)
         if key not in cache:
             cache[key] = _pair_features(ROOT / row["path_t0"], ROOT / row["path_t1"], n_bins)
             n_new += 1
