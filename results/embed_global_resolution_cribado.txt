@@ -1,0 +1,5 @@
+Control positivo GLOBAL por resolucion (longitudinal_manifest_cribado.csv, 324 pacientes; imagen t sola, mama recortada a su caja)
+
+   224x224 : AUC (5-fold CV) = 0.549 +/- 0.113
+   512x512 : AUC (5-fold CV) = 0.587 +/- 0.096
+  1024x1024: AUC (5-fold CV) = 0.600 +/- 0.066

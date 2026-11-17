@@ -108,6 +108,21 @@ con `git log --since=<fecha> --until=<fecha>`.
     ninguna señal (n pequeño).
   - Control positivo por densidad: poco densa 0.66, densa 0.60.
 
+- **¿Resolución o dilución?** (`scripts/embed_global_resolution.py`):
+  control positivo global con la mama recortada a 224 / 512 / 1024 px:
+  0.549 / 0.587 / 0.600 (±0.07–0.11). Mejora un poco con la resolución,
+  pero no llega al 0.67 de la ventana en la lesión: pesa más la dilución
+  (un rasgo entre miles) que la resolución. Hace falta un descriptor local.
+- **Cohorte de lesión** (`--lesion`): con la versión abierta de EMBED no hay
+  más cánceres elegibles (658 confirmados → 313 con cribado en el
+  diagnóstico → 162 con cribado negativo previo; bajar el margen a 90 d no
+  añade ninguno). Para ganar datos: todas las vistas del lado del cáncer
+  con ROI (MLO y CC: 174 vistas de 97 cánceres, antes 82) y 3 controles
+  por vista (522). CV agrupada por paciente del caso. Descargando.
+- CI: el job giotto-tda vs gudhi (#88) fallaba porque giotto-tda 0.6.2 fija
+  scikit-learn 1.3.2 (numpy 1.x) y pip retrocedía a una versión sin wheel.
+  Versiones fijadas tras comprobar la resolución en seco solo con wheels.
+
 **Conclusión del día**: con un diseño sin confusores y un descriptor que sí
 detecta la lesión cuando está, **no hay señal topológica detectable en el
 mismo sitio un cribado antes** (~1 año). Es un nulo informativo, no un nulo
