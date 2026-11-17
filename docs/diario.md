@@ -92,6 +92,22 @@ con `git log --since=<fecha> --until=<fecha>`.
     (p = 0.089, no significativa; a vigilar con más pares).
   - La densidad no está desequilibrada (p = 0.50), no confunde.
 
+- **Prueba definitiva del tercer confusor**: recalculados los diseños
+  antiguos con el lector corregido (MONOCHROME1), sus números se mantienen
+  (emparejado: deriva 0.748, anticipación 0.496). Y la exploración t sola
+  da **0.888 en el diseño emparejado frente a 0.530 en la cohorte de
+  cribado**: el descriptor global reconocía el tipo de vista (ampliada
+  diagnóstica frente a cribado), no el cáncer.
+- Notebook 03 rehecho sobre la cohorte de cribado: balance de covariables,
+  señales globales con control positivo, sitio de la lesión con
+  permutación, H2-H4 y la comparación de los tres diseños. Ejecutado de
+  principio a fin (14 celdas, 0 errores, ~28 min por las permutaciones).
+  - En el sitio de la lesión, H1 (ciclos) ve más la lesión que H0
+    (0.685 frente a 0.615), como en CBIS-DDSM con las espiculadas.
+  - Anticipación por cercanía al diagnóstico: cerca 0.45, lejos 0.56;
+    ninguna señal (n pequeño).
+  - Control positivo por densidad: poco densa 0.66, densa 0.60.
+
 **Conclusión del día**: con un diseño sin confusores y un descriptor que sí
 detecta la lesión cuando está, **no hay señal topológica detectable en el
 mismo sitio un cribado antes** (~1 año). Es un nulo informativo, no un nulo
