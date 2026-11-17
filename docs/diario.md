@@ -153,9 +153,26 @@ con `git log --since=<fecha> --until=<fecha>`.
     una propiedad de toda la mama (tipo marcador de riesgo).
   - Por dimensión: anticipación solo H1 0.568, solo H0 0.544 (como el
     control positivo, H1 ve algo más).
+  - Ninguna imagen t-1 (casos ni controles) tiene ROI anotada: no se puede
+    comprobar si el radiólogo marcó algo en el sitio un año antes.
+  - **Replicación con controles emparejados por edad** (`--age-caliper 3`,
+    `longitudinal_manifest_lesion_edad.csv`; 451 de 522 controles nuevos):
+    edad 64.2 frente a 64.2 (p = 0.90); control positivo 0.679 (p = 0.01);
+    **anticipación 0.571 (p = 0.02)**; 1:1 0.616 (p = 0.01); regresión
+    condicional ajustada por densidad y B: OR 1.24 (p = 0.02); MLO 0.588
+    (p = 0.06), CC 0.579 (p = 0.08). La "fragilidad" del 1:1 anterior era
+    ruido del muestreo de controles.
   - **Lectura**: indicio débil, no concluyente, tras muchas variantes
     probadas. Hipótesis para validar fuera (CSAW-CC) con el análisis fijado
     de antemano; no un resultado.
+
+**Lectura actualizada (tras la replicación por edad)**: la anticipación en
+el sitio de la lesión es un **efecto modesto pero consistente** (AUC
+≈0.57–0.62): local (desaparece media mama más allá), presente en MLO y CC,
+no explicado por edad, densidad ni BI-RADS B, y replicado con un conjunto
+de controles casi nuevo y emparejado por edad. Sigue siendo un único
+dataset, los mismos 97 cánceres y un análisis elegido tras varias variantes:
+hace falta validación externa con el análisis fijado de antemano.
 
 **Conclusión del día**: con un diseño sin confusores y un descriptor que sí
 detecta la lesión cuando está, **no hay señal topológica detectable en el
