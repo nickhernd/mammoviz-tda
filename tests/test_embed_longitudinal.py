@@ -160,3 +160,36 @@ def test_ffdm_views_excludes_spot_and_magnification():
          "spot_mag": 0.0, "anon_dicom_path": "cview.dcm"},
     ])
     assert dl._ffdm_views(meta) == {1: {"L_MLO": "ffdm.dcm"}}
+
+
+def test_lesion_cohort_one_row_per_view_with_roi_and_several_controls():
+    exams = _exams([
+        (1, 10, "2016-01-01", True, {"N"}, False, None),
+        (1, 11, "2017-01-10", True, {"A"}, False, None),
+        (1, 12, "2017-02-01", False, {"M"}, True, "L"),
+        (2, 20, "2016-03-01", True, {"N"}, False, None),
+        (2, 21, "2017-03-05", True, {"B"}, False, None),
+        (3, 30, "2016-02-01", True, {"N"}, False, None),
+        (3, 31, "2017-02-03", True, {"N"}, False, None),
+    ])
+    roi = (100.0, 200.0)
+    images = {
+        (10, "L_MLO"): ("k", None), (11, "L_MLO"): ("k", roi),     # ROI en MLO
+        (10, "L_CC"): ("k", None), (11, "L_CC"): ("k", roi),       # y en CC
+        (10, "R_MLO"): ("k", None), (11, "R_MLO"): ("k", roi),     # lado contrario: se ignora
+        (20, "L_MLO"): ("k", None), (21, "L_MLO"): ("k", None),
+        (20, "L_CC"): ("k", None), (21, "L_CC"): ("k", None),
+        (30, "L_MLO"): ("k", None), (31, "L_MLO"): ("k", None),
+    }
+    cohort = dl.build_lesion_cohort(exams, images, n_controls=3, seed=0)
+
+    cases = cohort[cohort["kind"] == "incidente"]
+    assert sorted(cases["view"]) == ["L_CC", "L_MLO"]          # ambas vistas del lado del cancer
+    assert (cases["roi_r"] == 100.0).all() and (cases["roi_c"] == 200.0).all()
+    controls = cohort[cohort["kind"] == "control"]
+    # cada control se usa una sola vez, y solo si tiene la vista del caso
+    assert controls["empi_anon"].is_unique
+    assert set(controls["view"]) <= {"L_CC", "L_MLO"}
+    assert controls["roi_r"].isna().all()
+    for set_id, g in cohort.groupby("set_id"):
+        assert (g["kind"] == "incidente").sum() == 1 and (g["view"].nunique() == 1)

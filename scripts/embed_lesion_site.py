@@ -156,43 +156,104 @@ def compute_site_features(manifest: pd.DataFrame, verbose: bool = True):
     return feats, np.asarray(labels), np.asarray(groups)
 
 
+def compute_lesion_cohort_features(manifest: pd.DataFrame, verbose: bool = True):
+    """Lo mismo que ``compute_site_features`` para el manifiesto de la
+    cohorte de lesion (``--lesion``): una fila por (caso, vista) con la ROI
+    en ``roi_r``/``roi_c`` y varios controles por ``set_id``. El grupo de la
+    validacion cruzada es la PACIENTE del caso, para que sus dos vistas (y
+    sus controles) caigan siempre en el mismo fold.
+
+    Devuelve (lista de dicts, etiquetas, grupos, set_ids)."""
+    from joblib import Parallel, delayed
+
+    cache = pickle.loads(CACHE_PATH.read_bytes()) if CACHE_PATH.exists() else {}
+
+    def _key(r):
+        return (r.path_t0, r.path_t1, r.set_id, HALF, WINDOW_SIZE, N_BINS, VERSION)
+
+    case_rows = {r.set_id: r for r in manifest[manifest["kind"] == "incidente"].itertuples()}
+    pending = [r for r in case_rows.values() if _key(r) not in cache]
+    out = Parallel(n_jobs=-1)(delayed(pair_site_features)(
+        ROOT / r.path_t0, ROOT / r.path_t1, (r.roi_r, r.roi_c), None, HALF) for r in pending)
+    cache.update({_key(r): f for r, f in zip(pending, out)})
+    CACHE_PATH.write_bytes(pickle.dumps(cache))
+    if verbose:
+        print(f"  casos: {len(pending)} calculados", flush=True)
+
+    ctl_rows = list(manifest[manifest["kind"] == "control"].itertuples())
+    pending = [r for r in ctl_rows if _key(r) not in cache]
+    for start in range(0, len(pending), 64):
+        chunk = pending[start:start + 64]
+        res = Parallel(n_jobs=-1)(delayed(pair_site_features)(
+            ROOT / r.path_t0, ROOT / r.path_t1,
+            (case_rows[r.set_id].roi_r, case_rows[r.set_id].roi_c),
+            cache[_key(case_rows[r.set_id])]["bbox_t1"], HALF) for r in chunk)
+        cache.update({_key(r): f for r, f in zip(chunk, res)})
+        CACHE_PATH.write_bytes(pickle.dumps(cache))
+        if verbose:
+            print(f"  controles: {min(start + 64, len(pending))}/{len(pending)} calculados", flush=True)
+
+    rows = list(manifest.itertuples())
+    feats = [cache[_key(r)] for r in rows]
+    labels = np.array([1 if r.kind == "incidente" else 0 for r in rows])
+    groups = np.array([case_rows[r.set_id].empi_anon for r in rows])
+    sets = np.array([r.set_id for r in rows])
+    return feats, labels, groups, sets
+
+
+def permutation_auc(X, y, groups, sets, n: int = 100, seed: int = 0, n_estimators: int = 200):
+    """AUC por CV agrupada (5 folds) y p-valor de una prueba de permutacion
+    que, dentro de cada conjunto emparejado (``sets``: un caso y sus
+    controles), elige al azar cual de sus miembros hace de caso."""
+    rng = np.random.default_rng(seed)
+    cv = GroupKFold(n_splits=5)
+    rf = lambda: RandomForestClassifier(n_estimators=n_estimators, random_state=42,
+                                        class_weight="balanced", n_jobs=-1)
+    obs = cross_val_score(rf(), X, y, groups=groups, cv=cv, scoring="roc_auc").mean()
+    idx_by_set = [np.where(sets == s)[0] for s in np.unique(sets)]
+    null = []
+    for _ in range(n):
+        yp = np.zeros_like(y)
+        for idx in idx_by_set:
+            yp[rng.choice(idx)] = 1
+        null.append(cross_val_score(rf(), X, yp, groups=groups, cv=cv, scoring="roc_auc").mean())
+    return obs, (1 + np.sum(np.array(null) >= obs)) / (1 + n)
+
+
 def main() -> None:
     import argparse
-
-    from scipy import stats
 
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--manifest", default="longitudinal_manifest_cribado.csv")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--half", type=int, default=HALF,
                         help="Semilado de la ventana en px (analisis de sensibilidad al error de alineacion).")
+    parser.add_argument("--permutations", type=int, default=100)
     args = parser.parse_args()
     globals()["HALF"] = args.half
 
     manifest = pd.read_csv(EMBED_DIR / args.manifest)
-    feats, y, groups = compute_site_features(manifest)
-    n_pairs = len(y) // 2
+    if "set_id" in manifest.columns:
+        feats, y, groups, sets = compute_lesion_cohort_features(manifest)
+        desc = (f"{int(y.sum())} vistas con lesion de {manifest.loc[y == 1, 'empi_anon'].nunique()} "
+                f"canceres, {int((1 - y).sum())} controles")
+    else:
+        feats, y, groups = compute_site_features(manifest)
+        sets = groups
+        desc = f"{len(y) // 2} pares incidente-control (incidentes con ROI anotada en t)"
 
-    rf = lambda: RandomForestClassifier(n_estimators=300, random_state=args.seed, class_weight="balanced")
-    cv = GroupKFold(n_splits=5)
-    lines = [f"Topologia en el sitio de la lesion ({args.manifest}): {n_pairs} pares "
-             f"incidente-control (incidentes con ROI anotada en t)",
+    lines = [f"Topologia en el sitio de la lesion ({args.manifest}): {desc}",
              f"Ventana {2 * HALF}x{2 * HALF} px a resolucion completa -> {WINDOW_SIZE}x{WINDOW_SIZE}; "
-             f"CV agrupada por par", ""]
+             f"CV agrupada por paciente del caso; p = permutacion dentro de cada conjunto emparejado "
+             f"({args.permutations} permutaciones)", ""]
     señales = {
         "control positivo: t en la lesion": np.stack([f["pi_t1"] for f in feats]),
         "anticipacion: t-1 en el sitio": np.stack([f["pi_t0"] for f in feats]),
         "deriva en el sitio (t-1 vs t)": np.stack([f["drift"] for f in feats]),
     }
     for name, X in señales.items():
-        s = cross_val_score(rf(), X, y, groups=groups, cv=cv, scoring="roc_auc")
-        lines.append(f"  {name:36s}: AUC (5-fold CV) = {s.mean():.3f} +/- {s.std():.3f}")
-
-    drift_h0 = np.array([f["drift"][0] for f in feats])
-    w = stats.wilcoxon(drift_h0[y == 1], drift_h0[y == 0])
-    lines += ["", "Deriva H0 en el sitio, pareada incidente vs su control (Wilcoxon):",
-              f"  mediana incidentes {np.median(drift_h0[y == 1]):.4f}, "
-              f"controles {np.median(drift_h0[y == 0]):.4f}, p = {w.pvalue:.3g}"]
+        auc, p = permutation_auc(X, y, groups, sets, n=args.permutations)
+        lines.append(f"  {name:36s}: AUC (5-fold CV) = {auc:.3f}, p = {p:.3f}")
 
     report = "\n".join(lines)
     print("\n" + report)

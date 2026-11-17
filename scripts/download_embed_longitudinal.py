@@ -313,6 +313,140 @@ def build_screening_cohort(
     return pd.DataFrame(out)
 
 
+def _ffdm_images(metadata: pd.DataFrame) -> dict:
+    """(acc_anon, vista) -> (clave S3, centro de la primera ROI o None) de la
+    PRIMERA imagen 2D de campo completo de esa vista: la misma que se
+    descarga, para que la ROI corresponda a la imagen usada."""
+    m = metadata[(metadata["FinalImageType"] == "2D") & (metadata["spot_mag"].fillna(0) != 1)]
+    out: dict = {}
+    for r in m.itertuples():
+        key = (r.acc_anon, f"{r.ImageLateralityFinal}_{r.ViewPosition}")
+        if key in out:
+            continue
+        roi = None
+        if r.num_ROI > 0 and isinstance(r.ROI_coords, str):
+            import ast
+            ymin, xmin, ymax, xmax = ast.literal_eval(r.ROI_coords)[0]
+            roi = ((ymin + ymax) / 2, (xmin + xmax) / 2)
+        out[key] = (r.anon_dicom_path, roi)
+    return out
+
+
+def build_lesion_cohort(
+    exams: pd.DataFrame, images: dict, n_controls: int = 3,
+    min_gap_days: int = 180, interval_caliper: int = 90, date_caliper: int = 365, seed: int = 42,
+) -> pd.DataFrame:
+    """Cohorte para el analisis en el sitio de la lesion: misma definicion de
+    caso que ``build_screening_cohort``, pero una fila por (caso, VISTA) para
+    cada vista del lado del cancer con ROI anotada en t (MLO y CC), y hasta
+    ``n_controls`` controles emparejados por (caso, vista), con los mismos
+    criterios de emparejamiento. Cada control se usa una sola vez.
+
+    Columnas extra: ``set_id`` (caso + vista, el grupo de la validacion
+    cruzada) y ``roi_r``/``roi_c`` (centro de la lesion en la imagen t del
+    caso; vacio en los controles)."""
+    rng = np.random.default_rng(seed)
+    gap = pd.Timedelta(days=min_gap_days)
+    views_of: dict = {}
+    for acc, view in images:
+        views_of.setdefault(acc, set()).add(view)
+
+    cases = []
+    for pid, g in exams.groupby("empi_anon"):
+        if not g["malig"].any():
+            continue
+        dx_row = g[g["malig"]].sort_values("date").iloc[0]
+        screens = g[g["screen"]].sort_values("date")
+        t = screens[(screens["date"] <= dx_row["date"]) & (screens["date"] >= dx_row["date"] - gap)]
+        if t.empty:
+            continue
+        t = t.iloc[-1]
+        prior = screens[(screens["date"] <= t["date"] - gap) & screens["normal"]]
+        if prior.empty:
+            continue
+        t0 = prior.iloc[-1]
+        common = views_of.get(t0["acc_anon"], set()) & views_of.get(t["acc_anon"], set())
+        side = dx_row["malig_side"]
+        for view in sorted(common):
+            if side in ("L", "R") and not view.startswith(side + "_"):
+                continue
+            roi = images[(t["acc_anon"], view)][1]
+            if roi is None:
+                continue
+            cases.append({"empi_anon": pid, "acc_t0": t0["acc_anon"], "acc_t1": t["acc_anon"],
+                          "date_t0": t0["date"], "interval": (t["date"] - t0["date"]).days,
+                          "view": view, "roi": roi})
+
+    healthy = exams.groupby("empi_anon").filter(lambda g: not g["malig"].any() and g["normal"].all())
+    pool = []
+    for pid, g in healthy[healthy["screen"]].sort_values("date").groupby("empi_anon"):
+        rows = list(g.itertuples())
+        for i, a in enumerate(rows):
+            for b in rows[i + 1:]:
+                pool.append((pid, a.acc_anon, b.acc_anon, a.date, (b.date - a.date).days))
+    pool = pd.DataFrame(pool, columns=["empi_anon", "acc_t0", "acc_t1", "date_t0", "interval"])
+
+    used: set = set()
+    out = []
+    for case in cases:
+        set_id = f"{case['empi_anon']}_{case['view']}"
+        cand = pool[((pool["interval"] - case["interval"]).abs() <= interval_caliper)
+                    & ((pool["date_t0"] - case["date_t0"]).dt.days.abs() <= date_caliper)
+                    & ~pool["empi_anon"].isin(used)]
+        chosen = []
+        for c in cand.iloc[rng.permutation(len(cand))].itertuples():
+            if c.empi_anon in used or (c.acc_t0, case["view"]) not in images \
+                    or (c.acc_t1, case["view"]) not in images:
+                continue
+            used.add(c.empi_anon)
+            chosen.append(c)
+            if len(chosen) == n_controls:
+                break
+        if not chosen:
+            continue
+        members = [("incidente", case["empi_anon"], case["acc_t0"], case["acc_t1"])] + \
+                  [("control", c.empi_anon, c.acc_t0, c.acc_t1) for c in chosen]
+        for kind, pid, acc0, acc1 in members:
+            folder = f"data/embed/images/lesion_{kind}_{pid}"
+            out.append({
+                "empi_anon": pid, "kind": kind, "view": case["view"], "set_id": set_id,
+                "acc_t0": acc0, "acc_t1": acc1,
+                "path_t0": f"{folder}/t0_{case['view']}.dcm", "path_t1": f"{folder}/t1_{case['view']}.dcm",
+                "s3_t0": images[(acc0, case["view"])][0], "s3_t1": images[(acc1, case["view"])][0],
+                "roi_r": case["roi"][0] if kind == "incidente" else None,
+                "roi_c": case["roi"][1] if kind == "incidente" else None,
+            })
+    return pd.DataFrame(out)
+
+
+def _run_lesion_cohort(args) -> None:
+    import boto3
+
+    exams = _exam_table(EMBED_DIR / "clinical.csv")
+    metadata = pd.read_csv(
+        EMBED_DIR / "metadata_reduced.csv",
+        usecols=["acc_anon", "FinalImageType", "ImageLateralityFinal", "ViewPosition",
+                 "spot_mag", "anon_dicom_path", "num_ROI", "ROI_coords"],
+    )
+    cohort = build_lesion_cohort(exams, _ffdm_images(metadata), n_controls=args.n_controls, seed=args.seed)
+    inc = cohort[cohort["kind"] == "incidente"]
+    print(f"Cohorte de lesion: {inc['empi_anon'].nunique()} canceres, {len(inc)} vistas con ROI, "
+          f"{(cohort['kind'] == 'control').sum()} controles.", flush=True)
+
+    s3 = boto3.Session(profile_name=args.profile, region_name="us-west-2").client("s3")
+    for i, row in cohort.reset_index(drop=True).iterrows():
+        for key, rel in [(row["s3_t0"], row["path_t0"]), (row["s3_t1"], row["path_t1"])]:
+            local = ROOT / rel
+            local.parent.mkdir(parents=True, exist_ok=True)
+            if not local.exists():
+                s3.download_file("embed-dataset-open", key, str(local))
+        print(f"  [{i + 1}/{len(cohort)}] {row['kind']} {row['empi_anon']} ({row['view']}): OK", flush=True)
+
+    out = EMBED_DIR / "longitudinal_manifest_lesion.csv"
+    cohort.drop(columns=["s3_t0", "s3_t1"]).to_csv(out, index=False)
+    print(f"Manifiesto guardado en {out}")
+
+
 def _run_screening_cohort(args) -> None:
     import boto3
 
@@ -397,8 +531,17 @@ def main() -> None:
                              "emparejados por intervalo, epoca y vista. Solo imagenes de campo "
                              "completo. --n-incident limita el numero de casos. Escribe "
                              "data/embed/longitudinal_manifest_cribado.csv.")
+    parser.add_argument("--lesion", action="store_true",
+                        help="Cohorte para el analisis en el sitio de la lesion: los mismos canceres "
+                             "que --cribado, una fila por cada vista del lado del cancer con ROI "
+                             "anotada en t, y --n-controls controles emparejados por vista. Escribe "
+                             "data/embed/longitudinal_manifest_lesion.csv.")
+    parser.add_argument("--n-controls", type=int, default=3)
     args = parser.parse_args()
 
+    if args.lesion:
+        _run_lesion_cohort(args)
+        return
     if args.cribado:
         _run_screening_cohort(args)
         return
