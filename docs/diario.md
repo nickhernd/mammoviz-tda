@@ -174,6 +174,17 @@ de controles casi nuevo y emparejado por edad. Sigue siendo un único
 dataset, los mismos 97 cánceres y un análisis elegido tras varias variantes:
 hace falta validación externa con el análisis fijado de antemano.
 
+**¿Estaba ya formulada la hipótesis?** (revisión, detalle en la issue #93)
+La idea general sí: entre un tercio y la mitad de los cánceres detectados
+en cribado tienen signos mínimos u omitidos en la previa (revisiones
+radiológicas: Noruega 2020, Flandes 2022), y modelos de IA marcan el sitio
+del cáncer futuro 2–4 años antes en el 57–81 % de casos seleccionados
+(Noruega 2026). Lo que no se ha encontrado es topología o TDA sobre
+mamografías previas, ni un diseño emparejado con control positivo y de
+localización, ni la descripción de los confusores. La aportación es el
+descriptor interpretable, el diseño controlado y los confusores, no el
+descubrimiento de la señal.
+
 **Conclusión del día**: con un diseño sin confusores y un descriptor que sí
 detecta la lesión cuando está, **no hay señal topológica detectable en el
 mismo sitio un cribado antes** (~1 año). Es un nulo informativo, no un nulo
