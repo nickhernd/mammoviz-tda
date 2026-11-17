@@ -1,0 +1,9 @@
+Topologia en el sitio de la lesion (longitudinal_manifest_cribado.csv): 82 pares incidente-control (incidentes con ROI anotada en t)
+Ventana 1024x1024 px a resolucion completa -> 256x256; CV agrupada por par
+
+  control positivo: t en la lesion    : AUC (5-fold CV) = 0.624 +/- 0.041
+  anticipacion: t-1 en el sitio       : AUC (5-fold CV) = 0.590 +/- 0.082
+  deriva en el sitio (t-1 vs t)       : AUC (5-fold CV) = 0.486 +/- 0.068
+
+Deriva H0 en el sitio, pareada incidente vs su control (Wilcoxon):
+  mediana incidentes 0.1285, controles 0.1158, p = 0.195

@@ -96,6 +96,33 @@ def compute_features(manifest: pd.DataFrame, n_bins: int = 6, verbose: bool = Tr
     return np.asarray(feats_t0), np.asarray(feats_drift), np.asarray(labels)
 
 
+IMAGE_CACHE_PATH = EMBED_DIR / "image_pi_cache.pkl"
+
+
+def compute_t1_features(manifest: pd.DataFrame, n_bins: int = 6, verbose: bool = True) -> np.ndarray:
+    """Persistence Image de la exploracion t (la del diagnostico) de cada par.
+
+    Es el control positivo del diseño: en t el cancer ya esta presente, asi
+    que si ni siquiera t sola separa casos de controles, el descriptor no ve
+    estas lesiones y no cabe esperar anticipacion desde t-1."""
+    import pickle
+
+    cache = pickle.loads(IMAGE_CACHE_PATH.read_bytes()) if IMAGE_CACHE_PATH.exists() else {}
+    feats, n_new = [], 0
+    for _, row in manifest.iterrows():
+        key = (row["path_t1"], n_bins, FEATURES_VERSION)
+        if key not in cache:
+            diagram = persistence_diagram(_load_and_preprocess(ROOT / row["path_t1"]))
+            cache[key] = persistence_image_vector(diagram, n_bins=n_bins)[0]
+            n_new += 1
+        feats.append(cache[key])
+    if n_new:
+        IMAGE_CACHE_PATH.write_bytes(pickle.dumps(cache))
+    if verbose:
+        print(f"  (t: {n_new} imagenes calculadas, {len(manifest) - n_new} desde cache)")
+    return np.asarray(feats)
+
+
 def intervals_days(manifest: pd.DataFrame) -> np.ndarray:
     """Intervalo t-1 -> t de cada par, en dias (requiere acc_t0/acc_t1)."""
     from download_embed_longitudinal import _load_per_study_assessment
@@ -148,6 +175,9 @@ def main() -> None:
     _cv_auc(X_deriva, "deriva")
     _cv_auc(X_combinada, "combinada")
 
+    print("\nControl positivo (t sola, con el cancer ya presente):")
+    _cv_auc(compute_t1_features(manifest, n_bins=args.n_bins), "diagnostico (solo t)")
+
     if {"acc_t0", "acc_t1"} <= set(manifest.columns):
         dias = intervals_days(manifest)
         print(f"\nIntervalo t-1 -> t (mediana): incidentes {np.median(dias[y == 1]):.0f} dias, "
@@ -159,6 +189,9 @@ def main() -> None:
 
     RESULTS_DIR.mkdir(exist_ok=True)
     stem = Path(args.manifest).stem.replace("longitudinal_pilot_manifest", "embed_longitudinal_pilot")
+    stem = stem.replace("longitudinal_manifest", "longitudinal")
+    if not stem.startswith("embed_"):
+        stem = f"embed_{stem}"
     out_path = RESULTS_DIR / f"{stem}.txt"
     with open(out_path, "w", encoding="utf-8") as f:
         f.write(f"Piloto longitudinal REAL (EMBED, {args.manifest}): {len(manifest)} pacientes "

@@ -29,6 +29,10 @@ con `git log --since=<fecha> --until=<fecha>`.
      (spot/magnificación), la de los controles de cribado (inflaba la deriva).
    El diseño definitivo es una **cohorte de cribado** con cánceres
    confirmados por patología y controles emparejados (ver 2026-11-17).
+5. **Resultado principal**: el descriptor global no ve las lesiones de
+   cribado (control positivo 0.53). En el sitio de la lesión sí las ve
+   (0.67, p = 0.02), pero en ese mismo sitio un cribado antes no hay señal
+   (0.50). Nulo informativo.
 
 ---
 
@@ -62,7 +66,37 @@ con `git log --since=<fecha> --until=<fecha>`.
   t-1 = cribado negativo previo; controles con dos cribados negativos
   emparejados por intervalo, época (±1 año) y vista; solo imágenes de campo
   completo de la mama del lado del cáncer. Intervalos (385 vs 390 días) y año
-  de t-1 equilibrados. En curso: descarga y evaluación.
+  de t-1 equilibrados.
+
+**Resultados de la cohorte de cribado (324 pacientes)**
+- Global (mamografía entera a 224×224): anticipación 0.459, deriva 0.535,
+  "intervalo solo" 0.503. **Todo al azar.** El 0.751 de deriva del diseño
+  anterior venía entero del tipo de exploración.
+- **Control positivo** (nuevo): la imagen t sola, con el cáncer ya presente,
+  tampoco separa (0.530). Conclusión: el descriptor global no "ve" una
+  lesión de cribado, que a esa escala son pocos píxeles. Un nulo de
+  anticipación con un descriptor ciego no dice nada.
+- Topología local en rejilla 4×4: todo al azar; el parche de máximo cambio
+  cae en la lesión 3/82 (azar 6 %).
+- **Análisis en el sitio de la lesión** (`scripts/embed_lesion_site.py`):
+  ventana de 512 px (~3.3 cm) a resolución completa centrada en la ROI de t;
+  la misma posición relativa se aplica a t-1 y al control emparejado
+  (sin sesgo de selección del sitio). 82 pares, CV agrupada por par.
+  - control positivo (t en la lesión): **0.668**, permutación p = 0.02.
+    La topología sí detecta el cáncer cuando se mira donde está (coherente
+    con el 0.66 de CBIS-DDSM, que también usa la lesión recortada).
+  - anticipación (t-1 en el mismo sitio): **0.498**, p = 0.5.
+  - deriva en el sitio: 0.501.
+  - Sensibilidad con ventana de 1024 px (por si la alineación sin registro
+    falla): control positivo 0.629 (p = 0.05), anticipación 0.589
+    (p = 0.089, no significativa; a vigilar con más pares).
+  - La densidad no está desequilibrada (p = 0.50), no confunde.
+
+**Conclusión del día**: con un diseño sin confusores y un descriptor que sí
+detecta la lesión cuando está, **no hay señal topológica detectable en el
+mismo sitio un cribado antes** (~1 año). Es un nulo informativo, no un nulo
+por ceguera del método. Pendiente: más pares con ROI (solo 82 de 162
+incidentes tienen ROI en la vista usada) para cerrar la ventana de 1024.
 
 ---
 

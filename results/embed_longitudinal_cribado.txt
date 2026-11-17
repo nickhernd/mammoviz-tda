@@ -1,0 +1,9 @@
+Piloto longitudinal REAL (EMBED, longitudinal_manifest_cribado.csv): 324 pacientes (162 incidentes, 162 control)
+AVISO: piloto exploratorio de 324 pacientes, no concluyente.
+
+auc_anticipacion: 0.4591 +/- 0.0241
+auc_deriva: 0.5352 +/- 0.0120
+auc_combinada: 0.4525 +/- 0.0286
+auc_diagnostico_(solo_t): 0.5299 +/- 0.0230
+auc_intervalo_solo: 0.5027 +/- 0.0428
+auc_deriva_mas_intervalo: 0.5587 +/- 0.0338

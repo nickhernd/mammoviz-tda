@@ -60,6 +60,32 @@ def point_to_cell(row: float, col: float, bbox: tuple[int, int, int, int], grid:
     return i * grid + j
 
 
+def map_point(row: float, col: float,
+              bbox_from: tuple[int, int, int, int],
+              bbox_to: tuple[int, int, int, int]) -> tuple[float, float]:
+    """Traslada un punto de una mamografia a otra conservando su posicion
+    RELATIVA dentro de la caja de la mama (misma aproximacion gruesa que la
+    rejilla: no es un registro elastico)."""
+    r0, c0, r1, c1 = bbox_from
+    s0, d0, s1, d1 = bbox_to
+    rel_r = (row - r0) / max(r1 - r0, 1)
+    rel_c = (col - c0) / max(c1 - c0, 1)
+    return s0 + rel_r * (s1 - s0), d0 + rel_c * (d1 - d0)
+
+
+def window_around(image: np.ndarray, row: float, col: float, half: int) -> np.ndarray:
+    """Ventana cuadrada de lado ``2*half`` centrada en (row, col). Si se sale
+    de la imagen se desplaza hacia dentro, de modo que siempre tiene el
+    tamaño pedido (salvo que la imagen sea mas pequeña que la ventana)."""
+    h, w = image.shape[:2]
+    side_r, side_c = min(2 * half, h), min(2 * half, w)
+    top = int(round(row)) - side_r // 2
+    left = int(round(col)) - side_c // 2
+    top = min(max(top, 0), h - side_r)
+    left = min(max(left, 0), w - side_c)
+    return image[top:top + side_r, left:left + side_c]
+
+
 def cell_neighbours(cell: int, grid: int = 4) -> set[int]:
     """La celda y sus vecinas (vecindad 3x3) en la rejilla."""
     i, j = divmod(cell, grid)

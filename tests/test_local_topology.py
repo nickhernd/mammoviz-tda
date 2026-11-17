@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import numpy as np
 
-from src.local_topology import breast_bbox, cell_neighbours, grid_patches, point_to_cell
+from src.local_topology import (
+    breast_bbox, cell_neighbours, grid_patches, map_point, point_to_cell, window_around,
+)
 
 
 def test_breast_bbox_finds_the_tissue_and_ignores_small_specks():
@@ -39,3 +41,17 @@ def test_point_to_cell_uses_breast_relative_coordinates():
 def test_cell_neighbours_in_corner_and_centre():
     assert cell_neighbours(0) == {0, 1, 4, 5}
     assert len(cell_neighbours(5)) == 9
+
+
+def test_map_point_keeps_the_relative_position_in_the_breast():
+    # centro de una mama -> centro de la otra, aunque cambien encuadre y tamaño
+    assert map_point(300, 400, (100, 200, 500, 600), (0, 0, 200, 100)) == (100.0, 50.0)
+    assert map_point(100, 200, (100, 200, 500, 600), (10, 20, 30, 40)) == (10.0, 20.0)
+
+
+def test_window_around_is_centred_and_shifted_inside_at_the_border():
+    img = np.arange(100 * 100).reshape(100, 100)
+    w = window_around(img, 50, 50, half=10)
+    assert w.shape == (20, 20) and w[0, 0] == img[40, 40]
+    corner = window_around(img, 0, 99, half=10)   # se sale por arriba y por la derecha
+    assert corner.shape == (20, 20) and corner[0, 0] == img[0, 80]
