@@ -140,3 +140,39 @@ Estas 74 vistas ya se vieron en el análisis principal (con la caja de la
 mama). El método de registro se eligió por geometría y se probó en EMBED,
 no en ellas, pero no son datos "vírgenes". La prueba limpia sería el 30 %
 reservado de CSAW-CC, en colaboración con Karolinska.
+
+---
+
+# Adenda 2 (2026-11-18): localización en el cribado anterior (exploratorio)
+
+**Fijada antes de calcular.** Es una pregunta nueva sobre datos de CSAW-CC
+ya usados, así que el resultado es **exploratorio**, no confirmatorio.
+
+## Pregunta
+
+Si se recorre toda la mama del cribado anterior (t-1) con ventanas, ¿la
+puntuación topológica es más alta donde después aparecerá el cáncer? No
+necesita registro entre exploraciones: todo ocurre dentro de t-1.
+
+## Diseño
+
+- **Imágenes:** t-1 de las vistas de caso con el sitio marcado por el
+  radiólogo (130 vistas), y t-1 de sus controles.
+- **Ventanas:** rejilla con paso de 256 px (media ventana) dentro de la mama,
+  más la ventana centrada en el sitio marcado. Misma medida de siempre
+  (512 px → 256, CLAHE, imagen de persistencia 6×6 por dimensión).
+- **Modelo:** Random Forest por validación cruzada de 5 particiones agrupada
+  por paciente. Se entrena con la ventana del sitio (positiva) frente a
+  ventanas a más de 36 mm del sitio en la misma mama y ventanas de la t-1 de
+  los controles (negativas).
+- **Evaluación en cada mama de test:** percentil de la puntuación de la
+  ventana del sitio entre todas las ventanas de la rejilla de esa mama.
+
+## Métricas y azar
+
+- Percentil mediano del sitio. **Azar: 0.5.** Test de Wilcoxon contra 0.5.
+- Fracción de mamas con el sitio en el 10 % superior. **Azar: 10 %.**
+- **Control positivo:** lo mismo en t, la exploración del diagnóstico, con
+  la máscara de t. Debería localizar bien; si no, la medida no sirve para
+  localizar.
+- Separado por tipo de marca: punto (nada visible) frente a contorno.
