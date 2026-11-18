@@ -58,7 +58,9 @@ En el contexto de la mamografía y del cáncer de mama, los descriptores
 topológicos permiten capturar patrones de conectividad y estructura (número de
 componentes conexas, agujeros, ramificaciones de conductos, distribución de
 microcalcificaciones) que resultan difíciles de modelar con características
-convencionales. Su robustez frente al ruido y su interpretabilidad geométrica
+convencionales, y se han usado para clasificar tanto
+microcalcificaciones~\cite{malek2023microcalc} como
+masas~\cite{asaad2022phbreast}. Su robustez frente al ruido y su interpretabilidad geométrica
 los convierten en un complemento natural de las CNN.
 
 \subsection{Comparación de novedad con los trabajos más cercanos}
@@ -76,22 +78,23 @@ identificados (issue \#51).}
 \small
 \begin{tabular}{@{}>{\raggedright}p{2.8cm}>{\raggedright}p{3.4cm}>{\raggedright}p{3.4cm}>{\raggedright\arraybackslash}p{4.4cm}@{}}
 \toprule
- & \textbf{Jetomo et al.\ 2025}~\cite{jetomo2025phca} & \textbf{Hitit Univ.\ 2026}~\cite{hitit2026epjplus} & \textbf{Este TFG} \\
+ & \textbf{Jetomo et al.\ 2025}~\cite{jetomo2025phca} & \textbf{Dalyan et al.\ 2026}~\cite{hitit2026epjplus} & \textbf{Este TFG} \\
 \midrule
-Dataset & INbreast & No verificado (artículo de pago) & CBIS-DDSM, EMBED y CSAW-CC \\
-Features & HOG + PCA + PHCA (algoritmo propio de clasificación por homología persistente) & Homología persistente (sublevel set) + momentos de Zernike + Haralick/GLCM & Imágenes de persistencia H0+H1 (\texttt{gudhi}/\texttt{giotto-tda}) \\
-Comparación con \textit{deep learning} & No reportada en el resumen disponible & No reportada en el resumen disponible & Sí: CNN (DenseNet121) y fusión TDA+CNN (Capítulo~\ref{cap:resultados}) \\
-Interpretabilidad & No es el foco & No es el foco (se presenta la TDA como alternativa interpretable, pero sin comparar contra XAI) & Sí: comparación sistemática con Grad-CAM, SHAP y LIME (Sección~\ref{sec:resultados-xai}) \\
+Dataset & INbreast & Dos conjuntos (no especificados en el resumen) & CBIS-DDSM, EMBED y CSAW-CC \\
+Features & HOG + PCA + PHCA (algoritmo propio de clasificación por homología persistente) & Homología persistente + descriptores clásicos de forma y textura, con selección de características por optimización & Imágenes de persistencia H0+H1 (\texttt{gudhi}/\texttt{giotto-tda}) \\
+Comparación con \textit{deep learning} & No reportada en el resumen disponible & Integra las características topológicas en modelos de \textit{deep learning} & Sí: CNN (DenseNet121) y fusión TDA+CNN (Capítulo~\ref{cap:resultados}) \\
+Interpretabilidad & No es el foco & Busca una representación compacta e interpretable, sin comparar con métodos de explicabilidad & Sí: comparación sistemática con Grad-CAM, SHAP y LIME (Sección~\ref{sec:resultados-xai}) \\
 Longitudinal o temporal & No & No & Sí: hipótesis principal, validada en CSAW-CC (Sección~\ref{sec:resultados-csaw}) \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 Los dos comparten con este TFG el uso de homología persistente para
-clasificación benigno/maligno sobre una mamografía aislada, pero ninguno
-compara explícitamente su enfoque topológico contra una CNN de referencia
-entrenada en el mismo conjunto, ni contra métodos de explicabilidad
-estándar (Grad-CAM, SHAP, LIME), y ninguno aborda el análisis longitudinal.
+clasificación benigno/maligno sobre una mamografía aislada; Dalyan et al.
+concluyen además que las características de homología persistente son la
+familia más informativa en su análisis de ablación. Ninguno compara su
+enfoque con métodos de explicabilidad estándar (Grad-CAM, SHAP, LIME) y
+ninguno aborda el análisis longitudinal.
 Esto confirma, desde el ángulo de los trabajos más afines (no solo desde la
 ausencia general de literatura ya discutida en la
 Sección~\ref{sec:estado-arte-longitudinal}), que el hueco de novedad que
@@ -99,12 +102,10 @@ ocupa este TFG --- combinación con \textit{deep learning},
 \textbf{comparación sistemática de interpretabilidad} e
 \textbf{hipótesis longitudinal} --- sigue sin estar cubierto.
 
-\emph{Nota de verificación}: el artículo de Hitit University (EPJ Plus,
-2026) está detrás de muro de pago; su descripción metodológica proviene de
-su resumen público, no de una lectura completa, y sus métricas de
-rendimiento no se han podido verificar directamente (ver nota en
-\texttt{tfg/bibliografia.bib}). Queda pendiente completar la verificación
-si se consigue acceso a texto completo.
+\emph{Nota de verificación}: el artículo de Dalyan \textit{et al.} (EPJ Plus,
+2026) es de pago; su descripción procede de su resumen público, no de una
+lectura completa, y por eso no se citan sus conjuntos de datos ni sus
+métricas.
 
 \section{Predicción de riesgo y análisis longitudinal de mamografía}
 \label{sec:estado-arte-longitudinal}
@@ -136,10 +137,7 @@ TDA a mamografía (Sección~\ref{sec:tda-imagen-medica} y
 exploración por caso}. Una búsqueda sistemática (arXiv, Google Scholar;
 2026-10-07) combinando "persistent homology" o "topological data analysis" con
 "longitudinal" o "temporal" y "mammography" o "breast cancer" no encontró ningún
-trabajo que combine ambas líneas. Un \textit{survey} de aplicaciones de TDA en
-oncología citado en esa búsqueda llega a sugerir explícitamente el análisis de
-series temporales en cáncer como dirección futura no explorada, lo que
-corrobora el hueco. Esto deja planteada la pregunta que motiva la hipótesis
+trabajo que combine ambas líneas. Esto deja planteada la pregunta que motiva la hipótesis
 principal de este trabajo: \textbf{¿aporta la homología persistente, aplicada
 al cambio topológico entre exploraciones sucesivas, una señal predictiva que
 los modelos de \textit{deep learning} longitudinal actuales no capturan --- o
@@ -156,19 +154,21 @@ mamografía anterior no es nueva, y está bien documentada sin topología:
         en cribado clasificó el 46\,\% como verdaderamente negativas, el
         32\,\% con signos mínimos y el 22\,\% con un hallazgo
         omitido~\cite{hovda2021prior}. En el programa flamenco, el 37\,\%
-        tenía signos mínimos~\cite{vandendaele2022review}. Entre un tercio y
-        la mitad de los cánceres ``avisan'' en el cribado anterior.
+        tenía signos mínimos y el 19\,{}\% un tumor claramente visible~\cite{vandendaele2022review}.
+        En ambos programas, algo más de la mitad de los cánceres mostraban
+        ya algún signo en el cribado anterior.
   \item \textbf{Inteligencia artificial sobre mamografías previas.}
-        Sistemas comerciales de \textit{deep learning} localizan alrededor
-        de un tercio de los cánceres que se pasaron por alto en la lectura
-        original~\cite{park2022missed}. El trabajo más cercano a la hipótesis
+        Un sistema comercial de diagnóstico asistido por IA, aplicado a las
+        mamografías previas de cánceres que se pasaron por alto, localizó 27
+        de 34 cánceres visibles en retrospectiva y 18 de 33 con signos
+        mínimos~\cite{park2022missed}. El trabajo más cercano a la hipótesis
         de este TFG es el de Martiniussen \textit{et
         al.}~\cite{martiniussen2026aimarkers}: dos modelos de IA marcaron el
         sitio del cáncer futuro en mamografías de 2 y 4 años antes (en al
         menos una vista, en el 75--81\,\% y el 57--61\,\% de los casos), que
         los radiólogos habían leído casi siempre como normales. Su diseño
-        selecciona casos con puntuación de riesgo alta y no usa controles
-        emparejados.
+        incluye solo casos cuyas exploraciones previas estaban en el decil
+        superior de riesgo según la IA.
   \item \textbf{Textura y densidad.} Los descriptores de textura
         mamográfica se usan como marcadores de riesgo, pero sobre la mama
         entera o sobre la mama contralateral, no en el sitio donde aparecerá
