@@ -1,0 +1,6 @@
+Error del registro t -> t-1 en CSAW-CC (113 vistas de caso con marca en t-1 y en t)
+distancia entre la marca de t trasladada y la marca de t-1, en mm
+
+  caja     : mediana  12.2 mm | P75  21.6 | <= 18 mm (dentro de media ventana) 65% | n = 113
+  afin     : mediana   8.2 mm | P75  16.0 | <= 18 mm (dentro de media ventana) 77% | n = 113
+  elastico : mediana   6.1 mm | P75  12.5 | <= 18 mm (dentro de media ventana) 89% | n = 113
