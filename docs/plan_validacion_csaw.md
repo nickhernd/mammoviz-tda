@@ -201,3 +201,32 @@ cruzada) en la t-1 del **primer control de cada conjunto**, con un
   pseudo-sitio de su control, la localización dice algo del cáncer y no
   solo de la anatomía.
 - Igual en t (control positivo).
+
+---
+
+# Adenda 4 (2026-11-18): transferencia del modelo EMBED → CSAW-CC
+
+**Fijada antes de calcular.** Hasta ahora CSAW-CC validó la *hipótesis*
+(cada cohorte entrenaba su propio modelo por validación cruzada). Aquí se
+valida un *modelo*.
+
+## Hipótesis H4
+
+Un Random Forest entrenado **solo con EMBED** (cohorte de lesión emparejada
+por edad, imágenes de persistencia de la ventana del sitio en t-1) y aplicado
+**sin ningún ajuste** a CSAW-CC (cohorte del análisis principal) separa casos
+de controles: AUC > 0.5.
+
+## Análisis
+
+- Entrenamiento: todas las filas de `longitudinal_manifest_lesion_edad.csv`
+  (174 vistas de caso, 522 controles), Random Forest de 300 árboles,
+  `class_weight="balanced"`, semilla 42. Mismas features que en todo el
+  trabajo (72 valores de la imagen de persistencia de t-1).
+- Prueba: las 816 filas de `manifest_csaw.csv`, sin reentrenar, sin
+  recalibrar y sin seleccionar umbral.
+- Métrica: AUC. p-valor por 1000 permutaciones dentro de cada conjunto de
+  CSAW (se permuta qué miembro es el caso; el modelo no cambia).
+- **Criterio:** AUC > 0.5 con p < 0.05.
+- Secundarios: lo mismo para el control positivo (t, entrenando con t de
+  EMBED); y en sentido inverso, CSAW → EMBED.
