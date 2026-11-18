@@ -1,0 +1,7 @@
+Mama contralateral como control (embed, sitio con registro elastico, subconjunto todo)
+157 vistas de caso, 471 controles (conjuntos completos); 200 permutaciones
+
+  sitio solo (referencia)             : AUC = 0.602, p = 0.005
+  sitio - contralateral               : AUC = 0.556, p = 0.055
+  sitio + contralateral (concatenado) : AUC = 0.578, p = 0.035
+  contralateral solo (control)        : AUC = 0.502, p = 0.532
