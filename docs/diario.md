@@ -108,6 +108,40 @@ con `git log --since=<fecha> --until=<fecha>`.
   mejora, pero confirma que la señal es local: el sitio homólogo de la otra
   mama no tiene nada. No se lleva a CSAW.
 
+**Nuevos caminos (tras ver que las mejoras no se confirmaban)**
+- Cánceres de intervalo en CSAW: solo 19 mujeres con el sitio marcado en
+  su último cribado negativo, demasiado pocas. Descartado.
+- **Interpretación** (`scripts/interpret_anticipation.py`): caso menos sus
+  controles, celda a celda. El patrón es casi idéntico en las dos cohortes
+  (**r = 0.88**, mismo signo en el 83 % de las celdas; CSAW 28/72 celdas
+  con FDR < 0.05): menos componentes y ciclos de intensidad baja-media y
+  más componentes efímeras en el extremo brillante. Lectura: densificación
+  local un cribado antes.
+- **¿Es solo densidad?** (`scripts/density_baseline.py`): densidad
+  absoluta 0.586 (CSAW) / 0.555 (EMBED); topología 0.614 / 0.571; juntas
+  0.637 / 0.588. Regresión condicional con las dos en CSAW: topología
+  ajustada OR 1.53 (p = 3·10⁻⁵), densidad ajustada OR 1.09 (p = 0.38). La
+  topología contiene la densidad y añade algo espacial.
+- **Localización** (adendas 2 y 3, exploratorio): recorriendo toda la mama
+  de t-1 en CSAW, el sitio marcado queda en el percentil mediano 0.78 (32 %
+  en el 10 % superior). Me di cuenta de que el nulo de 0.5 era incorrecto
+  (los cánceres aparecen en tejido glandular, el modelo puede aprender
+  anatomía) y lo cambié por la misma posición en el control sano, con una
+  adenda escrita antes de calcularlo: 0.581 (15 %). Caso frente a control,
+  p = 2·10⁻⁵; donde no se veía nada, 0.791 frente a 0.638 (p = 0.004).
+  Parte era anatomía, pero el sitio del cáncer puntúa más.
+
+**Memoria y slides**
+- Memoria reescrita (commit 4441b87): resumen y abstract, objetivos sin lo
+  sintético, estado del arte con la revisión de novedad, metodología
+  longitudinal real, capítulo de resultados nuevo (tres diseños, ceguera
+  global, sitio, validación preregistrada, mejoras, interpretación,
+  densidad, localización) y conclusiones. 9 referencias nuevas con
+  metadatos verificados en Europe PMC. Compila sin referencias rotas
+  (71 páginas). Figuras generadas desde `results/` con
+  `scripts/figuras_memoria.py`.
+- Slides actualizadas a 18 diapositivas con la historia completa.
+
 ---
 
 ## 2026-11-17
