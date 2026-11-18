@@ -2,6 +2,10 @@ LOCALIZACION EN CSAW-CC (adenda 2 del plan; EXPLORATORIO)
 rejilla de ventanas de 512 px con paso 256 px; RF por CV agrupada por paciente
 
   control positivo, t (diagnostico): 187 mamas | percentil mediano del sitio = 0.905 (azar 0.5), Wilcoxon p = 1.54e-29 | sitio en el 10 % superior: 51% (azar 10 %)
+     ADENDA 3, t1: 187 pares | sitio del caso 0.905 frente a pseudo-sitio del control 0.667 | Wilcoxon pareado p = 2.13e-14 | 10 % superior: caso 51%, control 20%
   pregunta, t-1 (cribado anterior): 130 mamas | percentil mediano del sitio = 0.782 (azar 0.5), Wilcoxon p = 3.67e-12 | sitio en el 10 % superior: 32% (azar 10 %)
+     ADENDA 3, t0: 130 pares | sitio del caso 0.782 frente a pseudo-sitio del control 0.581 | Wilcoxon pareado p = 2.35e-05 | 10 % superior: caso 32%, control 15%
      t-1, contorno (signos visibles): 42 mamas | percentil mediano del sitio = 0.749 (azar 0.5), Wilcoxon p = 1.79e-05 | sitio en el 10 % superior: 29% (azar 10 %)
+     ADENDA 3, t-1, contorno (signos visibles): 42 pares | sitio del caso 0.749 frente a pseudo-sitio del control 0.456 | Wilcoxon pareado p = 0.000325 | 10 % superior: caso 29%, control 7%
      t-1, punto (nada visible): 88 mamas | percentil mediano del sitio = 0.791 (azar 0.5), Wilcoxon p = 1.59e-08 | sitio en el 10 % superior: 34% (azar 10 %)
+     ADENDA 3, t-1, punto (nada visible): 88 pares | sitio del caso 0.791 frente a pseudo-sitio del control 0.638 | Wilcoxon pareado p = 0.00427 | 10 % superior: caso 34%, control 19%
