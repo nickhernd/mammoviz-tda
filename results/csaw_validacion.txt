@@ -1,0 +1,18 @@
+VALIDACION EXTERNA EN CSAW-CC (plan: docs/plan_validacion_csaw.md)
+204 vistas de 109 canceres, 612 controles; ventana 512 px; CV agrupada por paciente del caso
+
+ANALISIS PRINCIPAL (anticipacion: t-1 en el sitio)
+  AUC = 0.614, p (permutacion, 1000) = 0.0010
+  regresion logistica condicional: OR por DE = 1.59, p = 3.18e-07
+  CRITERIO DEL PLAN (AUC > 0.5, p < 0.05, OR > 1): CUMPLIDO
+
+SECUNDARIOS (200 permutaciones)
+  1. control positivo (t en el sitio)      : AUC = 0.725, p = 0.005
+  2. sitio alejado (media mama): anticipacion AUC = 0.519, p = 0.269; control positivo AUC = 0.516, p = 0.308
+  3. solo MLO: anticipacion AUC = 0.627, p = 0.005
+  3. solo CC : anticipacion AUC = 0.579, p = 0.045
+  4. solo H0: anticipacion AUC = 0.614, p = 0.005
+  4. solo H1: anticipacion AUC = 0.588, p = 0.005
+  5. sitio marcado en t-1 (regla 1): anticipacion AUC = 0.660, p = 0.005 (130 vistas)
+  5. sitio trasladado desde t (regla 2): anticipacion AUC = 0.491, p = 0.582 (74 vistas)
+  (deriva en el sitio, no prevista como secundario; exploratorio): AUC = 0.566

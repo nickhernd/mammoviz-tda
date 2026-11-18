@@ -1,0 +1,14 @@
+CSAW-CC, ANALISIS EXPLORATORIO (no previsto en docs/plan_validacion_csaw.md)
+
+Anticipacion (t-1 en el sitio) segun como se localizo el sitio en t-1.
+La marca del radiologo en t-1 es un PUNTO (1 px) si no habia nada visible,
+o un CONTORNO si habia signos visibles que no se detectaron en su momento.
+200 permutaciones dentro de cada conjunto caso + controles.
+
+  sitio por punto (nada visible)     : AUC = 0.596, p = 0.010 (88 vistas de caso)
+  sitio por contorno (signos visibles): AUC = 0.669, p = 0.020 (42 vistas de caso)
+  sitio trasladado desde t (sin marca): AUC = 0.491, p = 0.582 (74 vistas de caso)
+
+Pixeles marcados en t-1: mediana 1, percentil 75 = 2372, maximo 152022.
+Lectura: la señal existe tambien donde el radiologo no veia nada; trasladar
+el sitio desde t con la caja de la mama es demasiado impreciso.

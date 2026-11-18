@@ -62,6 +62,27 @@ con `git log --since=<fecha> --until=<fecha>`.
 - Condición de uso: en publicaciones hay que invitar como coautores a los
   curadores (criterios ICMJE). Para el TFG basta con citar.
 
+**Resultado de la validación (`results/csaw_validacion.txt`)**
+- **Análisis principal: AUC 0.614, p = 0.001 (1 000 permutaciones);
+  regresión condicional OR 1.59 por DE (p = 3·10⁻⁷). Criterio del plan
+  CUMPLIDO: la hipótesis se replica en una cohorte independiente.**
+- Control positivo (t): 0.725. Sitio alejado: 0.519 (anticipación) y
+  0.516 (control positivo), es decir, señal local. MLO 0.627, CC 0.579.
+  H0 0.614, H1 0.588.
+- Por regla de localización: marcado en t-1, 0.660; trasladado desde t,
+  0.491.
+- Exploratorio (`results/csaw_exploratorio.txt`): la marca en t-1 es un
+  **punto** (nada visible, 88 vistas) en dos tercios de los casos, y un
+  contorno (signos visibles no detectados, 42) en el resto.
+  - **Con solo los puntos: 0.596 (p = 0.01).** Hay señal donde el
+    radiólogo no veía nada, no solo cánceres visibles omitidos.
+  - Con contorno: 0.669.
+  - Trasladado desde t: 0.491. La alineación por la caja de la mama es
+    demasiado imprecisa, lo que explica por qué en EMBED (todo trasladado)
+    el efecto era más débil.
+- No se pudo emparejar por intervalo ni fecha (fechas anonimizadas); todo
+  Hologic del mismo programa.
+
 ---
 
 ## 2026-11-17
