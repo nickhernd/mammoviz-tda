@@ -150,6 +150,13 @@ con `git log --since=<fecha> --until=<fecha>`.
   habría que trasladar el sitio entre exploraciones, que ya se vio que
   pierde la señal.
 
+- **Casos de estudio** (`scripts/case_studies.py`): el caso de CSAW con
+  mayor puntuación entre los marcados con punto concentra 40 componentes
+  brillantes efímeras en un foco denso central (su control, 0), y en ese
+  centro aparece la lesión un año después. Ubicación por las cocaras de
+  gudhi; se verificó que gudhi indexa los píxeles en orden de Fortran
+  (con orden C las posiciones no coinciden con los nacimientos).
+
 **Memoria y slides**
 - Memoria reescrita (commit 4441b87): resumen y abstract, objetivos sin lo
   sintético, estado del arte con la revisión de novedad, metodología
