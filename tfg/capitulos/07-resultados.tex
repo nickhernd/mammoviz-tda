@@ -726,6 +726,73 @@ nada. Recorriendo toda la mamografía anterior, la topología señala el sitio
 del cáncer futuro en el 10\,\% superior de su mama en un tercio de los casos
 (15--19\,\% en los controles).
 
+\section{Robustez del resultado: otro modelo y otra cohorte}
+\label{sec:robustez}
+
+\subsection{Transferencia del modelo entre cohortes}
+La validación en CSAW-CC confirmó la \emph{hipótesis}, pero cada cohorte
+entrenaba su propio modelo por validación cruzada. Una prueba más exigente
+es validar el \emph{modelo}: entrenarlo con toda una cohorte y aplicarlo sin
+ningún ajuste a la otra (adenda 4 del plan, fijada antes de calcularla).
+
+\begin{table}[H]
+\centering
+\caption{Modelo entrenado en una cohorte y aplicado sin ajuste a la otra
+(AUC; $p$ por 1000 permutaciones dentro de conjunto).}
+\label{tab:transferencia}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+\textbf{Entrenado en $\rightarrow$ aplicado a} & \textbf{Anticipación ($t-1$)} & \textbf{Control positivo ($t$)} \\
+\midrule
+EMBED $\rightarrow$ CSAW-CC & 0.544 ($p = 0.03$) & 0.673 ($p = 0.001$) \\
+CSAW-CC $\rightarrow$ EMBED & 0.515 ($p = 0.31$) & 0.684 ($p = 0.001$) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+La firma de la lesión ya presente se transfiere bien entre países y
+fabricantes. La del precursor se transfiere poco: el criterio se cumple en
+el sentido previsto (EMBED $\rightarrow$ CSAW-CC), pero con un AUC de
+$0.544$, y no en el inverso. Aunque el patrón topológico es el mismo en las
+dos cohortes (Sección~\ref{sec:interpretacion-anticipacion}), un cambio tan
+sutil es más sensible a las diferencias de procesado entre equipos, lo que
+apunta a entrenar con varios centros o a armonizar intensidades.
+
+\subsection{Topología frente a una red neuronal en la misma ventana}
+La pregunta obligada es si una red neuronal haría lo mismo mejor. Se
+extrajeron, de la misma ventana del sitio, los \textit{embeddings} de
+DenseNet121 preentrenada en ImageNet y congelada (1024 valores), y se
+evaluaron con el mismo clasificador y protocolo que la topología (adenda 5).
+
+\begin{table}[H]
+\centering
+\caption{Topología frente a una CNN congelada en la misma ventana del sitio
+(AUC). La última fila es el OR por desviación típica de la puntuación
+topológica en una regresión logística condicional que incluye también la
+puntuación de la CNN.}
+\label{tab:cnn}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+ & \multicolumn{2}{c}{\textbf{Anticipación ($t-1$)}} & \multicolumn{2}{c}{\textbf{Control positivo ($t$)}} \\
+ & EMBED & CSAW-CC & EMBED & CSAW-CC \\
+\midrule
+Topología                  & 0.571 & 0.614 & 0.679 & 0.725 \\
+CNN (DenseNet121)          & 0.613 & 0.663 & 0.709 & 0.785 \\
+Topología ajustada por CNN & 1.11 ($p = 0.28$) & 1.31 ($p = 0.007$) & 1.46 ($p = 0.002$) & 1.68 ($p < 0.001$) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Tres conclusiones. Primero, la CNN es algo mejor que la topología en las dos
+cohortes, lo esperable con 1024 rasgos frente a 72. Segundo, \textbf{la CNN,
+un método completamente independiente, confirma la hipótesis}: la ventana
+del sitio en el cribado anterior separa casos de controles también con ella
+($0.663$ en CSAW-CC). El hallazgo central no depende del descriptor. Tercero,
+la topología aporta información que la CNN no tiene en CSAW-CC y en el
+control positivo de ambas cohortes, aunque no en la anticipación de EMBED:
+es un descriptor complementario, no redundante, con la ventaja de ser
+interpretable (Figura~\ref{fig:interpretacion}).
+
 \section{Discusión}
 \label{sec:discusion}
 \begin{itemize}
@@ -746,7 +813,9 @@ del cáncer futuro en el 10\,\% superior de su mama en un tercio de los casos
         la validación prefijada en CSAW-CC, también donde el radiólogo no
         veía nada. Es local, no la explican edad, densidad ni hallazgos
         benignos previos, y su patrón topológico se reproduce entre cohortes
-        ($r = 0.88$).
+        ($r = 0.88$). Una CNN independiente sobre la misma ventana confirma
+        la señal (y es algo mejor); la topología aporta información propia
+        en CSAW-CC.
   \item \textbf{Límites.} El efecto es modesto (AUC $\approx 0.6$), sin
         utilidad clínica por sí solo. Requiere saber dónde mirar o, en la
         versión de localización, solo acierta en un tercio de los casos.

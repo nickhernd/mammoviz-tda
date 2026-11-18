@@ -131,6 +131,25 @@ con `git log --since=<fecha> --until=<fecha>`.
   p = 2·10⁻⁵; donde no se veía nada, 0.791 frente a 0.638 (p = 0.004).
   Parte era anatomía, pero el sitio del cáncer puntúa más.
 
+**Profundizar (tras la sensación de "no hemos hecho gran cosa")**
+- **Transferencia del modelo** (adenda 4, `scripts/transfer_model.py`):
+  entrenar con EMBED y aplicar sin ajuste a CSAW. Anticipación **0.544
+  (p = 0.03)**: H4 cumplida, pero débil. Al revés, 0.515 (ns). El control
+  positivo se transfiere bien (0.67/0.68). La firma de la lesión viaja
+  entre países y fabricantes; la del precursor, poco (más sensible al
+  procesado de cada equipo).
+- **Topología frente a CNN** (adenda 5, `scripts/cnn_vs_topology.py`):
+  DenseNet121 de ImageNet congelada sobre la misma ventana.
+  - Anticipación: topología 0.571/0.614, **CNN 0.613/0.663** (EMBED/CSAW).
+  - Topología ajustada por CNN: OR 1.11 (p = 0.28) en EMBED, **1.31
+    (p = 0.007) en CSAW**. En el control positivo aporta en las dos.
+  - Lectura: la CNN es algo mejor, la topología aporta información propia
+    en CSAW, y una red independiente **confirma la hipótesis**: la señal
+    está en el sitio un cribado antes, sea cual sea el descriptor.
+- Descartado "cuántos años antes": en CSAW solo hay marca en t-1; para t-2
+  habría que trasladar el sitio entre exploraciones, que ya se vio que
+  pierde la señal.
+
 **Memoria y slides**
 - Memoria reescrita (commit 4441b87): resumen y abstract, objetivos sin lo
   sintético, estado del arte con la revisión de novedad, metodología
