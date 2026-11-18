@@ -3,61 +3,83 @@
 
 \section{Motivación}
 El cáncer de mama es la neoplasia más frecuente en mujeres y una de las
-principales causas de mortalidad por cáncer a nivel mundial. La detección precoz
-mediante programas de cribado con mamografía reduce de forma significativa la
-mortalidad, ya que permite identificar lesiones en estadios tempranos y más
-tratables. Sin embargo, la interpretación de mamografías es una tarea compleja,
-sujeta a variabilidad inter-observador y a una carga de trabajo elevada para los
-radiólogos.
+principales causas de mortalidad por cáncer a nivel mundial. Los programas de
+cribado con mamografía reducen esa mortalidad porque detectan lesiones en
+estadios tempranos y más tratables. El cribado funciona por \textbf{rondas}:
+cada mujer se hace una mamografía cada uno o dos años, y si una ronda se lee
+como normal no se vuelve a mirar hasta la siguiente.
 
-En este contexto, los sistemas de diagnóstico asistido por computador
-(\textit{Computer-Aided Diagnosis}, CAD) y, más recientemente, las técnicas de
-aprendizaje profundo (\textit{deep learning}) se han convertido en herramientas
-de gran interés. Trabajos como el de Yala \textit{et al.}~\cite{yala2019} han
-demostrado que los modelos basados en mamografía pueden mejorar la predicción del
-riesgo de cáncer de mama. No obstante, estos modelos presentan limitaciones
-importantes: son difíciles de interpretar, requieren grandes cantidades de datos
-etiquetados y pueden ser sensibles al ruido y a las condiciones de adquisición.
+Cuando una ronda detecta un cáncer surge una pregunta natural: ¿había ya algo
+en la ronda anterior? Las revisiones radiológicas de esas mamografías previas
+encuentran signos mínimos o hallazgos que se pasaron por alto en entre un
+tercio y la mitad de los casos~\cite{hovda2021prior, vandendaele2022review},
+y modelos recientes de \textit{deep learning} llegan a señalar el sitio del
+cáncer futuro años antes~\cite{martiniussen2026aimarkers}. Detectar esa señal
+de forma fiable permitiría adelantar el diagnóstico una ronda entera.
 
-El \textbf{Análisis Topológico de Datos} (TDA) surge como un enfoque
-complementario que caracteriza la \emph{forma} intrínseca de los datos mediante
-herramientas de la topología algebraica. Su técnica principal, la
-\emph{homología persistente}, es robusta frente al ruido y proporciona
-descriptores interpretables geométricamente, lo que la hace especialmente
-atractiva para el análisis de imagen médica.
+Los modelos de \textit{deep learning}, sin embargo, son difíciles de
+interpretar, necesitan muchos datos etiquetados y son sensibles a las
+condiciones de adquisición~\cite{yala2019}. El \textbf{Análisis Topológico de
+Datos} (TDA) ofrece un enfoque complementario: caracteriza la \emph{forma} de
+los datos mediante herramientas de la topología algebraica. Su técnica
+principal, la \emph{homología persistente}, es estable frente al ruido y
+produce descriptores con una lectura geométrica directa (componentes,
+ciclos y cuánto persisten al variar un umbral), lo que la hace atractiva para
+describir la textura del tejido mamario.
 
-\section{Contexto del problema}
-Una mamografía digital es una imagen de rayos X de la mama que revela
-estructuras como el tejido glandular, los conductos, las calcificaciones y
-posibles masas. La densidad mamaria (clasificada habitualmente según el sistema
-BI-RADS) y la morfología de las lesiones son factores clave en el diagnóstico.
-El conjunto de datos público \mbox{CBIS-DDSM}~\cite{lee2017cbisddsm} proporciona
-mamografías digitalizadas con anotaciones de lesiones (masas y
-microcalcificaciones), regiones de interés (ROI) segmentadas y etiquetas de
-patología (benigno/maligno), lo que lo convierte en un banco de pruebas
-adecuado para este trabajo.
+\section{Pregunta de investigación}
+Este trabajo se pregunta si la homología persistente permite la
+\textbf{detección anticipada} del cáncer de mama: si la topología de la
+mamografía de cribado anterior, leída como normal, distingue a las mujeres a
+las que después se diagnosticó un cáncer de las que no lo desarrollaron.
 
-\section{Objetivos y alcance (resumen)}
-El objetivo general de este TFG es \textbf{estudiar y evaluar la aplicación del
-Análisis Topológico de Datos a la clasificación y visualización de mamografías},
-comparándolo y combinándolo con técnicas de aprendizaje profundo. Los objetivos
-específicos se detallan en el Capítulo~\ref{cap:objetivos}.
+Responderla exige datos \textbf{longitudinales} (varias rondas de la misma
+mujer) y un diseño cuidadoso: en este tipo de estudios es fácil que
+diferencias que no tienen nada que ver con el cáncer (el tiempo entre
+exploraciones, la época de adquisición o el tipo de exploración) separen a
+los grupos por sí solas. Se usan dos cohortes reales de acceso controlado,
+EMBED~\cite{jeong2021embed} (Emory, EE.\,UU.) y CSAW-CC~\cite{dataset_csawcc}
+(Karolinska, Suecia), una para desarrollar el estudio y otra para validarlo.
+Como base, el trabajo incluye también la clasificación benigno/maligno de una
+mamografía aislada sobre \mbox{CBIS-DDSM}~\cite{lee2017cbisddsm}.
+
+\section{Contribuciones}
+\begin{enumerate}
+  \item \textbf{Anticipación local validada.} La topología de una ventana de
+        unos 3.5\,cm en el sitio donde aparecerá el cáncer, medida un cribado
+        antes, separa casos de controles emparejados. El resultado se
+        replica en una \textbf{validación externa preregistrada} (AUC
+        $0.614$, $p = 0.001$), también donde el radiólogo no veía nada, y una
+        red neuronal independiente lo confirma.
+  \item \textbf{Interpretación física.} El cambio topológico tiene el mismo
+        patrón en las dos cohortes ($r = 0.88$): una densificación local del
+        tejido, que la topología describe mejor que la densidad sola.
+  \item \textbf{Tres confusores de diseño.} El intervalo entre
+        exploraciones, la época de adquisición y el tipo de exploración en el
+        diagnóstico producían señales falsas con AUC de hasta $0.89$. Se
+        documentan, se cuantifican y se muestra cómo un control positivo los
+        delata.
+  \item \textbf{Un \textit{pipeline} reproducible} sobre tres conjuntos de
+        datos reales, con partición por paciente, tests automáticos,
+        integración continua y un plan de análisis fijado en el historial de
+        \texttt{git} antes de ver los datos de validación.
+\end{enumerate}
 
 \section{Estructura de la memoria}
-El resto de la memoria se organiza como sigue:
 \begin{itemize}
   \item El \textbf{Capítulo~\ref{cap:objetivos}} formula los objetivos y la
         metodología general del trabajo.
-  \item El \textbf{Capítulo~\ref{cap:estado-arte}} revisa el estado del arte en
-        análisis de mamografías y en TDA aplicado a imagen médica.
-  \item El \textbf{Capítulo~\ref{cap:fundamentos}} introduce los fundamentos
-        teóricos de la homología persistente y del aprendizaje profundo.
-  \item El \textbf{Capítulo~\ref{cap:metodologia}} describe la metodología
-        propuesta: datos, preprocesado, extracción de descriptores y modelos.
-  \item El \textbf{Capítulo~\ref{cap:implementacion}} detalla la implementación
-        y las herramientas utilizadas.
-  \item El \textbf{Capítulo~\ref{cap:resultados}} presenta y discute los
-        resultados experimentales.
-  \item El \textbf{Capítulo~\ref{cap:conclusiones}} recoge las conclusiones y
-        las líneas de trabajo futuro.
+  \item El \textbf{Capítulo~\ref{cap:estado-arte}} revisa el estado del arte:
+        análisis de mamografías, TDA en imagen médica, análisis longitudinal
+        y señales en la mamografía anterior al diagnóstico.
+  \item El \textbf{Capítulo~\ref{cap:fundamentos}} introduce la homología
+        persistente, las redes convolucionales y los métodos estadísticos
+        empleados.
+  \item El \textbf{Capítulo~\ref{cap:metodologia}} describe la metodología:
+        clasificación aislada, interpretabilidad y diseño longitudinal.
+  \item El \textbf{Capítulo~\ref{cap:implementacion}} detalla la
+        implementación y la reproducibilidad.
+  \item El \textbf{Capítulo~\ref{cap:resultados}} presenta los resultados.
+  \item El \textbf{Capítulo~\ref{cap:conclusiones}} recoge las conclusiones,
+        las limitaciones y el trabajo futuro.
 \end{itemize}

@@ -104,3 +104,46 @@ Al fijar la rejilla de antemano (en vez de ajustarla, \textit{fit}, por lote
 como hace \texttt{giotto-tda}), todas las imágenes del conjunto de datos
 producen vectores de la misma longitud y directamente comparables entre sí,
 sin necesitar un paso de ajuste previo sobre el conjunto de entrenamiento.
+
+\section{Acceso a los datos longitudinales}
+\begin{itemize}
+  \item \textbf{EMBED}~\cite{jeong2021embed}: acceso controlado a través de
+        Emory; descarga por S3. Cita requerida: \textit{EMory BrEast Imaging
+        Dataset (EMBED). HITI Lab, Emory University}.
+  \item \textbf{CSAW-CC}~\cite{dataset_csawcc, dembrower2020csaw}: acceso
+        controlado a través del Servicio Nacional de Datos de Suecia (SND) y
+        la Unidad de Acceso a Datos del Karolinska Institutet; descarga por
+        S3. Sus condiciones de uso exigen, en publicaciones, invitar como
+        coautores a los curadores del conjunto de datos (criterios ICMJE).
+        El 30\,\% de la cohorte no se distribuye y se reserva para
+        validaciones en colaboración.
+\end{itemize}
+
+\section{Correspondencia entre resultados y \textit{scripts}}
+\begin{table}[H]
+\centering
+\caption{Cada resultado de la memoria y el \textit{script} que lo produce.
+Los ficheros de resultados están en \texttt{results/}.}
+\label{tab:reproducibilidad}
+\small
+\begin{tabular}{@{}p{5.6cm}p{8.6cm}@{}}
+\toprule
+\textbf{Resultado} & \textbf{\textit{Script}} \\
+\midrule
+Clasificación CBIS-DDSM (Tablas~\ref{tab:resultados}, \ref{tab:refinamiento}) & \texttt{run\_pipeline.py}, \texttt{fuse\_and\_evaluate.py} \\
+Interpretabilidad (Tablas~\ref{tab:xai-acuerdo}--\ref{tab:xai-coste}) & \texttt{explainability\_benchmark.py} \\
+Tres diseños (Tabla~\ref{tab:tres-disenos}) & \texttt{download\_embed\_longitudinal.py}, \texttt{embed\_longitudinal\_evaluation.py} \\
+Resolución frente a dilución & \texttt{embed\_global\_resolution.py} \\
+Sitio de la lesión en EMBED (Tabla~\ref{tab:embed-sitio}) & \texttt{embed\_lesion\_site.py} \\
+Validación en CSAW-CC (Tabla~\ref{tab:csaw}) & \texttt{download\_csaw.py}, \texttt{csaw\_lesion\_site.py} \\
+Registro entre exploraciones & \texttt{registration\_benchmark.py}, \texttt{registered\_lesion\_site.py} \\
+Mama contralateral & \texttt{download\_contralateral.py}, \texttt{contralateral\_site.py} \\
+Patrón topológico (Figura~\ref{fig:interpretacion}) & \texttt{interpret\_anticipation.py} \\
+Densidad frente a topología (Tabla~\ref{tab:densidad}) & \texttt{density\_baseline.py} \\
+Localización (Tabla~\ref{tab:localizacion}) & \texttt{csaw\_localization.py} \\
+Transferencia entre cohortes (Tabla~\ref{tab:transferencia}) & \texttt{transfer\_model.py} \\
+Topología frente a CNN (Tabla~\ref{tab:cnn}) & \texttt{cnn\_vs\_topology.py} \\
+Figuras de resultados & \texttt{figuras\_memoria.py} \\
+\bottomrule
+\end{tabular}
+\end{table}

@@ -1,85 +1,132 @@
 \chapter{Implementación}
 \label{cap:implementacion}
 
-Este capítulo describe las herramientas, la organización del código y los
-detalles de implementación del \textit{pipeline}.
+Este capítulo describe las herramientas, la organización del código y las
+medidas tomadas para que todos los resultados sean reproducibles.
 
 \section{Herramientas y librerías}
-El proyecto se desarrolla en \textbf{Python}. Las principales librerías son:
+El proyecto está escrito en \textbf{Python}.
 
 \begin{table}[H]
 \centering
 \caption{Principales herramientas utilizadas.}
 \label{tab:herramientas}
-\begin{tabular}{@{}ll@{}}
+\begin{tabular}{@{}lp{9.5cm}@{}}
 \toprule
 \textbf{Ámbito} & \textbf{Herramienta} \\
 \midrule
-Manipulación de datos      & pandas, NumPy \\
-Imagen                     & OpenCV, scikit-image, Pillow \\
-TDA / homología persistente& giotto-tda (referencia) / GUDHI + persim (portable) \\
-Aprendizaje automático     & scikit-learn \\
-Aprendizaje profundo       & PyTorch / torchvision (DenseNet121) \\
-Visualización              & Matplotlib, seaborn \\
-Entorno                    & Jupyter Notebook \\
+Homología persistente   & GUDHI~\cite{maria2014gudhi} (complejo cúbico), persim (distancia \textit{bottleneck}); giotto-tda~\cite{tauzin2021giotto} como \textit{backend} alternativo \\
+Imagen médica           & pydicom y pylibjpeg (DICOM con compresión JPEG sin pérdida), OpenCV, scikit-image \\
+Registro de imágenes    & OpenCV (ECC afín), scikit-image (flujo óptico TV-L1) \\
+Aprendizaje automático  & scikit-learn (Random Forest, SVM, validación cruzada agrupada) \\
+Aprendizaje profundo    & PyTorch y torchvision (DenseNet121) \\
+Estadística             & SciPy, statsmodels (regresión logística condicional, FDR) \\
+Datos                   & pandas, NumPy, boto3 (descarga de EMBED y CSAW-CC por S3) \\
+Paralelismo             & joblib \\
+Documentos              & Jupyter, Matplotlib, \LaTeX \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \section{Organización del código}
-El repositorio se estructura de la siguiente forma (véase el
-\texttt{README.md}):
+El código se separa en una biblioteca (\texttt{src/}), con funciones
+reutilizables y probadas, y en \textit{scripts} (\texttt{scripts/}), cada uno
+de los cuales produce uno o varios ficheros de \texttt{results/}:
+
 \begin{lstlisting}[language=bash, numbers=none]
 mammoviz-tda/
-  data/            # datos (no versionados)
-  src/             # codigo fuente del pipeline
-    data.py        # carga y particion por paciente
-    preprocessing.py  # preprocesado de imagenes
-    topology.py    # homologia persistente y vectorizacion
-    models.py      # clasificadores y CNN
-    evaluate.py    # metricas y visualizacion
-  notebooks/       # experimentos reproducibles
-  tfg/             # memoria en LaTeX
+  src/
+    data.py              # carga de metadatos y particion por paciente
+    preprocessing.py     # lectura DICOM (incl. MONOCHROME1), CLAHE, recortes
+    topology.py          # homologia persistente, imagen de persistencia, bottleneck
+    local_topology.py    # caja de la mama, ventanas, espejo contralateral
+    registration.py      # registro t -> t-1 (caja, afin, elastico)
+    models.py            # clasificadores y CNN
+    explainability.py    # Grad-CAM, region topologica, SHAP, LIME
+    evaluate.py          # metricas, bootstrap, tests pareados
+  scripts/
+    download_*.py        # descargas de CBIS-DDSM, EMBED y CSAW-CC
+    run_pipeline.py ...  # clasificacion aislada (CBIS-DDSM)
+    embed_*.py           # diseno longitudinal y sitio de la lesion (EMBED)
+    csaw_*.py            # validacion preregistrada y localizacion (CSAW-CC)
+    registered_*.py, contralateral_site.py, density_baseline.py,
+    cnn_vs_topology.py, transfer_model.py, interpret_anticipation.py
+    figuras_memoria.py   # figuras de la memoria a partir de results/
+  notebooks/
+    02_real_data_pipeline.ipynb   # clasificacion e interpretabilidad
+    03_embed_longitudinal.ipynb   # EMBED: confusores, sitio, edad
+    04_validacion_csaw.ipynb      # CSAW-CC: validacion preregistrada
+  tests/                 # 15 ficheros, 93 tests
+  docs/                  # plan de validacion, diario, guias de acceso
+  tfg/                   # esta memoria
 \end{lstlisting}
 
-\section{Extracción de descriptores topológicos}
-\texttt{giotto-tda} solo distribuye binarios precompilados hasta Python 3.12,
-por lo que \texttt{src/topology.py} detecta en tiempo de ejecución qué backend
-está disponible (\texttt{giotto-tda} o, si no, \texttt{gudhi + persim}, con
-soporte hasta Python 3.14) y expone la misma interfaz
-(\texttt{persistence\_diagram}, \texttt{extract\_features}) independientemente
-de cuál esté activo; \texttt{topology.backend()} permite consultarlo. El
-siguiente fragmento ilustra el cálculo de un diagrama de persistencia a partir
-de una imagen en escala de grises mediante una filtración por \textit{sublevel
-sets}, utilizando \texttt{giotto-tda}.
+\section{Homología persistente}
+El cálculo central es corto. GUDHI construye el complejo cúbico tomando cada
+píxel como una celda cuya altura es su intensidad, y calcula la persistencia
+de la filtración por subniveles:
 
-\begin{lstlisting}[language=Python, caption={Ejemplo de extracción de un diagrama de persistencia.}, label={lst:tda}]
+\begin{lstlisting}[language=Python, caption={Diagrama de persistencia cúbico (src/topology.py, fragmento).}, label={lst:tda}]
+import gudhi
 import numpy as np
-from gtda.images import HeightFiltration, RadialFiltration
-from gtda.homology import CubicalPersistence
-from gtda.diagrams import PersistenceImage
 
-def descriptor_topologico(imagen_gris):
-    # imagen_gris: array 2D normalizado en [0, 1]
-    x = imagen_gris[None, :, :]              # (1, H, W)
-    cubical = CubicalPersistence(homology_dimensions=(0, 1))
-    diagramas = cubical.fit_transform(x)     # diagramas de persistencia
-    pi = PersistenceImage(n_bins=20)
-    vector = pi.fit_transform(diagramas)     # imagen de persistencia
-    return vector.reshape(len(x), -1)
+def persistence_diagram(image, homology_dims=(0, 1)):
+    cc = gudhi.CubicalComplex(top_dimensional_cells=image)
+    pairs = cc.persistence(homology_coeff_field=2, min_persistence=0.0)
+    cap = float(image.max())   # la componente de fondo de H0 nunca muere
+    return np.array([(b, cap if np.isinf(d) else d, dim)
+                     for dim, (b, d) in pairs if dim in homology_dims])
 \end{lstlisting}
 
-\section{Reproducibilidad}
-Para garantizar la reproducibilidad de los experimentos:
+\texttt{giotto-tda} solo publica binarios hasta Python 3.12, mientras que el
+entorno de desarrollo usa Python 3.14. \texttt{src/topology.py} detecta en
+tiempo de importación qué \textit{backend} está disponible y expone la misma
+interfaz con cualquiera de ellos. Un trabajo de integración continua instala
+los dos en Python 3.12 y comprueba que producen exactamente los mismos pares
+(nacimiento, muerte) sobre imágenes de prueba
+(\texttt{tests/test\_backend\_equivalence.py}).
+
+\section{Detalles de ingeniería con efecto en los resultados}
+Varios detalles aparentemente menores cambiaban los resultados y se
+documentan aquí:
 \begin{itemize}
-  \item Se fija una semilla aleatoria común.
-  \item Se documentan las versiones de las librerías (\texttt{requirements.txt}).
-  \item La partición de datos por paciente se guarda en disco para reutilizarla.
-  \item Cada experimento se ejecuta desde un \textit{notebook} autocontenido.
+  \item \textbf{Imágenes invertidas.} 13 imágenes de EMBED de un fabricante
+        vienen codificadas como \texttt{MONOCHROME1} (fondo blanco). Sin
+        invertirlas, su topología es la de la imagen en negativo. Un lector
+        común, \texttt{read\_dicom\_gray}, las corrige.
+  \item \textbf{Columnas duplicadas.} Los CSV de CBIS-DDSM nombran la
+        densidad de dos formas distintas; normalizarlas después de
+        concatenar producía dos columnas con el mismo nombre sin ningún
+        error. Se normaliza por fichero.
+  \item \textbf{Coste de la distancia \textit{bottleneck}.} Unos 121\,s por
+        par con los diagramas completos; 0.18\,s con los 100 puntos más
+        persistentes.
+  \item \textbf{Rutas de las imágenes.} Cuando la misma mujer aparece como
+        control en dos cohortes con exploraciones distintas, una ruta que no
+        incluya el identificador de la exploración reutilizaría una imagen
+        equivocada. Las rutas de las cohortes de lesión lo incluyen.
 \end{itemize}
 
-\section{Visualización}
-Se desarrollan visualizaciones específicas para el análisis topológico:
-diagramas de persistencia y códigos de barras superpuestos sobre la imagen,
-mapas de calor de las imágenes de persistencia, y comparación de las regiones
-más informativas frente a las activaciones de la CNN (p.\,ej. Grad-CAM).
+\section{Reproducibilidad}
+\begin{itemize}
+  \item \textbf{Semillas fijas} en todas las particiones, clasificadores y
+        permutaciones.
+  \item \textbf{Versiones fijadas} en \texttt{requirements.txt}.
+  \item \textbf{Cachés con clave}: las características se guardan en disco con
+        una clave que incluye la ruta, los parámetros y una versión del
+        preprocesado, de modo que un cambio de preprocesado invalida la caché
+        en lugar de mezclar resultados.
+  \item \textbf{Tests automáticos} (93) que se ejecutan en cada cambio en
+        GitHub Actions, incluidas las reglas de construcción de cada cohorte.
+  \item \textbf{Plan de análisis versionado}: la validación externa y cada
+        adenda se escribieron y guardaron en \texttt{git} antes de calcularse
+        (\texttt{docs/plan\_validacion\_csaw.md}).
+  \item \textbf{Figuras generadas}: las figuras de resultados de esta memoria
+        las produce \texttt{scripts/figuras\_memoria.py} leyendo los ficheros
+        de \texttt{results/}, sin números escritos a mano.
+  \item \textbf{Datos}: ninguna imagen ni credencial de EMBED o CSAW-CC se
+        incluye en el repositorio; los \textit{scripts} de descarga
+        reconstruyen exactamente las cohortes a partir de los metadatos.
+\end{itemize}
+El Apéndice~\ref{ap:material} relaciona cada resultado de la memoria con el
+\textit{script} que lo produce.

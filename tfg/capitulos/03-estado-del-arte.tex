@@ -74,15 +74,15 @@ ambos:
 identificados (issue \#51).}
 \label{tab:novedad-jetomo-epj}
 \small
-\begin{tabular}{@{}p{2.6cm}p{3.6cm}p{3.6cm}p{4.3cm}@{}}
+\begin{tabular}{@{}>{\raggedright}p{2.8cm}>{\raggedright}p{3.4cm}>{\raggedright}p{3.4cm}>{\raggedright\arraybackslash}p{4.4cm}@{}}
 \toprule
  & \textbf{Jetomo et al.\ 2025}~\cite{jetomo2025phca} & \textbf{Hitit Univ.\ 2026}~\cite{hitit2026epjplus} & \textbf{Este TFG} \\
 \midrule
-Dataset & INbreast & No verificado (artículo de pago) & CBIS-DDSM (piloto real descargado) \\
+Dataset & INbreast & No verificado (artículo de pago) & CBIS-DDSM, EMBED y CSAW-CC \\
 Features & HOG + PCA + PHCA (algoritmo propio de clasificación por homología persistente) & Homología persistente (sublevel set) + momentos de Zernike + Haralick/GLCM & Imágenes de persistencia H0+H1 (\texttt{gudhi}/\texttt{giotto-tda}) \\
 Comparación con \textit{deep learning} & No reportada en el resumen disponible & No reportada en el resumen disponible & Sí: CNN (DenseNet121) y fusión TDA+CNN (Capítulo~\ref{cap:resultados}) \\
 Interpretabilidad & No es el foco & No es el foco (se presenta la TDA como alternativa interpretable, pero sin comparar contra XAI) & Sí: comparación sistemática con Grad-CAM, SHAP y LIME (Sección~\ref{sec:resultados-xai}) \\
-Longitudinal/temporal & No & No & Sí: hipótesis principal (Capítulo~\ref{cap:objetivos}, O7--O8) \\
+Longitudinal o temporal & No & No & Sí: hipótesis principal, validada en CSAW-CC (Sección~\ref{sec:resultados-csaw}) \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -134,8 +134,8 @@ píxeles}; ninguno usa descriptores topológicos. En paralelo, la aplicación de
 TDA a mamografía (Sección~\ref{sec:tda-imagen-medica} y
 \cite{fanning2025wavelet}) trabaja siempre sobre una \textbf{única
 exploración por caso}. Una búsqueda sistemática (arXiv, Google Scholar;
-2026-10-07) combinando "persistent homology"/"topological data analysis" con
-"longitudinal"/"temporal" y "mammography"/"breast cancer" no encontró ningún
+2026-10-07) combinando "persistent homology" o "topological data analysis" con
+"longitudinal" o "temporal" y "mammography" o "breast cancer" no encontró ningún
 trabajo que combine ambas líneas. Un \textit{survey} de aplicaciones de TDA en
 oncología citado en esa búsqueda llega a sugerir explícitamente el análisis de
 series temporales en cáncer como dirección futura no explorada, lo que

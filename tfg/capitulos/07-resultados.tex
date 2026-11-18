@@ -76,12 +76,13 @@ automáticamente).
 
 \begin{table}[H]
 \centering
-\caption{Resultados reales sobre el piloto de CBIS-DDSM (70 pacientes,
+\caption[Clasificación benigno/maligno sobre CBIS-DDSM]{Resultados reales sobre el piloto de CBIS-DDSM (70 pacientes,
 \texttt{scripts/run\_pipeline.py} y \texttt{scripts/fuse\_and\_evaluate.py},
 \texttt{n\_bins=4}, Random Forest por defecto). El AUC por validación
 cruzada (5-fold sobre train) es la columna fiable; el test de solo $21$
 casos sigue siendo ruidoso (ver discusión debajo de la tabla).}
 \label{tab:resultados}
+\resizebox{\textwidth}{!}{%
 \begin{tabular}{@{}lccc@{}}
 \toprule
 \textbf{Modelo} & \textbf{AUC (test, $n=21$)} & \textbf{AUC (CV, train)} & \textbf{Sensib. (test)} \\
@@ -90,7 +91,7 @@ TDA (Persistence Image)      & 0.490 & $0.658 \pm 0.134$ & 0.429 \\
 CNN (DenseNet121, embeddings) & 0.668 & $0.798 \pm 0.122$ & 0.643 \\
 Fusión TDA + CNN              & 0.714 & $0.796 \pm 0.117$ & 0.714 \\
 \bottomrule
-\end{tabular}
+\end{tabular}}
 \end{table}
 
 \subsection{El AUC baja al ampliar el piloto (y por qué es una buena noticia)}
@@ -144,6 +145,7 @@ SVM ajustada por \texttt{GridSearchCV} ($n\_bins=4$,
 $C \in \{0.01,\ldots,100\}$, kernel lineal/RBF). ``Mejor encontrado'' es el
 máximo de las tres.}
 \label{tab:refinamiento}
+\resizebox{\textwidth}{!}{%
 \begin{tabular}{@{}lcccc@{}}
 \toprule
 \textbf{Vía} & \textbf{RF por defecto} & \textbf{RF ajustada} & \textbf{SVM ajustada} & \textbf{Mejor encontrado} \\
@@ -152,7 +154,7 @@ TDA sola           & $0.658 \pm 0.134$ & $0.658 \pm 0.134$ & $0.653 \pm 0.201$ &
 CNN sola           & $0.798 \pm 0.122$ & $0.798 \pm 0.127$ & $\mathbf{0.827 \pm 0.110}$ & $\mathbf{0.827 \pm 0.110}$ (SVM) \\
 Fusión TDA + CNN   & $0.796 \pm 0.117$ & $0.813 \pm 0.104$ & $\mathbf{0.819 \pm 0.113}$ & $\mathbf{0.819 \pm 0.113}$ (SVM) \\
 \bottomrule
-\end{tabular}
+\end{tabular}}
 \end{table}
 
 A diferencia del piloto de 30 pacientes (donde el ajuste de hiperparámetros
@@ -203,7 +205,7 @@ persistencia H0/H1 (backend \texttt{gudhi}).}
 \section{Interpretabilidad: TDA vs Grad-CAM vs SHAP vs LIME}
 \label{sec:resultados-xai}
 Como línea secundaria del trabajo (Sección~\ref{sec:metrica-acuerdo}), se ha
-ejecutado \texttt{scripts/explainability\_benchmark.py} sobre los
+ejecutado \texttt{scripts/\allowbreak explainability\_\allowbreak benchmark.py} sobre los
 \textbf{122 casos usables} del piloto real ampliado (entrenamiento y test
 juntos, estudio descriptivo, no predictivo), calculando las 4 regiones
 binarias (Grad-CAM, región topológica dominante, SHAP, LIME) y su acuerdo
@@ -494,6 +496,7 @@ se usaron \textbf{todas las vistas} del lado del cáncer con lesión anotada
 \caption{Anticipación en el sitio de la lesión en EMBED (ventana de 512\,px;
 $p$ por 100 permutaciones dentro de cada conjunto).}
 \label{tab:embed-sitio}
+\resizebox{\textwidth}{!}{%
 \begin{tabular}{@{}lccc@{}}
 \toprule
 \textbf{Análisis} & \textbf{Control positivo ($t$)} & \textbf{Anticipación ($t-1$)} & \textbf{$p$ anticip.} \\
@@ -503,7 +506,7 @@ Todas las vistas, 3 controles         & 0.693 & 0.569 & 0.04 \\
 Ídem, controles emparejados por edad  & 0.679 & 0.571 & 0.02 \\
 Ídem, sitio desplazado media mama     & 0.524 & 0.472 & 0.86 \\
 \bottomrule
-\end{tabular}
+\end{tabular}}
 \end{table}
 
 \subsection{Comprobación de confusores}
@@ -771,6 +774,7 @@ evaluaron con el mismo clasificador y protocolo que la topología (adenda 5).
 topológica en una regresión logística condicional que incluye también la
 puntuación de la CNN.}
 \label{tab:cnn}
+\resizebox{\textwidth}{!}{%
 \begin{tabular}{@{}lcccc@{}}
 \toprule
  & \multicolumn{2}{c}{\textbf{Anticipación ($t-1$)}} & \multicolumn{2}{c}{\textbf{Control positivo ($t$)}} \\
@@ -780,7 +784,7 @@ Topología                  & 0.571 & 0.614 & 0.679 & 0.725 \\
 CNN (DenseNet121)          & 0.613 & 0.663 & 0.709 & 0.785 \\
 Topología ajustada por CNN & 1.11 ($p = 0.28$) & 1.31 ($p = 0.007$) & 1.46 ($p = 0.002$) & 1.68 ($p < 0.001$) \\
 \bottomrule
-\end{tabular}
+\end{tabular}}
 \end{table}
 
 Tres conclusiones. Primero, la CNN es algo mejor que la topología en las dos

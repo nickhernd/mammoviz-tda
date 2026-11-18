@@ -1,96 +1,149 @@
 \chapter{Fundamentos teóricos}
 \label{cap:fundamentos}
 
-Este capítulo introduce los conceptos necesarios para comprender el trabajo: los
-fundamentos del Análisis Topológico de Datos, con énfasis en la homología
-persistente, y una breve descripción de los modelos de aprendizaje profundo
-empleados como referencia.
+Este capítulo introduce los conceptos necesarios para seguir el trabajo: la
+homología persistente sobre imágenes, su vectorización y la distancia entre
+diagramas; las redes convolucionales usadas como referencia; y los métodos
+estadísticos con los que se evalúan los resultados.
 
 \section{Análisis Topológico de Datos}
-El TDA parte de la idea de que los datos poseen una \emph{forma} y que dicha
-forma contiene información relevante. Formalmente, se construye a partir de los
-datos una familia de espacios topológicos y se estudia cómo evolucionan sus
-invariantes.
+El TDA parte de la idea de que los datos tienen una \emph{forma} y que esa
+forma contiene información~\cite{carlsson2009topology}. En lugar de mirar los
+datos a una sola escala, se construye una familia anidada de espacios y se
+estudia cómo cambian sus invariantes topológicos al recorrerla.
 
-\subsection{Complejos simpliciales y filtraciones}
-\begin{definicion}[Complejo simplicial]
-Un \emph{complejo simplicial} $K$ es un conjunto de símplices (vértices, aristas,
-triángulos, tetraedros, \dots) cerrado bajo la operación de tomar caras y tal
-que la intersección de dos símplices es una cara de ambos.
+\subsection{Complejos cúbicos y filtración por subniveles}
+Una imagen digital tiene estructura de rejilla, así que el soporte natural no
+es un complejo simplicial sino un \emph{complejo cúbico}: cada píxel es un
+cuadrado y, junto a él, se incluyen sus aristas y vértices.
+
+\begin{definicion}[Filtración por subniveles]
+Sea $f\colon \Omega \to \mathbb{R}$ la intensidad de una imagen sobre la
+rejilla de píxeles $\Omega$. Para cada umbral $r$, el \emph{conjunto de
+subnivel} es $X_r = \{p \in \Omega : f(p) \le r\}$, con las celdas del
+complejo cúbico que lo forman. Como $X_r \subseteq X_s$ si $r \le s$, la
+familia $\{X_r\}_{r \in \mathbb{R}}$ es una \emph{filtración}.
 \end{definicion}
 
-Para analizar datos se construye una \emph{filtración}, es decir, una familia
-anidada de complejos simpliciales
-\[
-  \emptyset = K_0 \subseteq K_1 \subseteq \cdots \subseteq K_n = K,
-\]
-indexada por un parámetro de escala. En imágenes, una filtración habitual es la
-\emph{filtración por sublevel sets} de la intensidad: se van incluyendo los
-píxeles cuyo valor es menor o igual que un umbral creciente.
+Intuitivamente, la imagen se ``inunda'' desde los píxeles más oscuros a los
+más brillantes. En una mamografía normalizada, los primeros en aparecer son
+la grasa y el fondo; los últimos, el tejido denso.
 
 \subsection{Homología y números de Betti}
-La homología asocia a cada complejo una secuencia de grupos cuyos rangos, los
-\emph{números de Betti} $\beta_k$, cuentan las características topológicas de
-dimensión $k$:
+La homología asocia a cada espacio grupos cuyos rangos, los \emph{números de
+Betti} $\beta_k$, cuentan sus rasgos topológicos de dimensión $k$. En una
+imagen bidimensional interesan dos:
 \begin{itemize}
-  \item $\beta_0$: número de \textbf{componentes conexas}.
-  \item $\beta_1$: número de \textbf{agujeros} o ciclos unidimensionales.
-  \item $\beta_2$: número de \textbf{cavidades} o huecos tridimensionales.
+  \item $\beta_0$: número de \textbf{componentes conexas} ($H_0$).
+  \item $\beta_1$: número de \textbf{ciclos} o agujeros ($H_1$): regiones
+        brillantes rodeadas por un anillo ya incluido en la filtración.
 \end{itemize}
 
 \subsection{Homología persistente}
-La \emph{homología persistente} rastrea el nacimiento (\textit{birth}) y la
-muerte (\textit{death}) de las características topológicas a lo largo de la
-filtración. Una característica que persiste durante un amplio rango de escalas se
-considera una propiedad estructural significativa, mientras que las de vida corta
-suelen corresponder a ruido.
+A lo largo de la filtración los rasgos aparecen y desaparecen: una componente
+nace en un mínimo local de intensidad y muere cuando se funde con otra más
+antigua; un ciclo nace al cerrarse un anillo y muere cuando se rellena su
+interior~\cite{edelsbrunner2010computational, ghrist2008barcodes}.
 
 \begin{definicion}[Diagrama de persistencia]
-El \emph{diagrama de persistencia} es un multiconjunto de puntos
-$(b_i, d_i) \in \mathbb{R}^2$ con $b_i \le d_i$, donde cada punto representa una
-característica topológica que nace en la escala $b_i$ y muere en $d_i$. La
-\emph{persistencia} de la característica es $d_i - b_i$.
+El \emph{diagrama de persistencia} $D_k(f)$ es el multiconjunto de pares
+$(b_i, d_i)$, con $b_i < d_i$, de los rasgos de dimensión $k$: el rasgo $i$
+nace en el umbral $b_i$ y muere en $d_i$. Su \emph{persistencia} es
+$d_i - b_i$.
 \end{definicion}
 
-La misma información puede representarse como un \emph{código de barras}
-(\textit{barcode}), donde cada característica es un intervalo $[b_i, d_i]$.
+Los rasgos de persistencia alta corresponden a estructura de la imagen; los
+que están cerca de la diagonal $b = d$, a ruido. La misma información puede
+representarse como un \emph{código de barras}, con un intervalo
+$[b_i, d_i]$ por rasgo.
 
-\subsection{Estabilidad y vectorización}
-Una propiedad fundamental es la \textbf{estabilidad}: pequeñas perturbaciones en
-los datos producen pequeñas variaciones en el diagrama de persistencia (medidas
-con la distancia \textit{bottleneck} o de Wasserstein). Esto explica la robustez
-del TDA frente al ruido.
+\subsection{Distancia entre diagramas y estabilidad}
+\begin{definicion}[Distancia \textit{bottleneck}]
+Dados dos diagramas $D$ y $D'$, a los que se añaden los puntos de la
+diagonal con multiplicidad infinita,
+\[
+  d_B(D, D') = \inf_{\gamma} \; \sup_{x \in D} \, \lVert x - \gamma(x) \rVert_\infty ,
+\]
+donde $\gamma$ recorre las biyecciones entre $D$ y $D'$.
+\end{definicion}
 
-Para poder utilizar los diagramas como entrada de algoritmos de aprendizaje
-automático es necesario \emph{vectorizarlos}. Entre las representaciones más
-utilizadas destacan:
-\begin{itemize}
-  \item \textbf{Imágenes de persistencia} (\textit{persistence images}):
-        transforman el diagrama en una imagen (matriz) de tamaño fijo.
-  \item \textbf{Persistence landscapes}: funciones a trozos que resumen el
-        diagrama.
-  \item \textbf{Curvas de Betti} y estadísticos de persistencia.
-\end{itemize}
+\begin{teorema}[Estabilidad~\cite{cohensteiner2007stability}]
+Para dos funciones $f, g$ suficientemente regulares sobre el mismo espacio,
+\[
+  d_B\bigl(D_k(f), D_k(g)\bigr) \le \lVert f - g \rVert_\infty .
+\]
+\end{teorema}
 
-\section{Aprendizaje profundo (referencia)}
-Como referencia comparativa se emplean redes neuronales convolucionales (CNN).
+Una perturbación pequeña de la imagen (ruido, pequeñas diferencias de
+procesado) produce una variación pequeña del diagrama. En este trabajo la
+distancia \textit{bottleneck} entre las exploraciones $t-1$ y $t$ define la
+señal de \emph{deriva}.
 
-\subsection{Redes neuronales convolucionales}
-Una CNN aprende, mediante capas convolucionales, jerarquías de características
-espaciales a partir de las imágenes. Combinada con capas de \textit{pooling} y
-capas totalmente conectadas, permite abordar tareas de clasificación de imagen.
+\subsection{Vectorización: imágenes de persistencia}
+Un diagrama es un conjunto de tamaño variable y los clasificadores necesitan
+vectores de tamaño fijo. La \emph{imagen de persistencia}~\cite{adams2017persistence}
+coloca sobre cada punto, expresado como (nacimiento, persistencia), una
+gaussiana ponderada por su persistencia, y evalúa la suma en una rejilla:
+\[
+  \rho_D(x, y) = \sum_{(b, d) \in D} (d - b)\,
+  \exp\!\left(-\frac{(x - b)^2 + (y - (d - b))^2}{2\sigma^2}\right).
+\]
+Con las intensidades normalizadas a $[0, 1]$, la rejilla es fija para todas
+las imágenes. En este trabajo se usa una rejilla de $6\times6$ por dimensión
+($H_0$ y $H_1$), es decir, 72 valores por ventana. Cada celda tiene una
+lectura directa: cuánta estructura nace a una intensidad dada y cuánto dura.
 
-\subsection{Transfer learning}
-Dado el tamaño limitado de los conjuntos de datos médicos, se recurre al
-\textit{transfer learning}: se parte de una red preentrenada en un gran corpus
-(p.\,ej. ImageNet) y se ajusta (\textit{fine-tuning}) a la tarea de mamografía.
-En este trabajo se utiliza como referencia una arquitectura de la familia
-DenseNet/ResNet.
+\section{Redes neuronales convolucionales}
+Una red convolucional (CNN) aprende, mediante capas convolucionales y de
+\textit{pooling}, jerarquías de rasgos espaciales a partir de la imagen. Dado
+el tamaño limitado de los conjuntos médicos se recurre al \textit{transfer
+learning}: se parte de una red preentrenada en ImageNet. Se usa DenseNet121 de
+dos formas: ajustada a la tarea (\textit{fine-tuning}) para la clasificación
+aislada sobre CBIS-DDSM, y \textbf{congelada} como extractor de
+características (1024 valores tras el \textit{pooling} global) para comparar
+con la topología sobre la misma ventana sin el riesgo de sobreajuste de
+entrenar una red con pocos cientos de ejemplos.
 
-\begin{ejemplo}[Intuición del enfoque topológico en mamografía]
-Una agrupación de microcalcificaciones puede caracterizarse por el número de
-componentes conexas ($\beta_0$) y su patrón de aparición a lo largo de la
-filtración de intensidad, mientras que la estructura de una masa espiculada
-puede reflejarse en la aparición y desaparición de ciclos ($\beta_1$). El TDA
-codifica estos patrones de forma compacta y robusta.
-\end{ejemplo}
+\section{Métodos estadísticos}
+\label{sec:fundamentos-estadistica}
+
+\subsection{AUC}
+El área bajo la curva ROC (AUC) es la probabilidad de que un caso elegido al
+azar reciba una puntuación mayor que un control elegido al azar. Vale $0.5$
+para un clasificador sin información y $1$ para uno perfecto. No depende de un
+umbral ni de la proporción de casos y controles.
+
+\subsection{Validación cruzada agrupada}
+El AUC se estima por validación cruzada de 5 particiones. Cuando una misma
+mujer aporta varias filas (dos vistas, o un caso con sus controles), todas
+van a la misma partición (\textit{GroupKFold}); si no, el modelo podría
+reconocer a la mujer en vez de la señal.
+
+\subsection{Prueba de permutación dentro de conjuntos}
+Para saber si un AUC supera al azar sin suponer ninguna distribución, se
+reasigna al azar, dentro de cada conjunto emparejado (un caso y sus
+controles), qué miembro es el caso, y se recalcula el AUC. Repitiendo $n$
+veces se obtiene la distribución nula y
+$p = \bigl(1 + \#\{\text{AUC}_\text{perm} \ge \text{AUC}_\text{obs}\}\bigr)/(n+1)$.
+Permutar solo dentro de cada conjunto respeta el emparejamiento.
+
+\subsection{Regresión logística condicional}
+En un diseño emparejado, la regresión logística condicional compara cada
+caso solo con sus propios controles. Para un conjunto $s$ con un caso $c$ y
+miembros $j \in s$, la verosimilitud es
+\[
+  L(\beta) = \prod_{s} \frac{\exp(\beta^\top x_{c})}{\sum_{j \in s} \exp(\beta^\top x_{j})},
+\]
+de modo que todo lo que es común al conjunto (lo emparejado) se cancela. Se
+usa con la puntuación del clasificador calculada fuera de partición,
+estandarizada, para obtener una razón de odds por desviación típica y
+ajustarla por covariables (edad, densidad, BI-RADS previo) o por la
+puntuación de otro descriptor.
+
+\subsection{Comparaciones múltiples y preregistro}
+Al comparar muchas celdas (la imagen de persistencia tiene 72) se controla la
+tasa de falsos descubrimientos con el procedimiento de Benjamini-Hochberg. Al
+probar muchas variantes de análisis, el riesgo es de otro tipo: alguna dará
+$p < 0.05$ por azar. La única defensa completa es fijar el análisis antes de
+ver los datos con los que se valida (preregistro), que es lo que se hace en
+la validación externa (Sección~\ref{subsec:preregistro}).

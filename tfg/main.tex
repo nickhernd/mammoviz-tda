@@ -8,7 +8,7 @@
 %------------------------------- Codificación e idioma ------------------------
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
-\usepackage[spanish,es-tabla]{babel}
+\usepackage[spanish,es-tabla,es-nodecimaldot]{babel}
 \usepackage{lmodern}
 
 %------------------------------- Márgenes y diseño ----------------------------
@@ -53,6 +53,7 @@
 
 %------------------------------- Teoremas -------------------------------------
 \theoremstyle{definition}
+\setlength{\emergencystretch}{3em}  % deja romper lineas con rutas largas en texttt
 \newtheorem{definicion}{Definición}[chapter]
 \newtheorem{teorema}{Teorema}[chapter]
 \newtheorem{ejemplo}{Ejemplo}[chapter]
