@@ -1,0 +1,7 @@
+TRANSFERENCIA DEL MODELO ENTRE COHORTES (adenda 4 del plan)
+Random Forest entrenado con toda la cohorte de origen, aplicado sin ajuste; 1000 permutaciones
+
+  EMBED -> CSAW  | anticipacion (t-1)    : AUC = 0.544, p = 0.0300  <- H4
+  EMBED -> CSAW  | control positivo (t)  : AUC = 0.673, p = 0.0010
+  CSAW  -> EMBED | anticipacion (t-1)    : AUC = 0.515, p = 0.3087
+  CSAW  -> EMBED | control positivo (t)  : AUC = 0.684, p = 0.0010
