@@ -90,6 +90,24 @@ con `git log --since=<fecha> --until=<fecha>`.
   pudieron emparejar.
 - Notebook 04 (`04_validacion_csaw.ipynb`) con todo el análisis.
 
+**Mejoras (desarrollo en EMBED, confirmación en CSAW-CC)**
+- **Registro t → t-1** (`src/registration.py`). Error geométrico en CSAW
+  (113 vistas con marca en t-1 y en t, sin etiquetas): mediana 12.2 mm con
+  la caja de la mama, 8.2 mm con afín (ECC) y **6.1 mm con elástico**
+  (afín + flujo óptico TV-L1). Se eligió el elástico por geometría.
+  - EMBED: anticipación **0.573 → 0.632** (OR 1.25 → 1.56, p = 1.6·10⁻⁶).
+  - CSAW, adenda 1 del plan, fijada antes de calcular (commit 233c8ed):
+    en las 74 vistas sin marca en t-1, **0.479 (p = 0.66): NO
+    replicado.** Con la caja eran 0.491. El control positivo en esas vistas
+    sí funciona (0.653). Cohorte completa con registro: 0.601.
+  - Lectura: la mejora de EMBED no se confirma. O fue en parte azar, o
+    6 mm de error sigue siendo poco preciso para un precursor pequeño. El
+    resultado robusto sigue siendo el del sitio bien localizado.
+- **Mama contralateral** (EMBED, 157 vistas): sitio solo 0.602; sitio menos
+  contralateral 0.556; concatenado 0.578; **contralateral sola 0.502**. No
+  mejora, pero confirma que la señal es local: el sitio homólogo de la otra
+  mama no tiene nada. No se lleva a CSAW.
+
 ---
 
 ## 2026-11-17

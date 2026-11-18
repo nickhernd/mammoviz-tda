@@ -1,0 +1,5 @@
+Sitio de la lesion con registro t -> t-1 (csaw, metodo elastico, subconjunto todo)
+204 vistas de caso, 612 controles; 200 permutaciones
+
+  anticipacion (t-1)     : AUC = 0.601, p = 0.005; OR condicional = 1.53 (p = 1.6e-06)
+  control positivo (t)   : AUC = 0.729, p = 0.005
