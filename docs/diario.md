@@ -36,6 +36,34 @@ con `git log --since=<fecha> --until=<fecha>`.
 
 ---
 
+## 2026-11-18
+
+**Hecho**
+- **Acceso a CSAW-CC concedido** (Karolinska, vía SND). Claves en
+  `~/.aws/credentials`, perfil `csaw-cc`; datos en `data/csaw/`, añadido a
+  `.gitignore` antes de descargar nada.
+- Inventario: 8 723 pacientes (873 cánceres), 98 788 imágenes Hologic
+  (2.3 TB), 1 006 máscaras. Fechas anonimizadas (solo el orden de las
+  exploraciones) y edad en dos bandas.
+- **Plan de validación fijado antes de ver los datos**
+  (`docs/plan_validacion_csaw.md`, commit 17f3e70): hipótesis, cohorte,
+  localización, emparejamiento, medida idéntica a EMBED, análisis
+  principal con 1 000 permutaciones, criterio de éxito y secundarios. El
+  script del análisis también se guardó antes de tener las imágenes.
+- Cohorte (`scripts/download_csaw.py`): 109 cánceres detectados en cribado
+  con cribado anterior normal y máscara, 204 vistas (130 con el sitio
+  marcado directamente en t-1), 612 controles por banda de edad, vista y
+  orden de exploración.
+
+**Descubierto**
+- El README de CSAW-CC dice que el radiólogo puso **un punto en el cribado
+  anterior donde después apareció el cáncer**, aunque no hubiera nada
+  visible. Es mejor que EMBED: no hace falta trasladar el sitio desde t.
+- Condición de uso: en publicaciones hay que invitar como coautores a los
+  curadores (criterios ICMJE). Para el TFG basta con citar.
+
+---
+
 ## 2026-11-17
 
 **Hecho**
