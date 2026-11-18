@@ -1,0 +1,15 @@
+Topologia frente a CNN en la misma ventana (embed; adenda 5, exploratorio en CSAW)
+174 vistas de caso, 522 controles; 200 permutaciones; CNN = DenseNet121 ImageNet congelada (1024)
+
+anticipacion (t-1)
+  topologia       : AUC = 0.571, p = 0.010
+  CNN             : AUC = 0.613, p = 0.010
+  topologia + CNN : AUC = 0.606, p = 0.015
+  logit condicional: topologia ajustada por CNN OR = 1.11 (p = 0.281); CNN ajustada por topologia OR = 1.44 (p = 0.000345); correlacion de scores 0.37
+
+control positivo (t)
+  topologia       : AUC = 0.679, p = 0.005
+  CNN             : AUC = 0.709, p = 0.005
+  topologia + CNN : AUC = 0.711, p = 0.005
+  logit condicional: topologia ajustada por CNN OR = 1.46 (p = 0.00198); CNN ajustada por topologia OR = 2.01 (p = 2.01e-08); correlacion de scores 0.58
+
