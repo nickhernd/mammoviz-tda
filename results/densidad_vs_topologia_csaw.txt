@@ -6,3 +6,8 @@ Densidad local frente a topologia, ventana del sitio en t-1 (csaw)
   densidad + histograma (sin topologia)     : AUC = 0.575, p = 0.010
   topologia (imagen de persistencia)        : AUC = 0.614, p = 0.005
   topologia + densidad + histograma         : AUC = 0.637, p = 0.005
+
+Regresion logistica condicional con los dos scores (OR por DE):
+  topologia ajustada por densidad: OR = 1.53, p = 2.8e-05
+  densidad ajustada por topologia: OR = 1.09, p = 0.379
+  correlacion entre los dos scores: 0.48
