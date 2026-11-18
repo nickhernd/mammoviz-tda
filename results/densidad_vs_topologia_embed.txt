@@ -1,0 +1,8 @@
+Densidad local frente a topologia, ventana del sitio en t-1 (embed)
+174 vistas de caso, 522 controles; 200 permutaciones
+
+  densidad absoluta (media, sd, p10/50/90)  : AUC = 0.555, p = 0.020
+  histograma de la ventana normalizada      : AUC = 0.534, p = 0.259
+  densidad + histograma (sin topologia)     : AUC = 0.536, p = 0.189
+  topologia (imagen de persistencia)        : AUC = 0.571, p = 0.010
+  topologia + densidad + histograma         : AUC = 0.588, p = 0.010

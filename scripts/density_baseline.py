@@ -77,9 +77,14 @@ def main() -> None:
         m = pd.read_csv(ROOT / "data" / "embed" / "longitudinal_manifest_lesion_edad.csv")
         ls.HALF = 256
         feats, y, groups, sets = ls.compute_lesion_cohort_features(m, verbose=False)
-    rels = site_rels(args.dataset, m)
-    stats_ = np.stack(Parallel(n_jobs=-1)(delayed(window_stats)(ROOT / r.path_t0, rels[r.set_id])
-                                          for r in m.itertuples()))
+    cache_file = ROOT / "data" / args.dataset / "density_window_stats.npy"
+    if cache_file.exists() and len(np.load(cache_file)) == len(m):
+        stats_ = np.load(cache_file)
+    else:
+        rels = site_rels(args.dataset, m)
+        stats_ = np.stack(Parallel(n_jobs=-1)(delayed(window_stats)(ROOT / r.path_t0, rels[r.set_id])
+                                              for r in m.itertuples()))
+        np.save(cache_file, stats_)
     topo = np.stack([f["pi_t0"] for f in feats])
 
     lines = [f"Densidad local frente a topologia, ventana del sitio en t-1 ({args.dataset})",
@@ -91,6 +96,22 @@ def main() -> None:
                       ("topologia + densidad + histograma", np.hstack([topo, stats_]))]:
         auc, p = ls.permutation_auc(X, y, groups, sets, n=args.permutations)
         lines.append(f"  {nombre:42s}: AUC = {auc:.3f}, p = {p:.3f}")
+
+    # ¿aporta la topologia sobre la densidad? scores fuera de fold de cada uno y
+    # regresion logistica condicional con los dos a la vez
+    from sklearn.ensemble import RandomForestClassifier
+    from sklearn.model_selection import GroupKFold, cross_val_predict
+    from statsmodels.discrete.conditional_models import ConditionalLogit
+
+    rf = RandomForestClassifier(n_estimators=200, random_state=42, class_weight="balanced", n_jobs=-1)
+    oof = lambda X: cross_val_predict(rf, X, y, groups=groups, cv=GroupKFold(5), method="predict_proba")[:, 1]
+    z = lambda v: (v - v.mean()) / v.std()
+    s_topo, s_dens = z(oof(topo)), z(oof(stats_))
+    r = ConditionalLogit(y, np.c_[s_topo, s_dens], groups=sets).fit(disp=0)
+    lines += ["", "Regresion logistica condicional con los dos scores (OR por DE):",
+              f"  topologia ajustada por densidad: OR = {np.exp(r.params[0]):.2f}, p = {r.pvalues[0]:.3g}",
+              f"  densidad ajustada por topologia: OR = {np.exp(r.params[1]):.2f}, p = {r.pvalues[1]:.3g}",
+              f"  correlacion entre los dos scores: {np.corrcoef(s_topo, s_dens)[0, 1]:.2f}"]
     report = "\n".join(lines)
     print("\n" + report)
     (RESULTS_DIR / f"densidad_vs_topologia_{args.dataset}.txt").write_text(report + "\n", encoding="utf-8")
