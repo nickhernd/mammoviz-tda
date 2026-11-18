@@ -69,7 +69,12 @@ def case_sites(path_t0, path_t1, roi0, roi1, metodo: str):
     return cs._rel(roi0, b0), cs._rel(roi1, b1)
 
 
-def compute(m: pd.DataFrame, cache_path: Path, metodo: str, verbose: bool = True):
+def compute_sites(m: pd.DataFrame, cache_path: Path, metodo: str, verbose: bool = True) -> dict:
+    """{set_id: (posicion relativa en t-1, posicion relativa en t)} del sitio de cada caso."""
+    return compute(m, cache_path, metodo, verbose=verbose, only_sites=True)
+
+
+def compute(m: pd.DataFrame, cache_path: Path, metodo: str, verbose: bool = True, only_sites: bool = False):
     from joblib import Parallel, delayed
 
     cache = pickle.loads(cache_path.read_bytes()) if cache_path.exists() else {}
@@ -87,6 +92,8 @@ def compute(m: pd.DataFrame, cache_path: Path, metodo: str, verbose: bool = True
         if verbose:
             print(f"  registro: {min(start + 32, len(pending))}/{len(pending)} casos", flush=True)
     sites = {r.set_id: cache[key_site(r)] for r in cases.itertuples()}
+    if only_sites:
+        return sites
 
     key_feat = lambda r: ("feat", r.path_t0, r.path_t1, sites[r.set_id], cs.HALF)
     rows = list(m.itertuples())

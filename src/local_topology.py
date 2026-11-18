@@ -86,6 +86,25 @@ def window_around(image: np.ndarray, row: float, col: float, half: int) -> np.nd
     return image[top:top + side_r, left:left + side_c]
 
 
+def chest_wall_side(image: np.ndarray, rel_threshold: float = 0.05) -> str:
+    """Lado de la imagen ("left" o "right") donde esta la pared toracica: el
+    borde vertical que la mama toca con mas pixeles."""
+    img = np.asarray(image, dtype=np.float64)
+    lo, hi = img.min(), img.max()
+    mask = img > lo + rel_threshold * (hi - lo)
+    edge = max(1, img.shape[1] // 50)
+    return "left" if mask[:, :edge].sum() >= mask[:, -edge:].sum() else "right"
+
+
+def mirror_relative(rel: tuple[float, float], side_from: str, side_to: str) -> tuple[float, float]:
+    """Posicion relativa (fila, columna en la caja de la mama) del punto
+    homologo en la mama CONTRALATERAL: misma altura y misma profundidad
+    medida desde la pared toracica, que puede estar en el otro lado de la
+    imagen."""
+    depth = rel[1] if side_from == "left" else 1.0 - rel[1]
+    return rel[0], depth if side_to == "left" else 1.0 - depth
+
+
 def cell_neighbours(cell: int, grid: int = 4) -> set[int]:
     """La celda y sus vecinas (vecindad 3x3) en la rejilla."""
     i, j = divmod(cell, grid)

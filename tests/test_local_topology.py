@@ -66,3 +66,16 @@ def test_shift_point_moves_half_the_breast_and_wraps_around():
     bbox = (100, 0, 500, 300)                      # mama de 400 px de alto
     assert shift_point(150, 40, bbox, 0.5) == (350.0, 40)   # mitad superior -> inferior, misma columna
     assert shift_point(450, 40, bbox, 0.5) == (250.0, 40)   # da la vuelta dentro de la caja
+
+
+def test_chest_wall_side_and_mirroring():
+    from src.local_topology import chest_wall_side, mirror_relative
+
+    img = np.zeros((100, 80))
+    img[10:90, 0:50] = 1.0                    # mama pegada al borde izquierdo
+    assert chest_wall_side(img) == "left"
+    assert chest_wall_side(img[:, ::-1]) == "right"
+    # un punto a 30 % de profundidad desde la pared, en una mama con la pared a
+    # la izquierda, corresponde en la otra (pared a la derecha) a la columna 70 %
+    assert mirror_relative((0.4, 0.3), "left", "right") == (0.4, 0.7)
+    assert mirror_relative((0.4, 0.3), "left", "left") == (0.4, 0.3)
