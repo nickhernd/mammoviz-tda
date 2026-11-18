@@ -363,6 +363,45 @@ ser una ventana local:
         dimensión ($H_0$ y $H_1$).
 \end{enumerate}
 
+La Figura~\ref{fig:metodo-sitio} resume el procedimiento.
+
+\begin{figure}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[
+    node distance = 0.55cm and 0.9cm,
+    box/.style  = {draw, rounded corners, align=center, font=\small,
+                   minimum height=1.05cm, text width=3.1cm, fill=blue!5},
+    caso/.style = {box, fill=orange!12},
+    arr/.style  = {-Latex, thick}
+  ]
+  \node[caso] (lesion) {\textbf{Caso, $t$}\\ diagnóstico:\\ región anotada};
+  \node[box, right=of lesion] (rel) {posición relativa\\ en la caja\\ de la mama};
+  \node[caso, right=of rel, yshift=1.35cm] (c0) {\textbf{Caso, $t-1$}\\ cribado leído como normal};
+  \node[box, right=of rel, yshift=-1.35cm] (k0) {\textbf{3 controles, $t-1$}\\ emparejados};
+  \node[box, right=of c0, yshift=-1.35cm] (win) {ventana de\\ $512\times512$\,px\\ (unos 3.5\,cm)};
+  \node[box, right=of win] (ph) {homología cúbica\\ $\rightarrow$ imagen de\\ persistencia ($H_0$, $H_1$)};
+  \node[box, below=of ph] (rf) {Random Forest\\ CV agrupada\\ por paciente};
+  \node[box, left=of rf] (eval) {AUC y permutación\\ dentro de cada\\ conjunto};
+
+  \draw[arr] (lesion) -- (rel);
+  \draw[arr] (rel) -- (c0.west);
+  \draw[arr] (rel) -- (k0.west);
+  \draw[arr] (c0.east) -- (win);
+  \draw[arr] (k0.east) -- (win);
+  \draw[arr] (win) -- (ph);
+  \draw[arr] (ph) -- (rf);
+  \draw[arr] (rf) -- (eval);
+\end{tikzpicture}%
+}
+\caption{Análisis en el sitio de la lesión. La anotación del caso en el
+diagnóstico ($t$) fija una posición relativa dentro de la caja de la mama,
+que se aplica igual al cribado anterior ($t-1$) del caso y al de sus tres
+controles emparejados. La ubicación no depende del contenido del control.
+En CSAW-CC el sitio en $t-1$ lo marcó directamente el radiólogo.}
+\label{fig:metodo-sitio}
+\end{figure}
+
 \subsection{Protocolo estadístico}
 \label{subsec:protocolo-longitudinal}
 \begin{itemize}

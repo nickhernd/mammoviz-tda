@@ -95,11 +95,105 @@ def tipo_marca() -> None:
     fig.tight_layout(); fig.savefig(OUT / "csaw_tipo_marca.png", dpi=200); plt.close(fig)
 
 
+def localizacion() -> None:
+    """Percentil del sitio en su mama: caso frente a la misma posicion en su control."""
+    import pandas as pd
+
+    f0 = ROOT / "data" / "csaw" / "localizacion_t0.csv"
+    f1 = ROOT / "data" / "csaw" / "localizacion_t1.csv"
+    if not (f0.exists() and f1.exists()):
+        print("  (sin datos de localizacion: se omite)")
+        return
+    fig, axes = plt.subplots(1, 2, figsize=(9, 3.4), sharey=True)
+    bins = np.linspace(0, 1, 11)
+    for ax, f, titulo in ((axes[0], f1, "t: diagnóstico (control positivo)"),
+                          (axes[1], f0, "t-1: cribado anterior")):
+        d = pd.read_csv(f).dropna(subset=["percentil_control"])
+        ax.hist(d["percentil_control"], bins=bins, color=GRIS, alpha=0.85, label="misma posición en su control sano")
+        ax.hist(d["percentil"], bins=bins, color=AZUL, alpha=0.6, label="sitio del cáncer")
+        ax.axvline(d["percentil"].median(), color=AZUL, lw=1.6)
+        ax.axvline(d["percentil_control"].median(), color=OSCURO, lw=1.2, ls="--")
+        ax.set_title(f"{titulo} ({len(d)} mamas)", fontsize=10)
+        ax.set_xlabel("percentil de la puntuación dentro de su mama")
+        ax.spines[["top", "right"]].set_visible(False)
+    axes[0].set_ylabel("mamas")
+    axes[1].legend(frameon=False, fontsize=8, loc="upper left")
+    fig.tight_layout(); fig.savefig(OUT / "localizacion.png", dpi=200); plt.close(fig)
+
+
+def registro() -> None:
+    """Error del traslado t -> t-1 con cada metodo de registro."""
+    import pandas as pd
+
+    f = ROOT / "data" / "csaw" / "registro_errores.csv"
+    if not f.exists():
+        print("  (sin datos de registro: se omite)")
+        return
+    d = pd.read_csv(f)
+    metodos = [("caja", "caja de la mama"), ("afin", "afín (ECC)"), ("elastico", "elástico (TV-L1)")]
+    fig, ax = plt.subplots(figsize=(6.4, 3.3))
+    datos = [d[m].dropna().values for m, _ in metodos]
+    bp = ax.boxplot(datos, tick_labels=[e for _, e in metodos], showfliers=False, patch_artist=True, widths=0.5)
+    for patch, c in zip(bp["boxes"], [GRIS, NARANJA, AZUL]):
+        patch.set_facecolor(c); patch.set_alpha(0.7)
+    ax.axhline(18, color=OSCURO, ls="--", lw=0.8)
+    ax.text(3.45, 18.6, "media ventana (18 mm)", fontsize=8, ha="right")
+    for i, v in enumerate(datos, 1):
+        ax.text(i, np.median(v) + 0.6, f"{np.median(v):.1f} mm", ha="center", fontsize=8)
+    ax.set_ylabel("error de localización (mm)")
+    ax.spines[["top", "right"]].set_visible(False)
+    fig.tight_layout(); fig.savefig(OUT / "registro.png", dpi=200); plt.close(fig)
+
+
+def filtracion() -> None:
+    """Filtracion por subniveles sobre una ventana real de mamografia y su diagrama."""
+    import sys
+    sys.path.insert(0, str(ROOT)); sys.path.insert(0, str(ROOT / "scripts"))
+    import pickle
+
+    import pandas as pd
+
+    m_path = ROOT / "data" / "csaw" / "manifest_csaw.csv"
+    if not m_path.exists():
+        print("  (sin datos de CSAW: se omite la figura de filtracion)")
+        return
+    import case_studies as cst
+    import csaw_lesion_site as cs
+    from src.topology import persistence_diagram
+
+    m = pd.read_csv(m_path)
+    r = m[m["kind"] == "incidente"].iloc[0]
+    rel0, _ = pickle.loads(cs.CACHE_PATH.read_bytes())[("rel", r.path_t0, r.path_t1)]
+    w = cst.window(ROOT / r.path_t0, rel0)
+    dgm = persistence_diagram(w)[0]
+
+    fig, axes = plt.subplots(1, 4, figsize=(12, 3.2))
+    axes[0].imshow(w, cmap="gray"); axes[0].set_title("ventana (intensidad)", fontsize=9)
+    for ax, thr in zip(axes[1:3], (0.35, 0.65)):
+        ax.imshow(w <= thr, cmap="Blues", vmin=0, vmax=1.4)
+        ax.set_title(f"subnivel: píxeles con intensidad ≤ {thr}", fontsize=9)
+    for ax in axes[:3]:
+        ax.axis("off")
+    ax = axes[3]
+    for dim, color, lab in ((0, AZUL, "$H_0$ componentes"), (1, NARANJA, "$H_1$ ciclos")):
+        p = dgm[dgm[:, 2] == dim]
+        ax.scatter(p[:, 0], p[:, 1], s=4, color=color, alpha=0.6, label=lab, linewidths=0)
+    ax.plot([0, 1], [0, 1], color=OSCURO, lw=0.8)
+    ax.set_xlim(0, 1); ax.set_ylim(0, 1.02); ax.set_aspect("equal")
+    ax.set_xlabel("nacimiento"); ax.set_ylabel("muerte")
+    ax.set_title("diagrama de persistencia", fontsize=9)
+    ax.legend(frameon=False, fontsize=7, loc="lower right", markerscale=3)
+    fig.tight_layout(); fig.savefig(OUT / "filtracion.png", dpi=200); plt.close(fig)
+
+
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     tres_disenos()
     embed_vs_csaw()
     tipo_marca()
+    localizacion()
+    registro()
+    filtracion()
     src = RES / "figuras" / "interpretacion_anticipacion.png"
     if src.exists():
         shutil.copy(src, OUT / "interpretacion_anticipacion.png")

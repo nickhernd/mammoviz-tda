@@ -57,6 +57,15 @@ que están cerca de la diagonal $b = d$, a ruido. La misma información puede
 representarse como un \emph{código de barras}, con un intervalo
 $[b_i, d_i]$ por rasgo.
 
+La Figura~\ref{fig:filtracion} muestra el proceso sobre una ventana real de mamografía.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1.0\textwidth]{figuras/filtracion.png}
+\caption{Filtración por subniveles sobre una ventana real de mamografía (CSAW-CC). En azul, los píxeles ya incluidos a cada umbral: primero aparecen las zonas oscuras (grasa) y después el tejido denso. A la derecha, el diagrama de persistencia: cada punto es un rasgo ($H_0$ componente, $H_1$ ciclo) y su distancia a la diagonal es su persistencia.}
+\label{fig:filtracion}
+\end{figure}
+
 \subsection{Distancia entre diagramas y estabilidad}
 \begin{definicion}[Distancia \textit{bottleneck}]
 Dados dos diagramas $D$ y $D'$, a los que se añaden los puntos de la
