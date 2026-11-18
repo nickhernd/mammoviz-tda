@@ -3,50 +3,58 @@
 % ----------------------------------------------------------------------------
 
 \noindent
-El cáncer de mama es el tumor de mayor incidencia entre las mujeres a nivel
-mundial, y la mamografía sigue siendo la prueba de cribado de referencia para su
-detección precoz. En los últimos años, las técnicas de \textit{deep learning}
-han demostrado un gran potencial en el análisis automático de imagen médica,
-pero suelen comportarse como cajas negras y son sensibles al ruido y a la
-variabilidad de adquisición. El \textbf{Análisis Topológico de Datos} (TDA, por
-sus siglas en inglés) ofrece una perspectiva complementaria: cuantifica la
-\emph{forma} de los datos mediante invariantes topológicos robustos frente al
-ruido, como la homología persistente.
+El cáncer de mama es el tumor más frecuente en las mujeres, y una parte de
+los cánceres detectados en cribado ya dejaba algún rastro en la mamografía
+anterior, leída como normal. Este Trabajo de Fin de Grado estudia si el
+\textbf{Análisis Topológico de Datos} (TDA), en concreto la homología
+persistente, permite medir ese rastro: si la topología del cribado anterior
+distingue a las mujeres a las que después se diagnosticó un cáncer.
 
 \medskip
 \noindent
-Este Trabajo de Fin de Grado estudia la aplicación del TDA a la clasificación y
-visualización de mamografías digitales del conjunto de datos público
-\mbox{CBIS-DDSM}. Se extraen descriptores topológicos (diagramas de
-persistencia, códigos de barras e imágenes de persistencia) a partir de las
-imágenes y de las regiones de interés, se evalúa su capacidad discriminativa
-entre lesiones benignas y malignas, y se comparan y combinan con modelos de
-aprendizaje profundo. El objetivo último es obtener un sistema de apoyo al
-diagnóstico más \emph{interpretable} sin sacrificar rendimiento.
+Sobre dos cohortes longitudinales reales, EMBED (Emory) y CSAW-CC
+(Karolinska), el trabajo muestra que el descriptor de la mamografía completa
+no ve las lesiones de cribado, pero que la topología de una ventana de unos
+3.5\,cm en el sitio donde aparecerá el cáncer, medida un cribado antes,
+separa casos de controles emparejados. El efecto es modesto pero se replica
+en una validación externa preregistrada (AUC $0.614$, $p = 0.001$), es local,
+no lo explican la edad, la densidad ni hallazgos benignos previos, persiste
+donde el radiólogo no veía nada y su patrón topológico se reproduce entre
+cohortes. Por el camino se identifican tres confusores de diseño (intervalo
+entre exploraciones, época de adquisición y tipo de exploración) que
+producían señales falsas con AUC de hasta $0.89$. Como base, se evalúa
+también la clasificación benigno/maligno sobre CBIS-DDSM y la
+interpretabilidad del TDA frente a Grad-CAM, SHAP y LIME.
 
 \vspace{1cm}
 \noindent\textbf{Palabras clave:} análisis topológico de datos, homología
-persistente, mamografía, cáncer de mama, aprendizaje profundo, imagen médica,
-CBIS-DDSM.
+persistente, mamografía, cribado, detección anticipada, estudio
+longitudinal, validación preregistrada.
 
 \newpage
 \selectlanguage{english}
 \noindent\textbf{Abstract.}
-Breast cancer is the most common malignancy among women worldwide, and
-mammography remains the reference screening test for its early detection. Deep
-learning has shown remarkable potential in medical image analysis, yet such
-models often behave as black boxes and are sensitive to noise and acquisition
-variability. \textbf{Topological Data Analysis} (TDA) provides a complementary
-viewpoint by quantifying the \emph{shape} of the data through noise-robust
-topological invariants such as persistent homology. This bachelor's thesis
-investigates the application of TDA to the classification and visualisation of
-digital mammograms from the public CBIS-DDSM dataset. Topological descriptors
-(persistence diagrams, barcodes and persistence images) are extracted and
-evaluated for their ability to discriminate benign from malignant lesions, and
-compared and combined with deep learning models, aiming at a more
-\emph{interpretable} decision-support system.
+Breast cancer is the most common cancer in women, and some screen-detected
+cancers already left a trace on the previous mammogram, which was read as
+normal. This bachelor's thesis studies whether \textbf{Topological Data
+Analysis} (TDA), specifically persistent homology, can measure that trace:
+whether the topology of the prior screening exam distinguishes the women who
+were later diagnosed with cancer. On two real longitudinal cohorts, EMBED
+(Emory) and CSAW-CC (Karolinska), whole-mammogram descriptors are blind to
+screening lesions, but the topology of a window of about 3.5\,cm at the site
+where the cancer will appear, measured one screening round earlier,
+separates cases from matched controls. The effect is modest but replicates
+in a pre-registered external validation (AUC $0.614$, $p = 0.001$); it is
+local, is not explained by age, density or prior benign findings, persists
+where the radiologist saw nothing, and its topological pattern is
+reproducible across cohorts. Along the way, three design confounders
+(interval between exams, acquisition era and exam type) are identified that
+produced spurious signals with AUC up to $0.89$. Benign/malignant
+classification on CBIS-DDSM and the interpretability of TDA against
+Grad-CAM, SHAP and LIME are also evaluated.
 
 \medskip
 \noindent\textbf{Keywords:} topological data analysis, persistent homology,
-mammography, breast cancer, deep learning, medical imaging, CBIS-DDSM.
+mammography, screening, early detection, longitudinal study, pre-registered
+validation.
 \selectlanguage{spanish}

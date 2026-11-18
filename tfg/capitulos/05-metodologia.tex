@@ -302,114 +302,131 @@ la issue \#89 sobre no mezclar pacientes de ajuste con pacientes nuevos.
 \label{sec:metodologia-longitudinal}
 
 Las secciones anteriores describen la clasificación benigno/maligno sobre una
-mamografía \textbf{aislada}, que constituye la base necesaria del trabajo
-(objetivos O3--O6). La hipótesis \textbf{principal} del TFG, sin embargo, es
-de naturaleza distinta: no preguntar si una imagen ya diagnosticada es
-maligna, sino si la exploración \textbf{anterior} de la misma paciente ---
-leída clínicamente como normal --- ya contenía una señal topológica de la
-lesión que se diagnosticaría después.
+mamografía \textbf{aislada}, base necesaria del trabajo (objetivos O3--O6).
+La hipótesis \textbf{principal} es de naturaleza distinta: no se pregunta si
+una imagen ya diagnosticada es maligna, sino si la exploración
+\textbf{anterior} de la misma mujer, leída como normal, ya contenía una
+señal topológica del cáncer que se diagnosticaría después.
 
-\subsection{Definición de las señales longitudinales}
-Para una paciente con dos exploraciones sucesivas, $t-1$ (previa, sin
-diagnóstico) y $t$ (donde se diagnostica la lesión), se calculan los
-diagramas de persistencia $D_{t-1}$ y $D_t$ mediante el mismo procedimiento
-de la Sección~\ref{sec:descriptores-topologicos} y se derivan dos señales
-candidatas:
-
+\subsection{Señales longitudinales}
+Para una mujer con dos exploraciones sucesivas, $t-1$ (cribado anterior,
+leído como normal) y $t$ (donde se diagnostica el cáncer), se calculan los
+diagramas de persistencia $D_{t-1}$ y $D_t$ con el procedimiento de la
+Sección~\ref{sec:descriptores-topologicos} y se definen:
 \begin{itemize}
-  \item \textbf{Anticipación}: el vector de características topológicas
-        (imagen de persistencia, estadísticos) calculado \textbf{únicamente}
-        sobre $D_{t-1}$. Mide si la exploración previa, por sí sola, ya es
-        distinguible de la de una paciente control.
-  \item \textbf{Deriva} (\textit{drift}): la distancia \textit{bottleneck} (o
-        Wasserstein) entre $D_{t-1}$ y $D_t$,
-        $d(D_{t-1}, D_t)$, calculada por dimensión de homología ($H_0$,
-        $H_1$) con la librería \texttt{persim}. Mide cuánto cambia la
-        topología entre ambas exploraciones.
-  \item \textbf{Combinada}: concatenación de ambas señales anteriores.
+  \item \textbf{Anticipación}: la imagen de persistencia de $D_{t-1}$
+        \textbf{sola}. Es la pregunta clínicamente valiosa: ¿se veía antes?
+  \item \textbf{Deriva}: la distancia \textit{bottleneck} entre $D_{t-1}$ y
+        $D_t$ por dimensión de homología, $d_B(D_{t-1}, D_t)$.
+  \item \textbf{Control positivo}: la imagen de persistencia de $D_t$ sola.
+        En $t$ el cáncer ya está presente; si ni siquiera $t$ separa casos de
+        controles, el descriptor no ve la lesión y un resultado nulo de
+        anticipación no es informativo.
+\end{itemize}
+Cada señal alimenta un clasificador binario (caso frente a control), un
+\textit{Random Forest} con pesos equilibrados, evaluado por el AUC de una
+validación cruzada de 5 particiones.
+
+\subsection{Diseño de la cohorte y confusores}
+El diseño definitivo es una \textbf{cohorte de cribado emparejada}, al que
+se llegó tras corregir tres confusores (Sección~\ref{sec:resultados-embed}).
+Las reglas son:
+\begin{itemize}
+  \item \textbf{Casos}: cáncer confirmado por anatomía patológica y
+        detectado en un cribado; $t$ es ese cribado y $t-1$ el cribado
+        anterior leído como normal.
+  \item \textbf{Controles}: mujeres sin cáncer con dos cribados normales,
+        emparejadas con cada caso por intervalo entre exploraciones, fecha
+        de $t-1$, vista y, en la versión final, edad.
+  \item \textbf{Imágenes}: solo mamografía 2D de campo completo, sin vistas
+        ampliadas, de la mama del lado del cáncer.
+\end{itemize}
+Como líneas base se calcula siempre ``solo intervalo'' (un clasificador que
+solo ve los días entre exploraciones) y el control positivo.
+
+\subsection{Análisis en el sitio de la lesión}
+\label{subsec:metodo-sitio}
+El descriptor de la mamografía completa no ve las lesiones de cribado
+(Sección~\ref{subsec:ceguera-global}), así que la unidad de análisis pasa a
+ser una ventana local:
+\begin{enumerate}
+  \item El sitio es el centro de la región anotada de la lesión. En EMBED
+        se conoce en $t$ y se traslada a $t-1$; en CSAW-CC el radiólogo lo
+        marcó también en $t-1$.
+  \item La posición del sitio se expresa \textbf{relativa a la caja de la
+        mama} y se aplica igual a $t-1$ y a $t$ de los controles de ese caso.
+        La ubicación la fija la anotación del caso y no depende del
+        contenido del control, lo que evita un sesgo de selección del sitio.
+  \item Ventana de $512\times512$\,px a resolución completa (unos 3.5\,cm
+        con píxel de 0.07\,mm), reducida a $256\times256$, CLAHE, homología
+        cúbica por subniveles e imagen de persistencia de $6\times6$ por
+        dimensión ($H_0$ y $H_1$).
+\end{enumerate}
+
+\subsection{Protocolo estadístico}
+\label{subsec:protocolo-longitudinal}
+\begin{itemize}
+  \item \textbf{Validación cruzada agrupada} (\texttt{GroupKFold}) por
+        paciente del caso: sus vistas y sus controles quedan siempre en la
+        misma partición.
+  \item \textbf{Prueba de permutación} dentro de cada conjunto caso +
+        controles: se elige al azar qué miembro hace de caso y se recalcula
+        el AUC (100 permutaciones en el desarrollo, 1000 en el análisis
+        principal de la validación).
+  \item \textbf{Regresión logística condicional} con estratos por conjunto
+        sobre la puntuación del clasificador fuera de partición: compara
+        cada caso solo con sus propios controles y permite ajustar por
+        covariables (edad, densidad, BI-RADS de $t-1$).
+  \item \textbf{Controles negativos de localización}: la misma ventana
+        desplazada media mama en vertical, y la ventana homóloga de la mama
+        contralateral. Si la señal fuera global (equipo, época, intervalo,
+        densidad de la mujer), aparecería también en ellas.
 \end{itemize}
 
-Cada señal se evalúa como entrada de un clasificador binario (paciente
-``incidente'', que desarrolla la lesión en $t$, frente a paciente
-``control'', sin lesión en ninguna de las dos exploraciones), reportando el
-AUC por validación cruzada de 5 particiones en vez de un único \textit{split}
-de test, dado el tamaño reducido de las cohortes disponibles (mismo criterio
-de robustez estadística aplicado en la clasificación aislada, ver
-Capítulo~\ref{cap:resultados}).
+\subsection{Validación externa preregistrada}
+\label{subsec:preregistro}
+Los resultados de EMBED se obtuvieron tras varias variantes de análisis, lo
+que por sí solo puede producir algún $p < 0.05$. Para la validación en
+CSAW-CC se escribió el plan completo (hipótesis, cohorte, localización,
+emparejamiento, medida, análisis principal, criterio de éxito y análisis
+secundarios) y se guardó en el historial de \texttt{git} \textbf{antes} de
+descargar ninguna imagen (\texttt{docs/plan\_validacion\_csaw.md}). El
+código del análisis también se guardó antes de tener los datos. Cada
+análisis posterior se añadió como adenda escrita antes de calcularlo, y los
+análisis no previstos se marcan como exploratorios.
 
-\subsection{Comprobación de ingeniería previa (datos sintéticos, sin resultados)}
-\label{subsec:validacion-sintetica}
-Antes de disponer de datos longitudinales reales, la mecánica del
-\textit{pipeline} de comparación (generación de pares $(t-1, t)$, cálculo
-de ambas señales, clasificación incidente/control) se comprobó sobre datos
-sintéticos controlados
-(\texttt{scripts/synthetic\_longitudinal\_validation.py}, que se conserva
-en el repositorio con un barrido de sensibilidad ejecutable con
-\texttt{--sweep}). De esa fase de diseño se retiene una única observación
-cualitativa, relevante para interpretar los resultados reales: \textbf{la
-deriva y la anticipación no miden lo mismo}. La deriva responde sobre todo
-al crecimiento de la lesión entre $t-1$ y $t$ (grande casi por definición
-en los casos incidentes), mientras que la anticipación depende de que
-exista un precursor detectable en $t-1$; un \textit{pipeline} puede tener
-deriva alta con anticipación nula. Los resultados cuantitativos de este
-trabajo son exclusivamente los obtenidos sobre datos reales
-(Capítulo~\ref{cap:resultados}).
+\subsection{Registro entre exploraciones}
+Trasladar el sitio de $t$ a $t-1$ con la caja de la mama es una aproximación
+gruesa: la mama se comprime de forma distinta en cada exploración. Se
+implementaron dos registros (\texttt{src/registration.py}) sobre las
+mamografías reducidas $8\times$: un registro \textbf{afín} que maximiza la
+correlación (ECC) y uno \textbf{elástico}, el afín seguido de un campo de
+deformación por flujo óptico TV-L1. Su error se mide en CSAW-CC con las
+vistas que tienen marca del radiólogo en $t-1$ y en $t$, solo con
+posiciones y sin usar etiquetas.
 
-\subsection{Acceso a datos longitudinales reales}
+\subsection{Acceso a los datos longitudinales}
 \label{subsec:acceso-longitudinal}
-Durante la mayor parte del desarrollo de este TFG no hubo acceso a ningún
-dataset longitudinal público de mamografía con descarga directa. Se
-identificaron dos candidatos:
+Al inicio del trabajo no había ningún dataset longitudinal de mamografía de
+descarga directa. Se solicitó acceso a los dos candidatos identificados y se
+obtuvo en ambos durante el desarrollo:
+\begin{itemize}
+  \item \textbf{EMBED}~\cite{jeong2021embed} (Emory, EE.\,UU.): 23\,253
+        pacientes, 14\,789 con dos o más exploraciones; imágenes de varios
+        fabricantes. Se usó como conjunto de \textbf{desarrollo}.
+  \item \textbf{CSAW-CC}~\cite{dataset_csawcc} (Karolinska, Suecia): 8723
+        mujeres, 98\,788 imágenes Hologic. Fechas anonimizadas y sitio del
+        cáncer marcado por un radiólogo en el cribado anterior. Se usó como
+        conjunto de \textbf{validación}.
+\end{itemize}
+Ninguno de los dos datos ni sus credenciales se incluyen en el repositorio.
 
-\begin{quote}
-\textit{CSAW-CC}~\cite{dataset_csawcc}, cohorte real del Karolinska
-Institutet con 8723 pacientes y 24694 exploraciones (75.5\,\% con dos o más
-exploraciones), cuyas imágenes DICOM/PNG ($\sim$2.5\,TB) requieren solicitud
-formal de acceso; y \textit{EMBED}~\cite{jeong2021embed}, de Emory, con
-acceso controlado (\textit{Controlled Access}) a través de un portal
-dedicado.
-\end{quote}
-
-\textbf{Durante la redacción de esta memoria se concedió acceso a EMBED.}
-Sus tablas de metadatos clínicos (\texttt{empi\_anon} como identificador de
-paciente, \texttt{acc\_anon} como identificador de exploración,
-\texttt{study\_date\_anon} y la valoración BI-RADS \texttt{asses} de cada
-exploración) confirman que EMBED tiene, de hecho, una estructura
-longitudinal real y de tamaño considerable: sobre 23253 pacientes únicos
-y 72770 exploraciones, 14789 pacientes (63.6\,\%) tienen dos o más
-exploraciones. Filtrando por la definición de O7/O8 (exploración más
-antigua con \texttt{asses} Normal o Benigno, exploración posterior con
-\texttt{asses} Sospechoso/Altamente sugestivo/Malignidad confirmada), se
-identificaron \textbf{644 pacientes ``incidentes''} candidatos y
-\textbf{7256 pacientes ``control''} (todas sus exploraciones Normal o
-Benigno) --- una cohorte de tamaño comparable o mayor que la de CSAW-CC,
-ya accesible. El resultado sobre un primer piloto de esta cohorte se
-reporta en la Sección~\ref{sec:resultados-embed} del
-Capítulo~\ref{cap:resultados}, la primera evaluación de la hipótesis
-principal del TFG sobre datos reales en vez de sintéticos.
-
-El trabajo reconocidamente comparable más cercano en la literatura sigue
-siendo LongiMam~\cite{rakez2025longimam}, que también explota pares
-longitudinales de mamografía pero con un modelo de \textit{deep learning}
-end-to-end, no con descriptores topológicos.
-
-\subsubsection*{Nota de ingeniería: coste de la distancia bottleneck sobre diagramas reales}
-Un hallazgo práctico no trivial al pasar de datos sintéticos a reales: los
-diagramas de persistencia de una mamografía real preprocesada
-($224\times224$) tienen del orden de $1000$-$2000$ puntos en $H_0$ y
-$H_1$ (frente a decenas en las imágenes sintéticas de la
-Sección~\ref{subsec:validacion-sintetica}), y \texttt{persim.bottleneck}
-escala muy mal con el número de puntos: se midió $\sim$121\,s para un solo
-par de diagramas reales sin recortar, lo que habría hecho inviable
-(horas) evaluar incluso un piloto pequeño. La solución --- estándar en
-TDA --- es quedarse con los \texttt{max\_points} puntos de mayor
-persistencia de cada diagrama antes de calcular la distancia bottleneck
-(\texttt{synthetic\_longitudinal\_validation.py:\_diagram\_by\_dim}),
-descartando el ``ruido topológico'' de baja persistencia: con
-$\texttt{max\_points}=100$ el cálculo baja a $\sim$0.18\,s por par (más de
-$600\times$ más rápido). Es una aproximación, no una igualdad garantizada
---- la distancia bottleneck no es en general invariante a quitar puntos,
-aunque el cambio es pequeño cuando hay una señal dominante de alta
-persistencia, verificado con un test de regresión
-(\texttt{tests/test\_synthetic\_longitudinal\_validation.py}) ---, pero
-imprescindible para que la evaluación sobre datos reales sea tratable.
+\subsubsection*{Nota de ingeniería: coste de la distancia bottleneck}
+Los diagramas de una mamografía real preprocesada ($224\times224$) tienen del
+orden de 1000--2000 puntos en $H_0$ y $H_1$, y \texttt{persim.bottleneck}
+escala mal con el número de puntos: se midieron unos 121\,s por par. La
+solución, estándar en TDA, es quedarse con los 100 puntos de mayor
+persistencia de cada diagrama (\texttt{src/topology.py:diagram\_points}):
+el cálculo baja a unos 0.18\,s por par (más de $600\times$ más rápido). Es
+una aproximación, no una igualdad garantizada, verificada con un test de
+regresión (\texttt{tests/test\_topological\_drift.py}).

@@ -22,11 +22,10 @@ específicos:
         automático de mamografías, (ii) aplicaciones del TDA en imagen médica
         y (iii) predicción de riesgo/análisis longitudinal de mamografías.
   \item[\textbf{O2.}] \textbf{Preparar y preprocesar} un conjunto de datos de
-        mamografía (\mbox{CBIS-DDSM} para la base de clasificación; un
-        conjunto longitudinal --- \mbox{CSAW-CC} o \mbox{EMBED}, pendiente de
-        acceso, ver Capítulo~\ref{cap:metodologia} --- para la hipótesis
-        principal): descarga, limpieza de metadatos, extracción de ROIs y
-        normalización de las imágenes.
+        mamografía (\mbox{CBIS-DDSM} para la base de clasificación;
+        \mbox{EMBED} y \mbox{CSAW-CC}, dos cohortes longitudinales de acceso
+        controlado, para la hipótesis principal): descarga, limpieza de
+        metadatos, extracción de ROIs y normalización de las imágenes.
   \item[\textbf{O3.}] \textbf{Extraer descriptores topológicos} (diagramas de
         persistencia, códigos de barras e imágenes de persistencia) a partir de
         las mamografías mediante homología persistente.
@@ -43,9 +42,9 @@ específicos:
   \item[\textbf{O7.}] \textbf{Diseñar y validar la metodología de comparación
         longitudinal}: definir cómo medir el cambio topológico entre dos
         exploraciones de la misma paciente (distancia \textit{bottleneck}/
-        Wasserstein entre diagramas de persistencia) y validar que el
-        \textit{pipeline} es capaz de detectar esa señal cuando existe,
-        inicialmente sobre datos sintéticos controlados.
+        Wasserstein entre diagramas de persistencia), con un diseño de
+        cohorte libre de confusores y un control positivo que compruebe
+        que el descriptor detecta la lesión cuando está presente.
   \item[\textbf{O8.}] \textbf{Evaluar la hipótesis de detección anticipada}
         sobre datos longitudinales reales: determinar si los descriptores
         topológicos de la exploración previa (sin diagnóstico) distinguen a
@@ -71,9 +70,8 @@ estructurada en las siguientes fases, alineadas con los objetivos anteriores:
   \item \textbf{Fase de análisis y visualización} (O6): interpretación de los
         resultados y desarrollo de visualizaciones.
   \item \textbf{Fase longitudinal} (O7, O8): diseño de la comparación
-        topológica entre exploraciones sucesivas, validación con datos
-        sintéticos y, en cuanto se obtenga acceso a un dataset real
-        longitudinal, evaluación de la hipótesis de detección anticipada.
+        topológica entre exploraciones sucesivas, desarrollo sobre EMBED y
+        validación externa preregistrada sobre CSAW-CC.
   \item \textbf{Fase de redacción} de la memoria.
 \end{enumerate}
 
@@ -91,7 +89,7 @@ O3 & Descriptores topológicos   & \ref{cap:fundamentos}, \ref{cap:metodologia} 
 O4 & Clasificadores sobre TDA   & \ref{cap:metodologia}, \ref{cap:resultados} \\
 O5 & Comparación con DL         & \ref{cap:resultados} \\
 O6 & Visualización              & \ref{cap:implementacion}, \ref{cap:resultados} \\
-O7 & Diseño y validación sintética de la comparación longitudinal & \ref{cap:metodologia}, \ref{cap:resultados} \\
+O7 & Diseño de la comparación longitudinal & \ref{cap:metodologia}, \ref{cap:resultados} \\
 O8 & Evaluación de la hipótesis de detección anticipada (datos reales) & \ref{cap:resultados}, \ref{cap:conclusiones} \\
 \bottomrule
 \end{tabular}

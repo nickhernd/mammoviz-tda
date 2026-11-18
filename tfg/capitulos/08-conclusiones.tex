@@ -2,69 +2,67 @@
 \label{cap:conclusiones}
 
 \section{Conclusiones}
-Este Trabajo de Fin de Grado parte de la clasificación benigno/maligno sobre
-una mamografía aislada mediante Análisis Topológico de Datos (TDA), pero su
-objetivo principal es más ambicioso: estudiar si esos mismos descriptores
-topológicos permiten \textbf{detección anticipada}, comparando la
-exploración previa (normal) y la exploración donde se diagnostica el cáncer
-en la misma paciente (Capítulo~\ref{cap:objetivos}, objetivos O7--O8). Este
-pivote --- documentado en detalle en el registro de decisión del
-repositorio --- sustituye al planteamiento inicial centrado en comparar la
-interpretabilidad del TDA frente a Grad-CAM/SHAP/LIME sobre una imagen
-aislada, que se mantiene como línea secundaria si el tiempo lo permite, pero
-ya no como contribución central.
+Este Trabajo de Fin de Grado se preguntaba si el Análisis Topológico de Datos
+permite la \textbf{detección anticipada} del cáncer de mama: si la
+exploración de cribado anterior, leída como normal, ya contenía una señal
+topológica del cáncer que se diagnosticaría después. La respuesta, obtenida
+íntegramente sobre datos reales de dos cohortes independientes, tiene tres
+partes.
 
-El resultado principal es un \textbf{\textit{pipeline} completo,
-reproducible y ejecutado íntegramente sobre datos reales} --- CBIS-DDSM
-para la clasificación aislada y EMBED para la hipótesis longitudinal ---
-desde la carga de metadatos hasta la evaluación clínica, que corrige el
-problema de fuga de datos detectado en el material de partida (partición
-estricta por paciente). En relación con los objetivos específicos:
+\begin{enumerate}
+  \item \textbf{Sobre la mamografía completa, no.} Con un diseño sin
+        confusores, el descriptor topológico de la mamografía entera no
+        separa casos de controles ni siquiera en la exploración del
+        diagnóstico (AUC $0.53$): una lesión de cribado se diluye entre los
+        miles de rasgos de la imagen completa.
+  \item \textbf{En el sitio donde aparecerá el cáncer, sí, con un efecto
+        modesto.} La topología de una ventana de unos 3.5\,cm en ese sitio,
+        medida un cribado antes, separa casos de controles: AUC $0.57$ en
+        EMBED y $\mathbf{0.614}$ ($p = 0.001$) en una \textbf{validación
+        externa preregistrada} en CSAW-CC. Es una señal local (desaparece
+        media mama más allá y en la mama contralateral), no la explican la
+        edad, la densidad ni los hallazgos benignos previos, aparece en las
+        dos proyecciones y persiste \textbf{donde el radiólogo no veía nada}
+        ($0.596$, $p = 0.01$). Su patrón (menos estructura de intensidad
+        media y más variación fina en el tejido denso, una densificación
+        local) se reproduce entre cohortes con correlación $0.88$, y la
+        topología supera a la densidad local sola.
+  \item \textbf{El camino hasta ese resultado es en sí mismo una
+        aportación.} Tres confusores de diseño (intervalo entre
+        exploraciones, época de adquisición y tipo de exploración en el
+        diagnóstico) produjeron señales falsas con AUC entre $0.6$ y $0.9$.
+        Un control positivo y una línea base ``solo intervalo'' los habrían
+        detectado de inmediato.
+\end{enumerate}
 
+En relación con los objetivos específicos:
 \begin{itemize}
-  \item Se ha revisado el estado del arte en análisis automático de
-        mamografías, aplicaciones del TDA a imagen médica y predicción de
-        riesgo/análisis longitudinal (O1).
-  \item Se ha construido un \textit{pipeline} reproducible de preparación de
-        datos (\texttt{src/data.py}) cuyo aporte metodológico central es la
-        \textbf{partición por paciente}, que corrige la fuga de datos
-        observada en el \texttt{Demo\_Notebook.ipynb} original (exactitud
-        del 100\,\% desde la primera época); se ha descargado y usado un
-        piloto real de 70 pacientes de CBIS-DDSM (O2).
-  \item Se ha implementado y ejecutado sobre datos reales la extracción de
-        descriptores topológicos mediante homología persistente cúbica
-        (\texttt{src/topology.py}: diagramas de persistencia, imágenes de
-        persistencia H0+H1), con dos backends intercambiables
-        (\texttt{giotto-tda} y \texttt{gudhi}, este último operativo en
-        Python 3.14) (O3), y se han entrenado y evaluado clasificadores
-        clásicos (SVM, \textit{random forest}) sobre estos descriptores
-        sobre el piloto real, con AUC por validación cruzada
-        $\approx 0.66$ (Sección~\ref{sec:resultados-reales}) (O4).
-  \item Se ha migrado la CNN de referencia a PyTorch (DenseNet121 con
-        \textit{transfer learning}), se ha entrenado de forma determinista
-        sobre el piloto real, y se ha implementado y evaluado la fusión de
-        características topológicas y \textit{embeddings} de la CNN, con
-        AUC por CV $\approx 0.83$ (CNN) y $\approx 0.82$ (fusión) tras
-        ajustar hiperparámetros por vía sobre el piloto actual, sin que se
-        pueda todavía afirmar que la fusión mejore a la CNN sola (O5).
-  \item Se han desarrollado utilidades de visualización (matriz de
-        confusión, diagrama de persistencia, comparación visual benigno vs.
-        maligno espiculado con datos reales) en \texttt{src/evaluate.py} y
-        en el notebook interactivo (O6).
-  \item Se ha diseñado la metodología de comparación longitudinal (señales
-        de \textit{anticipación} y \textit{deriva} topológica entre
-        exploraciones sucesivas, Sección~\ref{sec:metodologia-longitudinal}
-        del Capítulo~\ref{cap:metodologia}), con la distinción metodológica
-        clave de que ambas señales no miden lo mismo: la deriva detecta
-        ``algo cambió'', la anticipación detecta ``ya había señal antes''
-        (O7).
-  \item Se concedió acceso a EMBED y se ha evaluado la hipótesis de
-        detección anticipada sobre un \textbf{piloto real de 99 pacientes}
-        (49 incidentes, 50 control): AUC por CV de $0.805 \pm 0.060$
-        (deriva, señal robusta) y $0.550 \pm 0.105$ (anticipación pura,
-        cerca del azar), ver Sección~\ref{sec:resultados-embed}. Queda
-        pendiente ampliar el piloto, para lo que ya hay acceso y candidatos
-        de sobra (644 incidentes, 7256 control) (O8).
+  \item Se ha revisado el estado del arte en análisis de mamografía, TDA en
+        imagen médica y análisis longitudinal, y se ha verificado que no
+        existe trabajo previo que aplique homología persistente a
+        mamografías anteriores al diagnóstico (O1).
+  \item Se ha construido un \textit{pipeline} reproducible con partición
+        por paciente, que corrige la fuga de datos del material de partida
+        (exactitud del 100\,\% desde la primera época), y descargas
+        automatizadas de CBIS-DDSM, EMBED y CSAW-CC (O2).
+  \item Se ha implementado la extracción de descriptores topológicos
+        (diagramas e imágenes de persistencia $H_0$+$H_1$) con dos
+        \textit{backends} cuya equivalencia se comprueba en integración
+        continua (O3), y se han entrenado clasificadores sobre ellos:
+        AUC $0.66$ en benigno/maligno sobre CBIS-DDSM, $0.87$ en masas
+        espiculadas (O4).
+  \item Se ha comparado con una CNN (DenseNet121, AUC $0.83$) y su fusión,
+        sin que la fusión mejore con claridad a la CNN sola (O5).
+  \item Se han desarrollado visualizaciones y se ha comparado la región
+        topológica con Grad-CAM, SHAP y LIME: los cuatro métodos apenas
+        coinciden, y la topología es más de $300\times$ más rápida que SHAP
+        (O6).
+  \item Se ha diseñado la comparación longitudinal (anticipación, deriva y
+        control positivo) y el análisis en el sitio de la lesión, con
+        validación cruzada agrupada, permutación dentro de conjuntos,
+        regresión logística condicional y controles de localización (O7).
+  \item Se ha evaluado la hipótesis de detección anticipada en EMBED y se
+        ha validado de forma preregistrada en CSAW-CC (O8).
 \end{itemize}
 
 \section{Grado de cumplimiento de los objetivos}
@@ -73,132 +71,72 @@ estricta por paciente). En relación con los objetivos específicos:
 \centering
 \caption{Grado de cumplimiento de los objetivos específicos.}
 \label{tab:cumplimiento}
-\begin{tabular}{@{}p{1.3cm}p{3.3cm}p{9.4cm}@{}}
+\begin{tabular}{@{}p{1.3cm}p{2.6cm}p{10.1cm}@{}}
 \toprule
 \textbf{Obj.} & \textbf{Estado} & \textbf{Observaciones} \\
 \midrule
-O1 & Cumplido            & Revisión bibliográfica completa, incluida la línea
-                            longitudinal/predicción de riesgo (Cap.~\ref{cap:estado-arte}). \\
-O2 & Cumplido            & \textit{Pipeline} de datos y partición por paciente
-                            implementados y verificados sobre un piloto real
-                            de 70 pacientes; dataset longitudinal (CSAW-CC/EMBED)
-                            bajo solicitud de acceso (O8). \\
-O3 & Cumplido             & Extracción de imágenes de persistencia H0+H1
-                            implementada y ejecutada sobre el piloto real con
-                            dos backends (gudhi, giotto-tda). \\
-O4 & Cumplido             & Clasificadores entrenados y evaluados sobre el
-                            piloto real (AUC por CV $\approx 0.66$, estimación
-                            más fiable al ampliar el piloto); tamaño de
-                            muestra todavía pequeño (issue \#82). \\
-O5 & Cumplido             & CNN (PyTorch/DenseNet121) y fusión entrenadas y
-                            comparadas sobre el piloto real, con ajuste de
-                            hiperparámetros por vía (issue \#77). \\
-O6 & Cumplido             & Visualizaciones implementadas y aplicadas a casos
-                            reales; comparación sistemática con Grad-CAM,
-                            SHAP y LIME completada como línea secundaria
-                            (Sección~\ref{sec:resultados-xai}): acuerdo bajo
-                            entre los 4 métodos, TDA tan rápida como Grad-CAM
-                            y $>300\times$ más rápida que SHAP. \\
-O7 & Cumplido             & Metodología de comparación longitudinal diseñada
-                            y aplicada sobre datos reales
-                            (Sección~\ref{sec:metodologia-longitudinal},
-                            Sección~\ref{sec:resultados-embed}). \\
-O8 & Cumplido (preliminar) & Acceso a EMBED concedido; evaluación sobre un
-                            piloto real de 99 pacientes completada
-                            (AUC deriva $0.805 \pm 0.060$, anticipación
-                            $0.550 \pm 0.105$,
-                            Sección~\ref{sec:resultados-embed}). Es el
-                            objetivo más importante del TFG y el resultado
-                            es ya real, pero preliminar: falta ampliar el
-                            piloto para que sea concluyente. \\
+O1 & Cumplido & Incluida la verificación de novedad de la hipótesis
+               (Cap.~\ref{cap:estado-arte}). \\
+O2 & Cumplido & Tres datasets reales: CBIS-DDSM, EMBED y CSAW-CC, con
+               descarga automatizada y partición por paciente. \\
+O3 & Cumplido & Homología cúbica $H_0$/$H_1$, imagen de persistencia y
+               distancia \textit{bottleneck}; dos \textit{backends}
+               equivalentes. \\
+O4 & Cumplido & AUC $0.66$ (CBIS-DDSM), $0.87$ en masas espiculadas. \\
+O5 & Cumplido & CNN $0.83$; la fusión no mejora con claridad a la CNN. \\
+O6 & Cumplido & Comparación con Grad-CAM, SHAP y LIME; interpretación
+               topológica de la señal de anticipación. \\
+O7 & Cumplido & Metodología longitudinal con control positivo, controles de
+               localización y protocolo estadístico pareado. \\
+O8 & Cumplido & Anticipación local replicada en una validación externa
+               preregistrada (AUC $0.614$, $p = 0.001$). \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-La principal desviación respecto a la planificación inicial ya no es
-logística ni de acceso (la descarga de CBIS-DDSM está resuelta y
-automatizada, y el acceso a EMBED se concedió durante la redacción de esta
-memoria), sino de \textbf{tamaño de piloto}: el primer resultado real sobre
-la hipótesis central del trabajo (O8) ya existe, pero sobre solo 99
-pacientes de los más de 7900 candidatos disponibles en EMBED, así que no es
-todavía una validación concluyente.
-
 \section{Limitaciones}
-Se identifican las siguientes limitaciones del trabajo en su estado actual:
-
 \begin{itemize}
-  \item \textbf{El piloto real sobre la hipótesis principal es todavía
-        pequeño.} 99 pacientes (Sección~\ref{sec:resultados-embed}) dan ya
-        una señal de deriva robusta ($0.805 \pm 0.060$), pero no bastan
-        para cerrar la pregunta central: el AUC de anticipación
-        ($0.550 \pm 0.105$) aún no permite distinguir con confianza entre
-        ``señal débil real'' y ``sin señal''. Además, el piloto usa una
-        sola vista (lateralidad + proyección) por paciente, sin registro
-        espacial entre exploraciones de distinta fecha.
-  \item \textbf{Tamaño del piloto real.} 70 pacientes (101 casos de
-        entrenamiento, 21 de test tras la partición por paciente) ya
-        permite estimaciones más estables que el piloto inicial de 30
-        pacientes --- el CV-AUC de TDA bajó de $0.850 \pm 0.143$ a
-        $0.658 \pm 0.134$ al ampliar el piloto, una corrección a la baja
-        que es en sí misma evidencia de que el número anterior era
-        optimista por el tamaño de muestra (Sección~\ref{sec:test-ruidoso})
-        --- pero sigue siendo pequeño para un estudio concluyente: con 30
-        pacientes, el AUC de un único \textit{split} de test con $n=8$
-        llegó a ser, en una ejecución, peor que el azar por pura
-        casualidad, lo que ilustra por qué se reporta el AUC por validación
-        cruzada como métrica principal y no el de un solo \textit{split}.
-  \item \textbf{Sesgos del conjunto de datos.} CBIS-DDSM, aunque curado,
-        procede de un número limitado de centros y equipos de adquisición,
-        lo que puede limitar la generalización a otras poblaciones o
-        tecnologías de imagen; además, el piloto actual solo incluye casos
-        de tipo masa, no de calcificación.
-  \item \textbf{Alcance de la validación clínica.} Ninguna de las métricas
-        obtenidas constituye una validación clínica: falta contraste con
-        radiólogos y con conjuntos de datos externos antes de extraer
-        conclusiones sobre utilidad diagnóstica real.
+  \item \textbf{Efecto modesto.} Un AUC de alrededor de $0.6$ no tiene
+        utilidad clínica por sí solo: la señal existe y es reproducible,
+        pero es débil.
+  \item \textbf{Hay que saber dónde mirar.} La anticipación se mide en el
+        sitio donde aparecerá el cáncer, conocido a posteriori; es una
+        pregunta retrospectiva. La versión sin conocer el sitio
+        (localización recorriendo toda la mama) es exploratoria y acierta
+        en el 10\,\% superior de la mama en un tercio de los casos.
+  \item \textbf{Trasladar el sitio entre exploraciones.} Cuando el sitio no
+        está marcado en $t-1$ y hay que trasladarlo desde $t$, la señal se
+        pierde; un registro elástico reduce el error a 6\,mm pero no la
+        recupera en la validación.
+  \item \textbf{Cohortes de un solo centro cada una, y tamaño limitado.} 97
+        cánceres en EMBED y 109 en CSAW-CC. En CSAW-CC no se pudo emparejar
+        por intervalo ni por fecha (fechas anonimizadas), aunque el control
+        de localización descarta los confusores globales.
+  \item \textbf{CSAW-CC ya no es un conjunto virgen.} Tras el análisis
+        principal se usó para adendas; las mejoras posteriores necesitan
+        una tercera cohorte.
+  \item \textbf{Sin validación clínica.} Ninguna métrica sustituye a una
+        evaluación con radiólogos.
 \end{itemize}
 
 \section{Trabajo futuro}
-A corto plazo, para consolidar el objetivo O8 (ya con un primer resultado
-real, pero preliminar):
 \begin{itemize}
-  \item Ampliar el piloto real de EMBED más allá de 40 pacientes (hay 644
-        incidentes y 7256 control disponibles en la cohorte completa, issue
-        \#92) para reducir la varianza del AUC de la
-        Tabla~\ref{tab:embed-resultados} y poder distinguir si la señal de
-        anticipación mejora con más datos o se mantiene cerca del azar.
-  \item Solicitar también acceso a CSAW-CC como fuente adicional/cruzada,
-        ya que no hay coste en tenerlo como respaldo (ver
-        \texttt{docs/acceso\_datasets\_longitudinales.pdf}).
-  \item Seguir ampliando el piloto real de CBIS-DDSM más allá de 70
-        pacientes (issue \#82) para reducir aún más la varianza de las
-        métricas de la Tabla~\ref{tab:resultados} e incorporar los casos de
-        calcificación.
-\end{itemize}
-
-Como líneas de trabajo futuro de más largo alcance se proponen:
-\begin{itemize}
-  \item Comparar la señal de anticipación topológica con modelos de
-        predicción de riesgo basados en \textit{deep learning} ya
-        publicados sobre datos longitudinales reales (p.\,ej.
-        LongiMam~\cite{rakez2025longimam}, STA-Risk~\cite{zhou2025starisk}).
-  \item Completar las dos tareas que quedaron abiertas de la línea
-        secundaria de interpretabilidad (Sección~\ref{sec:resultados-xai}):
-        una cota de estabilidad teórica de la métrica de acuerdo frente a
-        perturbaciones del ROI (issue \#78) y una validación cualitativa
-        con un segundo anotador humano sobre los casos más discordantes
-        (issue \#80), ya que no hay acceso garantizado a un radiólogo.
-  \item Extender el estudio a otras filtraciones y descriptores topológicos
-        (\textit{multiparameter persistence}) para la señal de deriva entre
-        exploraciones.
-  \item Explorar la \textbf{consistencia topológica entre proyecciones
-        CC/MLO} de la misma exploración (distancia de Wasserstein entre sus
-        diagramas de persistencia) como señal de calidad/ambigüedad
-        complementaria a la señal longitudinal: dos vistas de la misma
-        lesión deberían ser topológicamente similares, y una discrepancia
-        grande podría señalar casos donde el descriptor topológico es menos
-        fiable.
-  \item Validar el enfoque longitudinal en otros conjuntos de datos
-        (además de CSAW-CC/EMBED) y, si procede, con radiólogos, para medir
-        la utilidad clínica real de una ventana de detección anticipada.
+  \item \textbf{Validación en datos no usados}: el 30\,\% de CSAW-CC que
+        Karolinska reserva para validación en colaboración, con el análisis
+        principal tal como está fijado.
+  \item \textbf{Mejor registro entre exploraciones}, con puntos de
+        referencia anatómicos (pezón, pared torácica) o modelos de
+        deformación de la compresión, para no depender de una marca del
+        radiólogo en $t-1$.
+  \item \textbf{Localización prospectiva}: convertir el mapa de puntuación
+        de toda la mama en una herramienta que señale regiones a vigilar, y
+        compararla con los marcadores de riesgo de modelos de
+        \textit{deep learning} sobre mamografías previas.
+  \item \textbf{Trayectorias}: usar todas las exploraciones anteriores de
+        cada mujer ($t-3$, $t-2$, $t-1$), no solo la inmediatamente
+        anterior.
+  \item \textbf{Combinar con otros descriptores}: la topología supera a la
+        densidad local y ambas se suman; cabe esperar lo mismo con
+        descriptores de textura o con \textit{embeddings} de una CNN sobre
+        la misma ventana.
 \end{itemize}

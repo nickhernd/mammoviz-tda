@@ -1,20 +1,15 @@
 \chapter{Experimentos y resultados}
 \label{cap:resultados}
 
-Este capítulo presenta el diseño experimental del trabajo y los resultados
-obtenidos, \textbf{todos sobre datos reales}: la clasificación
-benigno/maligno sobre el piloto de CBIS-DDSM (70 pacientes descargados con
-\texttt{scripts/download\_cbis\_ddsm.py},
-Sección~\ref{sec:resultados-reales}), el estudio de interpretabilidad
-(Sección~\ref{sec:resultados-xai}) y la evaluación de la hipótesis
-longitudinal principal (O7--O8) sobre el piloto real de EMBED
-(Sección~\ref{sec:resultados-embed}). Durante el desarrollo se usaron
-datos sintéticos únicamente como comprobación de ingeniería de que las
-etapas del \textit{pipeline} encajaban entre sí
-(\texttt{notebooks/01\_pipeline\_demo.ipynb},
-\texttt{scripts/synthetic\_longitudinal\_validation.py}, que se conservan
-en el repositorio); ningún resultado de este capítulo procede de datos
-sintéticos.
+Este capítulo presenta los resultados del trabajo, \textbf{todos sobre
+datos reales}: la clasificación benigno/maligno sobre CBIS-DDSM
+(Sección~\ref{sec:resultados-reales}), el estudio de interpretabilidad
+(Sección~\ref{sec:resultados-xai}) y la hipótesis longitudinal principal
+(O7--O8): los tres diseños en EMBED (Sección~\ref{sec:resultados-embed}), el
+análisis en el sitio de la lesión (Sección~\ref{sec:resultados-sitio}), la
+validación externa preregistrada en CSAW-CC (Sección~\ref{sec:resultados-csaw}),
+los intentos de mejora (Sección~\ref{sec:mejoras}) y la interpretación de la
+señal (Sección~\ref{sec:interpretacion-anticipacion}).
 
 \section{Diseño experimental}
 Se definen los siguientes experimentos, alineados con los objetivos O4 y O5
@@ -205,23 +200,6 @@ persistencia H0/H1 (backend \texttt{gudhi}).}
 \label{fig:sanity-check-espiculada}
 \end{figure}
 
-\subsection{Estado de los datos}
-\label{sec:estado-datos}
-El piloto real de CBIS-DDSM cubre 70 pacientes de tipo masa, y el piloto
-longitudinal real de EMBED cubre 99 pacientes
-(Sección~\ref{sec:resultados-embed}). Ambas descargas están resueltas y
-automatizadas; lo que queda es \textbf{ampliarlas}:
-\begin{itemize}
-  \item Relanzar \texttt{scripts/download\_cbis\_ddsm.py --add N N} para
-        crecer el piloto de clasificación y reducir la varianza de la
-        Tabla~\ref{tab:resultados} (issue \#82), e incorporar los casos de
-        tipo calcificación (\texttt{Calc-*}), de momento excluidos.
-  \item Relanzar \texttt{scripts/download\_embed\_longitudinal.py} con más
-        pacientes para el piloto longitudinal (issue \#95): la cohorte
-        completa de EMBED tiene 644 incidentes y 7256 control candidatos,
-        de los que solo se han usado 99.
-\end{itemize}
-
 \section{Interpretabilidad: TDA vs Grad-CAM vs SHAP vs LIME}
 \label{sec:resultados-xai}
 Como línea secundaria del trabajo (Sección~\ref{sec:metrica-acuerdo}), se ha
@@ -381,120 +359,395 @@ topológicamente fundamentada prácticamente gratis en comparación con SHAP,
 y sin la dependencia de una CNN ya entrenada que tienen los otros tres
 métodos.
 
-\section{Evaluación real de la hipótesis longitudinal (EMBED, O8)}
+\section{Hipótesis longitudinal en EMBED: tres diseños y tres confusores}
 \label{sec:resultados-embed}
-Como se explica en la Sección~\ref{subsec:acceso-longitudinal}, durante la
-redacción de esta memoria se concedió acceso a EMBED. Se construyó un
-primer piloto longitudinal real con \texttt{scripts/download\_embed\_longitudinal.py}:
-para cada paciente seleccionado se descargan las dos exploraciones (t-1,
-t) de la misma vista (lateralidad + proyección, para que la comparación
-sea sobre la misma región anatómica), filtrando a imágenes de tipo
-\texttt{2D} (mamografía digital real, no el \textit{C-view} sintetizado de
-tomosíntesis). El piloto tiene \textbf{99 pacientes}: 49 incidentes
-(primera exploración Normal/Benigna, exploración posterior
-Sospechosa/Maligna; un candidato más se descartó automáticamente por no
-tener ninguna vista común entre sus dos exploraciones) y 50 control (todas
-sus exploraciones Normal/Benigna), seleccionados aleatoriamente (semilla
-fija) de los 644 y 7256 candidatos respectivamente identificados en la
-cohorte completa. Una primera iteración con 40 pacientes dio el mismo
-patrón cualitativo con el doble de varianza; se reportan los números del
-piloto de 99.
+La hipótesis principal (O8) se evaluó primero en EMBED~\cite{jeong2021embed}.
+El estudio pasó por tres diseños sucesivos. Los dos primeros producían
+señales que \textbf{no eran cáncer}, y cada uno se corrigió al descubrir su
+confusor. Se presentan los tres porque la secuencia es en sí misma un
+resultado: describe errores de diseño que cualquier estudio longitudinal de
+mamografía puede cometer.
+
+\subsection{Diseño original: BI-RADS y controles sin emparejar}
+Casos (``incidentes''): pacientes cuya primera exploración era normal o
+benigna (BI-RADS N/B) y una posterior sospechosa o maligna (S/M/K).
+Controles: pacientes con todas sus exploraciones N/B, usando sus dos
+primeras exploraciones. 394 pacientes. Las señales (imagen de persistencia
+de la mamografía completa a $224\times224$; deriva por distancia
+\textit{bottleneck}) parecían prometedoras: anticipación $0.611$ y deriva
+$0.793$ (Tabla~\ref{tab:tres-disenos}).
+
+\paragraph{Confusor 1: el intervalo entre exploraciones.} Un clasificador
+que solo recibe el número de días entre $t-1$ y $t$, sin mirar ninguna
+imagen, separaba las clases con AUC $0.745$. Los controles usaban sus dos
+primeras exploraciones (mediana 420 días) y los casos llegaban a tener años
+entre ambas (mediana 1112 días): el tiempo transcurrido distinguía las
+clases por sí solo.
+
+\paragraph{Confusor 2: la época de adquisición.} El año de la exploración
+$t-1$ difería entre grupos (Mann-Whitney $p = 3.5\cdot10^{-4}$). Cambios de
+equipo y de procesado entre años bastan para que la imagen de $t-1$ ``sepa''
+a qué grupo pertenece, y eso explicaba la aparente anticipación de $0.611$.
+
+\subsection{Diseño emparejado por intervalo}
+Para cada caso se buscó un control con el mismo intervalo ($\pm 90$ días).
+``Solo intervalo'' cayó a $0.527$, la anticipación al azar ($0.496$) y la
+deriva se mantuvo ($0.748$). Parecía, por tanto, que la deriva topológica
+era una señal real.
+
+\paragraph{Confusor 3: el tipo de exploración en $t$.} Al validar contra
+las regiones anotadas de EMBED, el sitio de mayor cambio topológico casi
+nunca coincidía con la lesión. Investigando por qué, se encontró que la
+exploración $t$ de los casos era \textbf{diagnóstica} en 193 de 194 casos, y
+en 136 una vista de compresión focal o magnificación, mientras que la de los
+controles era siempre un cribado. La prueba más directa es la columna
+``solo $t$'' de la Tabla~\ref{tab:tres-disenos}: la imagen $t$ sola
+separaba las clases con AUC $0.888$. El descriptor reconocía el tipo de
+vista, no el cáncer. Además, BI-RADS 4/5 no es cáncer: la mayoría de esas
+biopsias resultan benignas.
+
+\subsection{Cohorte de cribado (diseño definitivo)}
+\begin{itemize}
+  \item \textbf{Casos}: cáncer \textbf{confirmado por anatomía patológica}
+        (invasivo o \textit{in situ}) y detectado en un cribado. $t$ es ese
+        cribado; $t-1$, el cribado anterior leído como normal (al menos
+        180 días antes).
+  \item \textbf{Controles}: mujeres sin cáncer con dos cribados normales,
+        emparejadas 1:1 por intervalo ($\pm 90$ días), fecha de $t-1$
+        ($\pm 1$ año) y vista.
+  \item \textbf{Imágenes}: solo mamografía 2D de campo completo (sin vistas
+        ampliadas), de la mama del lado del cáncer.
+\end{itemize}
+162 casos y 162 controles, con intervalos (385 frente a 390 días) y años de
+$t-1$ equilibrados. Con el diseño limpio, \textbf{todo cae al azar}
+(Tabla~\ref{tab:tres-disenos}, Figura~\ref{fig:tres-disenos}).
 
 \begin{table}[H]
 \centering
-\caption{AUC por validación cruzada (5-fold) de cada señal longitudinal
-sobre el piloto REAL de EMBED (\texttt{scripts/embed\_longitudinal\_evaluation.py},
-$n=99$ pacientes).}
-\label{tab:embed-resultados}
-\begin{tabular}{@{}lc@{}}
+\caption{Los tres diseños en EMBED (AUC por validación cruzada de 5
+particiones, Random Forest). ``Solo intervalo'' no mira ninguna imagen;
+``solo $t$'' es el control positivo global (la exploración del diagnóstico
+sola).}
+\label{tab:tres-disenos}
+\begin{tabular}{@{}lcccc@{}}
 \toprule
-\textbf{Señal} & \textbf{AUC (CV, media $\pm$ desv.)} \\
+\textbf{Diseño} & \textbf{Solo intervalo} & \textbf{Anticipación} & \textbf{Deriva} & \textbf{Solo $t$} \\
 \midrule
-Anticipación (solo $D_{t-1}$)        & $0.550 \pm 0.105$ \\
-Deriva ($d(D_{t-1}, D_t)$)           & $0.805 \pm 0.060$ \\
-Combinada                             & $0.762 \pm 0.094$ \\
+Original (394)                 & 0.745 & 0.611 & 0.793 & 0.876 \\
+Emparejado por intervalo (388) & 0.527 & 0.496 & 0.748 & 0.888 \\
+Cohorte de cribado (324)       & 0.503 & 0.459 & 0.535 & 0.530 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\paragraph{Aviso metodológico, antes de interpretar estos números.} Con
-$99$ pacientes este sigue siendo un \textbf{piloto}, no un estudio
-definitivo --- el mismo aviso repetido en todo este capítulo sobre
-pilotos pequeños aplica también aquí, aunque con menos fuerza que en la
-primera iteración de 40.
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{figuras/tres_disenos.png}
+\caption{Al corregir cada confusor, las señales caen al azar. En la cohorte
+de cribado ni siquiera la exploración del diagnóstico sola (control
+positivo) supera el azar.}
+\label{fig:tres-disenos}
+\end{figure}
 
-El patrón de resultados es claro: la señal de \textbf{deriva} ($0.805 \pm
-0.060$) supera al azar de forma robusta --- el cambio topológico entre la
-exploración previa y la del diagnóstico es real y medible con homología
-persistente ---, mientras que la señal de \textbf{anticipación pura}
-($0.550 \pm 0.105$) sigue estadísticamente cerca del azar incluso tras
-multiplicar por 2.5 el tamaño del piloto. Tiene sentido mecánico: la
-deriva mide sobre todo "cuánto cambió la topología entre t-1 y t" (que
-casi por definición es grande en los casos incidentes, donde en t ya hay
-una lesión diagnosticada), mientras que la anticipación mide si ya había
-señal \textbf{antes} del diagnóstico --- la pregunta clínicamente valiosa,
-y la más difícil. Dos lecturas posibles, no excluyentes entre sí:
-
+\subsection{El descriptor global no ve la lesión}
+\label{subsec:ceguera-global}
+El dato decisivo de la cohorte de cribado es el control positivo: si ni
+siquiera la imagen $t$, con el cáncer ya presente, separa casos de
+controles ($0.530$), el descriptor no ve la lesión, y un resultado nulo de
+anticipación no dice nada sobre la existencia de un precursor. Dos pruebas
+precisan por qué:
 \begin{itemize}
-  \item Los precursores topológicos reales son, en efecto, demasiado
-        sutiles para el descriptor actual (imagen de persistencia de la
-        vista completa a $224\times224$): haría falta un descriptor más
-        sensible, mayor resolución o localización de la región sospechosa.
-  \item El AUC de anticipación de $0.550 \pm 0.105$ aún deja margen a que
-        exista una señal débil ($\sim$0.55) real: distinguir "señal débil"
-        de "sin señal" requiere todavía más pacientes.
+  \item \textbf{Resolución.} Con la mama recortada a su caja y reducida a
+        224, 512 y 1024\,px, el control positivo global sube poco: $0.549$,
+        $0.587$ y $0.600$. No llega a lo que se obtiene mirando donde está
+        la lesión (Sección~\ref{sec:resultados-sitio}).
+  \item \textbf{Localización a ciegas.} Dividiendo la mama en una rejilla
+        de $4\times4$ parches y tomando como ``sitio del cambio'' el parche
+        de mayor deriva, ese parche coincide con la lesión anotada en 3 de
+        82 casos (azar: 6\,\%).
 \end{itemize}
+Una lesión de cribado de 1\,cm es un rasgo entre miles en la mamografía
+completa: el problema es sobre todo de \textbf{dilución}, no de resolución.
 
-Eso sí, la tendencia entre las dos iteraciones del piloto (de $0.525 \pm
-0.219$ con 40 pacientes a $0.550 \pm 0.105$ con 99) es la de un AUC que se
-estabiliza en un valor bajo con varianza decreciente, no la de una señal
-fuerte emergiendo al crecer la muestra. Ampliar el piloto (hay candidatos
-de sobra: 644 incidentes y 7256 control en la cohorte completa de EMBED)
-sigue siendo el siguiente paso natural (Capítulo~\ref{cap:conclusiones}).
+\section{Topología en el sitio de la lesión (EMBED)}
+\label{sec:resultados-sitio}
+Se cambió la unidad de análisis: una ventana de $512\times512$\,px a
+resolución completa (unos 3.5\,cm) centrada en la región anotada de la
+lesión en $t$. La misma posición relativa dentro de la caja de la mama se
+aplica a $t-1$ del caso y a las dos exploraciones de sus controles, de modo
+que la ubicación la fija la anotación del caso y no depende del contenido
+del control. La validación cruzada se agrupa por paciente y la
+significación se mide con una \textbf{prueba de permutación} dentro de cada
+conjunto caso + controles.
+
+\subsection{Más datos: todas las vistas y tres controles por caso}
+La versión abierta de EMBED no tiene más cánceres que cumplan el diseño (658
+confirmados, 313 con un cribado en el diagnóstico y 162 con un cribado
+negativo previo). Con el análisis 1:1 sobre 82 pares, el control positivo ya
+funcionaba ($0.668$) pero la anticipación no ($0.498$). Para ganar potencia
+se usaron \textbf{todas las vistas} del lado del cáncer con lesión anotada
+(MLO y CC: 174 vistas de 97 cánceres) y \textbf{tres controles por vista}
+(522).
+
+\begin{table}[H]
+\centering
+\caption{Anticipación en el sitio de la lesión en EMBED (ventana de 512\,px;
+$p$ por 100 permutaciones dentro de cada conjunto).}
+\label{tab:embed-sitio}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{Análisis} & \textbf{Control positivo ($t$)} & \textbf{Anticipación ($t-1$)} & \textbf{$p$ anticip.} \\
+\midrule
+1:1, 82 pares                         & 0.668 & 0.498 & 0.52 \\
+Todas las vistas, 3 controles         & 0.693 & 0.569 & 0.04 \\
+Ídem, controles emparejados por edad  & 0.679 & 0.571 & 0.02 \\
+Ídem, sitio desplazado media mama     & 0.524 & 0.472 & 0.86 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Comprobación de confusores}
+Antes de interpretar el $0.569$ se aplicaron los mismos filtros que habían
+tumbado las señales anteriores:
+\begin{itemize}
+  \item \textbf{Edad.} Los casos eran unos 3 años mayores (64.2 frente a
+        60.9, $p = 2\cdot10^{-4}$). La puntuación topológica no codifica la
+        edad (en controles, $R^2 \approx 0$) y, en una regresión logística
+        condicional (cada caso comparado solo con sus propios controles)
+        ajustada por edad y densidad, mantiene una razón de odds de 1.29
+        por desviación típica ($p = 0.008$). Además, \textbf{repitiendo el
+        análisis con controles emparejados por edad} ($\pm 3$ años; 451 de
+        522 controles nuevos; edad 64.2 frente a 64.2) se obtiene el mismo
+        resultado: $0.571$ ($p = 0.02$).
+  \item \textbf{Hallazgo benigno previo.} La $t-1$ de los casos tenía con
+        más frecuencia BI-RADS B, un hallazgo benigno anotado (17\,\% frente
+        a 7\,\%, $p = 0.001$): un año antes el radiólogo ya veía algo con
+        más frecuencia. Ajustando también por ello, el efecto se mantiene
+        (OR $1.30$, $p = 0.007$).
+  \item \textbf{Localización.} Con la ventana desplazada media mama (misma
+        profundidad, otra zona) todo cae al azar, incluido el control
+        positivo, y el sitio homólogo de la mama contralateral tampoco tiene
+        señal ($0.502$). La señal es \textbf{local}: está donde aparecerá el
+        cáncer, no es una propiedad de toda la mama.
+  \item \textbf{Vista.} Aparece igual en MLO ($0.566$) y en CC ($0.571$).
+\end{itemize}
+El resultado en EMBED era un efecto modesto pero consistente, obtenido tras
+varias variantes de análisis. Para afirmarlo hacía falta una validación
+externa con el análisis fijado de antemano.
+
+\section{Validación externa preregistrada en CSAW-CC}
+\label{sec:resultados-csaw}
+Durante el trabajo se obtuvo acceso a CSAW-CC~\cite{dataset_csawcc}
+(Karolinska Institutet, Suecia): 8723 mujeres, 98\,788 mamografías Hologic de
+2008--2016. Tiene dos particularidades: las fechas están anonimizadas (solo
+se conoce el orden de las exploraciones) y, en el cribado anterior al
+diagnóstico, el radiólogo \textbf{marcó con un punto el lugar donde después
+apareció el cáncer} cuando no había nada visible, o contorneó los signos
+cuando los había.
+
+\paragraph{Preregistro.} Antes de descargar ninguna imagen se fijó por
+escrito el plan completo (\texttt{docs/plan\_validacion\_csaw.md}): cohorte,
+localización del sitio, emparejamiento, medida (idéntica a EMBED), análisis
+principal con 1000 permutaciones y criterio de éxito (AUC $> 0.5$,
+$p < 0.05$ y OR condicional $> 1$). El plan y el código del análisis quedaron
+en el historial de \texttt{git} antes de tener los datos.
+
+\paragraph{Cohorte.} 109 cánceres detectados en cribado con el cribado
+anterior leído como normal y el sitio anotado (204 vistas, 130 con el sitio
+marcado directamente en $t-1$), y 612 controles emparejados por banda de
+edad, vista y número de orden de la exploración.
+
+\begin{table}[H]
+\centering
+\caption{Validación en CSAW-CC. Análisis principal y secundarios fijados en
+el plan; el desglose por tipo de marca es exploratorio.}
+\label{tab:csaw}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+\textbf{Análisis} & \textbf{AUC} & \textbf{$p$} \\
+\midrule
+\textbf{Principal: anticipación ($t-1$ en el sitio)} & \textbf{0.614} & \textbf{0.001} \\
+\quad regresión logística condicional               & \multicolumn{2}{c}{OR $1.59$ por DE, $p = 3\cdot10^{-7}$} \\
+Control positivo ($t$ en el sitio)                   & 0.725 & 0.005 \\
+Sitio desplazado media mama                          & 0.519 & 0.27 \\
+Solo MLO / solo CC                                   & 0.627 / 0.579 & 0.005 / 0.045 \\
+Solo $H_0$ / solo $H_1$                              & 0.614 / 0.588 & 0.005 / 0.005 \\
+\midrule
+\multicolumn{3}{@{}l}{\textit{Exploratorio: según la marca del radiólogo en $t-1$}} \\
+Punto: nada visible (88 vistas)                      & 0.596 & 0.01 \\
+Contorno: signos visibles no detectados (42)         & 0.669 & 0.02 \\
+Sin marca, sitio trasladado desde $t$ (74)           & 0.491 & 0.58 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{El criterio del plan se cumple}: la anticipación local se replica
+en una cohorte independiente (otro país, otro hospital, otro fabricante),
+con un efecto incluso algo mayor que en EMBED (Figura~\ref{fig:embed-csaw}).
+Es local (el sitio desplazado da $0.519$) y aparece en ambas vistas. El
+análisis exploratorio por tipo de marca es el más importante para
+interpretarlo: \textbf{donde el radiólogo no veía nada} la señal sigue
+siendo significativa ($0.596$, $p = 0.01$), así que no se reduce a cánceres
+visibles que se pasaron por alto. Donde el sitio hubo que trasladarlo desde
+$t$, desaparece ($0.491$): trasladar el sitio entre dos mamografías con la
+caja de la mama es demasiado impreciso para una ventana de 3.5\,cm. Esto
+explica que en EMBED, donde siempre había que trasladarlo, el efecto fuera
+más débil.
+
+Que en CSAW-CC no se pudiera emparejar por intervalo ni por fecha no
+invalida el resultado: esos confusores, como los tres encontrados en EMBED,
+actúan sobre la mamografía entera, y si explicaran la señal también
+aparecería en la ventana desplazada, que da $0.519$.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{figuras/embed_vs_csaw.png}
+\caption{EMBED (descubrimiento) frente a CSAW-CC (validación prefijada). El
+valor de EMBED para el sitio desplazado procede de la cohorte de lesión sin
+emparejar por edad.}
+\label{fig:embed-csaw}
+\end{figure}
+
+\section{Intentos de mejora}
+\label{sec:mejoras}
+Con la validación hecha, CSAW-CC ya no es un conjunto ``virgen''. Las
+mejoras se desarrollaron en EMBED y se comprobaron en CSAW-CC con adendas al
+plan escritas antes de calcularlas.
+
+\paragraph{Registro entre exploraciones.} Para trasladar el sitio de $t$ a
+$t-1$ se implementó un registro afín (ECC) y otro elástico (afín seguido de
+flujo óptico TV-L1). Su error se midió en las 113 vistas de CSAW-CC con
+marca en $t-1$ y en $t$, usando solo posiciones, sin etiquetas: mediana de
+12.2\,mm con la caja de la mama, 8.2\,mm con el afín y 6.1\,mm con el
+elástico (89\,\% de las lesiones dentro de media ventana, frente a
+65\,\%). En EMBED, el registro elástico subió la anticipación de $0.573$ a
+$0.632$. En CSAW-CC (adenda 1), sobre las 74 vistas sin marca en $t-1$, dio
+$0.479$ ($p = 0.66$): \textbf{no replicado}. La mejora de EMBED fue en parte
+azar, o un error de 6\,mm sigue siendo demasiado para un precursor pequeño.
+
+\paragraph{Mama contralateral.} Restar la ventana homóloga de la otra mama,
+como control de cada mujer, no mejora (sitio solo $0.602$, sitio menos
+contralateral $0.556$ en EMBED). Su único aporte es confirmar la
+localidad: la ventana contralateral sola da $0.502$.
+
+\section{Interpretación de la señal}
+\label{sec:interpretacion-anticipacion}
+
+\subsection{Qué cambia en la topología del sitio}
+Para cada conjunto se restó la imagen de persistencia de la ventana del
+caso en $t-1$ menos la media de la de sus controles, celda a celda (rejilla
+de nacimiento $\times$ persistencia para $H_0$ y $H_1$). El patrón es
+\textbf{casi idéntico en las dos cohortes}: la correlación entre los mapas
+de EMBED y CSAW-CC es $0.88$, con el mismo signo en el 83\,\% de las celdas
+(Figura~\ref{fig:interpretacion}). En el sitio donde aparecerá el cáncer hay
+\textbf{menos} componentes y ciclos de intensidad baja y media (el
+entramado de grasa y tejido glandular) y \textbf{más} componentes de vida
+corta en el extremo más brillante (variaciones finas dentro del tejido
+denso). En términos físicos, una \textbf{densificación local} ya presente un
+cribado antes.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{figuras/interpretacion_anticipacion.png}
+\caption{Diferencia pareada (caso menos sus controles) de la imagen de
+persistencia en la ventana del sitio, un cribado antes del diagnóstico.
+Filtración por subniveles de intensidad: el eje vertical es la intensidad a
+la que nace cada rasgo. $^*$: FDR $< 0.05$ (solo CSAW-CC alcanza
+significación celda a celda; el patrón de EMBED coincide con $r = 0.88$).}
+\label{fig:interpretacion}
+\end{figure}
+
+\subsection{¿Es solo densidad local?}
+Si la señal fuera solo ``más densidad'', una media de intensidad de la
+misma ventana bastaría. Se comparó la topología con descriptores de
+intensidad sin estructura espacial (media, desviación típica y percentiles
+de la ventana en bruto; histograma de la ventana normalizada):
+
+\begin{table}[H]
+\centering
+\caption{Densidad local frente a topología en la ventana del sitio en
+$t-1$ (AUC, 200 permutaciones).}
+\label{tab:densidad}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+\textbf{Descriptor} & \textbf{CSAW-CC} & \textbf{EMBED} \\
+\midrule
+Densidad absoluta (media, sd, percentiles) & 0.586 & 0.555 \\
+Histograma de la ventana normalizada       & 0.554 & 0.534 \\
+\textbf{Topología (imagen de persistencia)} & \textbf{0.614} & \textbf{0.571} \\
+Topología + densidad + histograma          & 0.637 & 0.588 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+La densidad local explica parte de la señal, coherente con la lectura de
+``densificación local'', pero la topología la supera en ambas cohortes y
+combinarlas mejora en ambas. La prueba formal es una regresión logística
+condicional con las dos puntuaciones a la vez. En CSAW-CC, la topología
+ajustada por la densidad mantiene una razón de odds de $1.53$ por desviación
+típica ($p = 3\cdot10^{-5}$), mientras que la densidad ajustada por la
+topología deja de aportar (OR $1.09$, $p = 0.38$); la correlación entre
+ambas puntuaciones es $0.48$. \textbf{La topología contiene la información
+de densidad local y añade estructura espacial que la densidad no capta.}
+%DENSIDAD-CONJUNTA-EMBED
+
+\subsection{Localización: ¿señala la topología dónde aparecerá el cáncer?}
+La pregunta original del trabajo no presupone saber dónde mirar. Se recorrió
+toda la mama de $t-1$ en CSAW-CC con una rejilla de ventanas y se midió en
+qué percentil de puntuación quedaba el sitio marcado (exploratorio, adendas
+2 y 3 del plan). El nulo correcto no es 0.5: los cánceres aparecen en tejido
+glandular, no en la piel ni en el pectoral, y un modelo puede aprender esa
+anatomía. Por eso se comparó cada sitio con la \textbf{misma posición en su
+control sano}:
+
+\begin{table}[H]
+\centering
+\caption{Localización en CSAW-CC: percentil mediano del sitio entre las
+ventanas de su mama y fracción de mamas con el sitio en el 10\,\% superior.
+``Control'': la misma posición relativa en la mama de su control sano.}
+\label{tab:localizacion}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{Exploración} & \textbf{Caso} & \textbf{Control} & \textbf{$p$ pareado} \\
+\midrule
+$t$, diagnóstico (187)               & 0.905; 51\,\% & 0.667; 20\,\% & $2\cdot10^{-14}$ \\
+$t-1$, todas (130)                   & 0.782; 32\,\% & 0.581; 15\,\% & $2\cdot10^{-5}$ \\
+$t-1$, punto: nada visible (88)      & 0.791; 34\,\% & 0.638; 19\,\% & 0.004 \\
+$t-1$, contorno: signos visibles (42) & 0.749; 29\,\% & 0.456; 7\,\%  & $3\cdot10^{-4}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Parte de la localización era anatomía (la posición en el control ya puntúa
+por encima de 0.5), pero el sitio del cáncer puntúa claramente más alto que
+la misma posición en una mujer sana, también donde el radiólogo no veía
+nada. Recorriendo toda la mamografía anterior, la topología señala el sitio
+del cáncer futuro en el 10\,\% superior de su mama en un tercio de los casos
+(15--19\,\% en los controles).
 
 \section{Discusión}
 \label{sec:discusion}
-Las observaciones principales de este capítulo, todas sobre datos reales:
-
 \begin{itemize}
-  \item \textbf{El \textit{pipeline} completo funciona de extremo a extremo
-        sobre datos reales}: partición por paciente, preprocesado,
-        extracción de imágenes de persistencia H0+H1 y evaluación con
-        métricas clínicas, tanto sobre CBIS-DDSM (clasificación) como sobre
-        EMBED (longitudinal).
-  \item \textbf{El tamaño de muestra manda}: la lección metodológica más
-        repetida del capítulo. El CV-AUC de TDA pasó de $0.850 \pm 0.143$
-        (30 pacientes) a $0.658 \pm 0.134$ (70); un test de $n=8$ llegó a
-        dar AUC $0.000$ por puro azar; y el "mejor resultado" de la fusión
-        con el piloto pequeño ($0.967$) se desinfló a $0.819$ al ampliar.
-        Ningún número de un piloto pequeño debe tomarse al pie de la letra
-        sin su intervalo de confianza.
-  \item \textbf{Clasificación aislada (E1--E3)}: la CNN sola y la fusión
-        quedan prácticamente empatadas (AUC por CV $0.827$ y $0.819$ tras
-        ajustar hiperparámetros por vía), ambas claramente por delante de
-        TDA en solitario ($0.658$). Con el piloto actual no se puede
-        afirmar que la fusión aporte una mejora real sobre la CNN sola
-        (issue \#82). El resultado de TDA es además robusto a la elección
-        de la función de filtración (intensidad vs.\ transformada de
-        distancia: mismo CV-AUC medio, $0.658$, issue \#77).
-  \item \textbf{Interpretabilidad}: los cuatro métodos (Grad-CAM, región
-        topológica dominante, SHAP, LIME) apenas coinciden entre sí (IoU
-        $0.07$--$0.14$, $n=122$), y un test pareado confirma que TDA no se
-        comporta distinto de los métodos basados en píxeles en ese aspecto;
-        la ventaja real de TDA es el coste ($300\times$ más rápida que
-        SHAP, sin necesitar CNN).
-  \item \textbf{Hipótesis longitudinal (O8), el resultado central}: sobre
-        99 pacientes reales de EMBED, la deriva topológica entre
-        exploraciones es una señal robusta ($0.805 \pm 0.060$), pero la
-        anticipación pura --- la pregunta clínicamente valiosa --- se
-        mantiene cerca del azar ($0.550 \pm 0.105$), con una tendencia
-        entre iteraciones del piloto que apunta a señal débil o ausente
-        con el descriptor actual, más que a una señal fuerte oculta por el
-        ruido de muestra.
+  \item \textbf{Clasificación aislada (CBIS-DDSM).} La topología sola
+        distingue parcialmente masas benignas de malignas (AUC $0.658$),
+        sobre todo en masas espiculadas ($0.867$), pero no supera a la CNN
+        ($0.827$), y la fusión no mejora con claridad a la CNN.
+  \item \textbf{Interpretabilidad.} Grad-CAM, SHAP, LIME y la región
+        topológica apenas coinciden entre sí (IoU $0.07$--$0.14$); la ventaja
+        de la topología es el coste, no la concordancia.
+  \item \textbf{Diseño longitudinal.} Tres confusores (intervalo, época de
+        adquisición y tipo de exploración en $t$) produjeron señales falsas
+        de AUC entre $0.6$ y $0.9$. Un control positivo (la exploración del
+        diagnóstico sola) habría detectado el tercero de inmediato.
+  \item \textbf{Anticipación local.} La topología de una ventana en el sitio
+        donde aparecerá el cáncer, medida en el cribado anterior leído como
+        normal, separa casos de controles: AUC $0.57$ en EMBED y $0.614$ en
+        la validación prefijada en CSAW-CC, también donde el radiólogo no
+        veía nada. Es local, no la explican edad, densidad ni hallazgos
+        benignos previos, y su patrón topológico se reproduce entre cohortes
+        ($r = 0.88$).
+  \item \textbf{Límites.} El efecto es modesto (AUC $\approx 0.6$), sin
+        utilidad clínica por sí solo. Requiere saber dónde mirar o, en la
+        versión de localización, solo acierta en un tercio de los casos.
+        Trasladar el sitio entre exploraciones sigue siendo el punto débil.
 \end{itemize}
-
-Las limitaciones de estos resultados (tamaño de los pilotos frente a las
-cohortes completas disponibles, una sola vista por paciente en el piloto
-longitudinal, ausencia de validación clínica) se retoman en el
-Capítulo~\ref{cap:conclusiones} junto con las limitaciones generales del
-trabajo.

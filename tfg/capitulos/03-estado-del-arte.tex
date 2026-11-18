@@ -145,18 +145,61 @@ al cambio topológico entre exploraciones sucesivas, una señal predictiva que
 los modelos de \textit{deep learning} longitudinal actuales no capturan --- o
 capturan de forma menos interpretable?}
 
+\section{Señales en la mamografía anterior al diagnóstico}
+\label{sec:estado-arte-previa}
+La idea de que un cáncer detectado en cribado ya dejaba rastro en la
+mamografía anterior no es nueva, y está bien documentada sin topología:
+
+\begin{itemize}
+  \item \textbf{Revisión radiológica.} En el programa noruego, una revisión
+        por consenso de las mamografías previas de 1225 cánceres detectados
+        en cribado clasificó el 46\,\% como verdaderamente negativas, el
+        32\,\% con signos mínimos y el 22\,\% con un hallazgo
+        omitido~\cite{hovda2021prior}. En el programa flamenco, el 37\,\%
+        tenía signos mínimos~\cite{vandendaele2022review}. Entre un tercio y
+        la mitad de los cánceres ``avisan'' en el cribado anterior.
+  \item \textbf{Inteligencia artificial sobre mamografías previas.}
+        Sistemas comerciales de \textit{deep learning} localizan alrededor
+        de un tercio de los cánceres que se pasaron por alto en la lectura
+        original~\cite{park2022missed}. El trabajo más cercano a la hipótesis
+        de este TFG es el de Martiniussen \textit{et
+        al.}~\cite{martiniussen2026aimarkers}: dos modelos de IA marcaron el
+        sitio del cáncer futuro en mamografías de 2 y 4 años antes (en al
+        menos una vista, en el 75--81\,\% y el 57--61\,\% de los casos), que
+        los radiólogos habían leído casi siempre como normales. Su diseño
+        selecciona casos con puntuación de riesgo alta y no usa controles
+        emparejados.
+  \item \textbf{Textura y densidad.} Los descriptores de textura
+        mamográfica se usan como marcadores de riesgo, pero sobre la mama
+        entera o sobre la mama contralateral, no en el sitio donde aparecerá
+        el tumor.
+\end{itemize}
+
+Que exista señal antes del diagnóstico, por tanto, está establecido. Lo que
+no se ha encontrado en la literatura revisada es: (i) homología persistente
+aplicada a mamografías previas al diagnóstico; toda la aplicación de TDA a
+mamografía clasifica una única exploración~\cite{malek2023microcalc,
+asaad2022phbreast, jetomo2025phca}; (ii) un diseño caso-control con la
+ventana del sitio aplicada igual a casos y controles, control positivo y
+controles negativos de localización; y (iii) una descripción cuantificada de
+los confusores de diseño de este tipo de estudios.
+
 \section{Síntesis y aportación de este trabajo}
-La revisión anterior muestra dos líneas activas que, hasta donde se ha podido
-verificar, no se han combinado todavía: el TDA aplicado a una mamografía
-aislada (prometedor pero poco explorado frente al \textit{deep learning}
-dominante) y la predicción de riesgo mediante \textit{deep learning} sobre
-exploraciones longitudinales (activa y reciente, pero exclusivamente basada en
-píxeles). La aportación de este TFG parte de un estudio sistemático de
-descriptores topológicos sobre \mbox{CBIS-DDSM} para la clasificación
-benigno/maligno sobre una mamografía aislada --- necesario como base, y
-comparado y combinado con un modelo de \textit{deep learning} de referencia
---- pero su objetivo central es extender esa base al caso longitudinal: usar
-la homología persistente para comparar la exploración previa (normal) con la
-exploración donde se diagnostica el cáncer, y evaluar si ya existía una señal
-topológica medible antes del diagnóstico (Capítulo~\ref{cap:metodologia},
-Sección~\ref{sec:metodologia-longitudinal}).
+La revisión muestra tres líneas que, hasta donde se ha podido verificar, no
+se habían combinado: el TDA sobre una mamografía aislada, el \textit{deep
+learning} sobre exploraciones longitudinales y el estudio de la mamografía
+anterior al diagnóstico. La aportación de este TFG no es descubrir que existe
+señal antes del diagnóstico, sino:
+\begin{enumerate}
+  \item \textbf{medirla con un descriptor topológico interpretable}, cuyo
+        patrón tiene una lectura física (densificación local del tejido);
+  \item \textbf{con un diseño controlado}: cohorte de cribado emparejada,
+        control positivo, controles de localización y una validación externa
+        preregistrada en una segunda cohorte;
+  \item \textbf{documentar tres confusores de diseño} que producen señales
+        falsas en este tipo de estudios, con su efecto cuantificado.
+\end{enumerate}
+Como base, el trabajo incluye además un estudio de clasificación
+benigno/maligno sobre \mbox{CBIS-DDSM}, comparado y combinado con un modelo
+de \textit{deep learning}, y de la interpretabilidad del TDA frente a
+Grad-CAM, SHAP y LIME.
