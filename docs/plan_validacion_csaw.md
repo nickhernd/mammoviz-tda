@@ -230,3 +230,26 @@ de controles: AUC > 0.5.
 - **Criterio:** AUC > 0.5 con p < 0.05.
 - Secundarios: lo mismo para el control positivo (t, entrenando con t de
   EMBED); y en sentido inverso, CSAW → EMBED.
+
+---
+
+# Adenda 5 (2026-11-18): topología frente a deep learning en la misma ventana
+
+**Fijada antes de calcular. Exploratoria en CSAW-CC** (cohorte ya usada).
+
+## Pregunta
+
+¿Aporta la topología algo que una CNN no capte sobre la misma ventana del
+sitio?
+
+## Análisis (EMBED y CSAW-CC por separado)
+
+- **CNN:** *embeddings* de DenseNet121 preentrenada en ImageNet, congelada
+  (1024 valores; la ventana de 512 px reducida a 224×224 y replicada en 3
+  canales), para t-1 (anticipación) y t (control positivo).
+- **Mismo clasificador y protocolo** que la topología: Random Forest, CV
+  agrupada por paciente, 200 permutaciones dentro de conjunto.
+- Comparación: topología, CNN y la concatenación de ambas.
+- **Prueba de aporte:** regresión logística condicional con los dos scores
+  fuera de fold a la vez. **Criterio:** la topología aporta sobre la CNN si
+  su OR ajustado es > 1 con p < 0.05.
