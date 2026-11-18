@@ -82,6 +82,13 @@ con `git log --since=<fecha> --until=<fecha>`.
     el efecto era más débil.
 - No se pudo emparejar por intervalo ni fecha (fechas anonimizadas); todo
   Hologic del mismo programa.
+- **Por qué eso no invalida el resultado**: los confusores de este tipo
+  (intervalo, época, equipo, tipo de exploración: los de EMBED) actúan
+  sobre toda la mamografía. Si explicaran la señal, también aparecería en
+  la ventana desplazada media mama, y ahí da 0.519. El control negativo de
+  localización descarta los confusores globales, incluidos los que no se
+  pudieron emparejar.
+- Notebook 04 (`04_validacion_csaw.ipynb`) con todo el análisis.
 
 ---
 
