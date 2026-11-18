@@ -176,3 +176,28 @@ necesita registro entre exploraciones: todo ocurre dentro de t-1.
   la máscara de t. Debería localizar bien; si no, la medida no sirve para
   localizar.
 - Separado por tipo de marca: punto (nada visible) frente a contorno.
+
+---
+
+# Adenda 3 (2026-11-18): el nulo correcto de la localización (exploratorio)
+
+**Escrita después de ver el resultado de la adenda 2 y antes de calcular
+esto.** El resultado de la adenda 2 (percentil mediano 0.78 en t-1) se
+comparó con un azar de 0.5. Ese nulo es incorrecto: supone que cualquier
+ventana de la mama tenía la misma probabilidad de ser el sitio, pero los
+cánceres aparecen en el tejido glandular, no en la piel, el pectoral ni la
+grasa. El modelo puede estar aprendiendo "tejido glandular frente a
+periferia", y eso puntuaría alto el mismo sitio en una mujer sana.
+
+## Nulo correcto
+
+Mismo procedimiento (mismo modelo de cada partición de la validación
+cruzada) en la t-1 del **primer control de cada conjunto**, con un
+**pseudo-sitio** en la misma posición relativa que el sitio de su caso.
+
+- Métrica: percentil del sitio (caso) frente al percentil del pseudo-sitio
+  (su control), pareado por conjunto; Wilcoxon pareado de una cola.
+- **Interpretación:** solo si el sitio del caso puntúa más alto que el
+  pseudo-sitio de su control, la localización dice algo del cáncer y no
+  solo de la anatomía.
+- Igual en t (control positivo).
