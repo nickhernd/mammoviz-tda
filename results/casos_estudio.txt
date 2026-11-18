@@ -1,0 +1,5 @@
+Casos de estudio (CSAW-CC, sitio marcado con punto, mayor puntuacion de anticipacion)
+caso (punto) · puntuación 0.78: ciclos H1 medios 66, H0 brillantes efimeras 40
+su control · puntuación 0.29: ciclos H1 medios 84, H0 brillantes efimeras 0
+caso (punto) · puntuación 0.77: ciclos H1 medios 122, H0 brillantes efimeras 30
+su control · puntuación 0.35: ciclos H1 medios 194, H0 brillantes efimeras 17

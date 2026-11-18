@@ -695,6 +695,37 @@ de densidad local y añade estructura espacial que la densidad no capta.}
 En EMBED el resultado es el mismo, con menos fuerza: topología ajustada OR
 $1.23$ ($p = 0.04$), densidad ajustada OR $1.04$ ($p = 0.71$).
 
+\subsection{Casos de estudio}
+Para ver sobre la imagen qué mide la topología, se tomaron en CSAW-CC los dos
+casos con mayor puntuación de anticipación entre aquellos cuyo sitio estaba
+marcado con un punto (el radiólogo no veía nada), junto con su primer
+control. Sobre la ventana de $t-1$ se marcan los píxeles donde nacen los dos
+tipos de rasgo que separan casos de controles
+(Figura~\ref{fig:interpretacion}), localizados con los pares de cocaras de
+GUDHI (Figura~\ref{fig:casos}).
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/casos_estudio.png}
+\caption{Casos de estudio en CSAW-CC: ventana del sitio en el cribado
+anterior ($t-1$, el radiólogo no veía nada), píxeles donde nacen los ciclos
+$H_1$ de intensidad media (azul) y las componentes $H_0$ efímeras del extremo
+brillante (naranja), y la misma ventana en el diagnóstico ($t$). Filas 1 y 3:
+casos; filas 2 y 4: sus controles. En el segundo par, parte de los puntos
+naranjas caen en el borde de la ventana.}
+\label{fig:casos}
+\end{figure}
+
+En el primer caso, un año antes del diagnóstico ya hay un foco central de
+tejido denso donde se agrupan las componentes brillantes efímeras (40, frente
+a ninguna en su control), y en ese mismo centro aparece la lesión en $t$. Su
+control muestra el entramado de tejido graso, con más ciclos de intensidad
+media (84 frente a 66). El segundo par repite el patrón (122 frente a 194
+ciclos; 30 frente a 17 componentes brillantes), menos nítido. Son ejemplos
+elegidos por tener la puntuación más alta, no casos típicos, pero muestran
+que la ``densificación local'' que describen los mapas corresponde a
+estructuras visibles en la imagen una vez se sabe dónde mirar.
+
 \subsection{Localización: ¿señala la topología dónde aparecerá el cáncer?}
 La pregunta original del trabajo no presupone saber dónde mirar. Se recorrió
 toda la mama de $t-1$ en CSAW-CC con una rejilla de ventanas y se midió en
