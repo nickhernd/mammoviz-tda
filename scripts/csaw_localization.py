@@ -72,6 +72,19 @@ def image_windows(path: Path, site: tuple[float, float] | None, n_random: int | 
     return out
 
 
+def image_windows_rel(path: Path, rel: tuple[float, float]) -> dict:
+    """Rejilla completa y ventana en un PSEUDO-sitio dado por su posicion
+    relativa en la caja de la mama (adenda 3: el sitio del caso llevado a su
+    control)."""
+    import csaw_lesion_site as cs
+
+    arr = read_dicom_gray(path)
+    site = cs._abs(rel, ls._full_bbox(arr))
+    out = image_windows(path, site)
+    out["site"] = np.array(site)
+    return out
+
+
 def load_all(manifest: pd.DataFrame, which: str) -> tuple[list[dict], list[dict], pd.DataFrame]:
     """Ventanas de las mamas de caso con sitio marcado en ``which`` (t0 | t1)
     y de las mamas de sus controles en la misma exploracion."""
@@ -98,10 +111,42 @@ def load_all(manifest: pd.DataFrame, which: str) -> tuple[list[dict], list[dict]
         print(f"  {which}: {min(start + 32, len(pending))}/{len(pending)} imagenes", flush=True)
     case_w = [cache[key(j)] | {"site": np.array(j[2])} for j in jobs if j[0] == "case"]
     ctl_w = [cache[key(j)] for j in jobs if j[0] == "ctl"]
-    return case_w, ctl_w, cases.assign(ctl_index=None), controls
+
+    # adenda 3: rejilla completa + pseudo-sitio en el primer control de cada conjunto
+    import csaw_lesion_site as cs
+    rel_cache = pickle.loads(cs.CACHE_PATH.read_bytes())
+    widx = 0 if which == "t0" else 1
+    first = controls.groupby("set_id").head(1).set_index("set_id")
+    pjobs = []
+    for r in cases.itertuples():
+        if r.set_id in first.index:
+            rel = rel_cache[("rel", r.path_t0, r.path_t1)][widx]
+            pjobs.append((r.set_id, first.loc[r.set_id, col_path], tuple(rel)))
+    pkey = lambda j: ("pseudo", j[1], j[2], HALF, STRIDE)
+    pending = [j for j in pjobs if pkey(j) not in cache]
+    for start in range(0, len(pending), 32):
+        chunk = pending[start:start + 32]
+        res = Parallel(n_jobs=-1)(delayed(image_windows_rel)(ROOT / j[1], j[2]) for j in chunk)
+        cache.update({pkey(j): x for j, x in zip(chunk, res)})
+        CACHE_PATH.write_bytes(pickle.dumps(cache))
+        print(f"  {which} pseudo-sitio: {min(start + 32, len(pending))}/{len(pending)} imagenes", flush=True)
+    pseudo = {j[0]: cache[pkey(j)] for j in pjobs}
+    return case_w, ctl_w, cases.assign(ctl_index=None), controls, pseudo
 
 
-def evaluate(case_w, ctl_w, cases: pd.DataFrame, controls: pd.DataFrame) -> pd.DataFrame:
+def _percentile(rf, w) -> float | None:
+    """Percentil de la ventana del sitio frente a las ventanas de la rejilla
+    de la misma mama que no contienen el sitio."""
+    d = np.hypot(*(w["centres"] - w["site"]).T) * PIXEL_MM
+    others = w["pi_grid"][d > NEAR_MM]
+    if len(others) < 5:
+        return None
+    s_site = rf.predict_proba(w["pi_site"][None])[0, 1]
+    s_other = rf.predict_proba(others)[:, 1]
+    return float(np.mean(s_other < s_site) + 0.5 * np.mean(s_other == s_site))
+
+
+def evaluate(case_w, ctl_w, cases: pd.DataFrame, controls: pd.DataFrame, pseudo: dict | None = None) -> pd.DataFrame:
     """Percentil del sitio en cada mama de test (CV agrupada por paciente)."""
     from sklearn.ensemble import RandomForestClassifier
     from sklearn.model_selection import GroupKFold
@@ -123,17 +168,27 @@ def evaluate(case_w, ctl_w, cases: pd.DataFrame, controls: pd.DataFrame) -> pd.D
         rf = RandomForestClassifier(n_estimators=300, random_state=SEED, class_weight="balanced_subsample",
                                     min_samples_leaf=3, n_jobs=-1).fit(X, y)
         for i in test:
-            w = case_w[i]
-            d = np.hypot(*(w["centres"] - w["site"]).T) * PIXEL_MM
-            others = w["pi_grid"][d > NEAR_MM]
-            if len(others) < 5:
+            p_case = _percentile(rf, case_w[i])
+            if p_case is None:
                 continue
-            s_site = rf.predict_proba(w["pi_site"][None])[0, 1]
-            s_other = rf.predict_proba(others)[:, 1]
-            rows.append({"set_id": cases.loc[i, "set_id"], "pid": cases.loc[i, "pid"],
-                         "percentil": float(np.mean(s_other < s_site) + 0.5 * np.mean(s_other == s_site)),
-                         "n_ventanas": len(others)})
+            sid = cases.loc[i, "set_id"]
+            p_ctl = _percentile(rf, pseudo[sid]) if pseudo and sid in pseudo else None
+            rows.append({"set_id": sid, "pid": cases.loc[i, "pid"], "percentil": p_case,
+                         "percentil_control": np.nan if p_ctl is None else p_ctl})
     return pd.DataFrame(rows)
+
+
+def summarize_vs_control(res: pd.DataFrame, label: str) -> list[str]:
+    """Adenda 3: sitio del caso frente a pseudo-sitio de su control (pareado)."""
+    from scipy import stats
+
+    r = res.dropna(subset=["percentil_control"])
+    if len(r) < 6:
+        return [f"  {label}: pareados insuficientes ({len(r)})"]
+    w = stats.wilcoxon(r["percentil"] - r["percentil_control"], alternative="greater")
+    return [f"  {label}: {len(r)} pares | sitio del caso {r['percentil'].median():.3f} frente a pseudo-sitio "
+            f"del control {r['percentil_control'].median():.3f} | Wilcoxon pareado p = {w.pvalue:.3g} | "
+            f"10 % superior: caso {np.mean(r['percentil'] >= 0.9):.0%}, control {np.mean(r['percentil_control'] >= 0.9):.0%}"]
 
 
 def summarize(res: pd.DataFrame, label: str) -> list[str]:
@@ -152,9 +207,10 @@ def main() -> None:
     lines = ["LOCALIZACION EN CSAW-CC (adenda 2 del plan; EXPLORATORIO)",
              f"rejilla de ventanas de {2 * HALF} px con paso {STRIDE} px; RF por CV agrupada por paciente", ""]
     for which, label in (("t1", "control positivo, t (diagnostico)"), ("t0", "pregunta, t-1 (cribado anterior)")):
-        case_w, ctl_w, cases, controls = load_all(manifest, which)
-        res = evaluate(case_w, ctl_w, cases, controls)
+        case_w, ctl_w, cases, controls, pseudo = load_all(manifest, which)
+        res = evaluate(case_w, ctl_w, cases, controls, pseudo)
         lines += summarize(res, label)
+        lines += summarize_vs_control(res, f"   ADENDA 3, {which}")
         if which == "t0":
             npx = {r.set_id: int(np.count_nonzero(np.array(Image.open(
                 CSAW_DIR / "masks" / r.file_t0.replace(".dcm", "_mask.png")))))
@@ -162,6 +218,7 @@ def main() -> None:
             res["tipo"] = res["set_id"].map(lambda k: "punto (nada visible)" if npx[k] <= 25 else "contorno (signos visibles)")
             for t, g in res.groupby("tipo"):
                 lines += summarize(g, f"   t-1, {t}")
+                lines += summarize_vs_control(g, f"   ADENDA 3, t-1, {t}")
         res.to_csv(CSAW_DIR / f"localizacion_{which}.csv", index=False)
     report = "\n".join(lines)
     print("\n" + report)
