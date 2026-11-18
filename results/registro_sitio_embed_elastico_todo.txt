@@ -1,0 +1,5 @@
+Sitio de la lesion con registro t -> t-1 (embed, metodo elastico, subconjunto todo)
+174 vistas de caso, 522 controles; 200 permutaciones
+
+  anticipacion (t-1)     : AUC = 0.632, p = 0.005; OR condicional = 1.56 (p = 1.6e-06)
+  control positivo (t)   : AUC = 0.679, p = 0.005
