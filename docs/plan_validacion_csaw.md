@@ -101,3 +101,42 @@ Según el README de CSAW-CC, una publicación debe seguir los criterios ICMJE
 e **invitar como coautores a los curadores** del dataset (Fredrik Strand y
 colaboradores, Karolinska Institutet). Para el TFG basta con citarlo; para un
 artículo hay que contactarles.
+
+---
+
+# Adenda 1 (2026-11-18): registro t -> t-1
+
+**Fijada antes de calcular nada con registro sobre CSAW-CC.** El commit que
+introduce esta adenda es la marca temporal.
+
+## Motivo
+
+En el análisis principal, las 74 vistas de caso sin marca en t-1 (el sitio
+se trasladaba desde t con la caja de la mama) daban AUC 0.491. En CSAW-CC,
+el error geométrico de ese traslado es de 12.2 mm de mediana, frente a
+6.1 mm con un registro elástico (`results/registro_csaw.txt`; se mide solo
+con posiciones, sin etiquetas ni AUC). En EMBED, que es el conjunto de
+desarrollo, el registro elástico sube la anticipación de 0.573 a 0.632
+(`results/registro_sitio_embed_*`).
+
+## Hipótesis H2
+
+En CSAW-CC, en las vistas sin marca en t-1, la anticipación con el sitio
+trasladado mediante **registro elástico** (`src/registration.py`, método
+`elastico`) tiene AUC > 0.5.
+
+## Análisis
+
+- `python scripts/registered_lesion_site.py --dataset csaw --metodo elastico --subconjunto trasladado --permutations 1000`.
+- Misma medida, clasificador, validación cruzada y permutaciones dentro de
+  conjunto que el análisis principal.
+- **Criterio:** AUC > 0.5, p < 0.05 (1 000 permutaciones) y OR condicional > 1.
+- Secundario: la cohorte completa con registro (`--subconjunto todo`). Las
+  vistas con marca en t-1 no cambian.
+
+## Limitación declarada
+
+Estas 74 vistas ya se vieron en el análisis principal (con la caja de la
+mama). El método de registro se eligió por geometría y se probó en EMBED,
+no en ellas, pero no son datos "vírgenes". La prueba limpia sería el 30 %
+reservado de CSAW-CC, en colaboración con Karolinska.
